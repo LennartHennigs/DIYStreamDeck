@@ -36,7 +36,7 @@ The `key_def.json` file contains the key configurations for each app. Each app i
 
 The first element is either a string or an array containing the keycodes, representing the shortcut. If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T"). If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]).
 In addition to specifying key combinations, you can also add delays between key presses within a shortcut. To do this, simply include a floating-point number in the list of keys for a specific shortcut in the `key_def.json` file. This number represents the delay in seconds between key presses.
-The second element is a string representing the color of the key. The available colors are "RED", "GREEN", "BLUE", "YELLOW", "ORANGE", "WHITE", and "BLACK".
+The second element is a string representing is the hex code of the color for the key. 
 For example, the configuration for the app "App1" could look like this:
 
 ``` json
