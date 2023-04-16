@@ -1,0 +1,2 @@
+pyobjc-framework-Cocoa==7.3
+pyserial==3.5
