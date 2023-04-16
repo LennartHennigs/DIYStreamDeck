@@ -3,6 +3,8 @@
 
 This project uses a Raspberry Pi Pico microcontroller and an [Pimoroni RGB Keypad](https://shop.pimoroni.com/products/pico-rgb-keypad-base) to provide dynamic app-specific shortcut keys. By monitoring the currently active app on your computer, it automatically loads and displays relevant shortcuts to streamline your workflow and increase productivity.
 
+**Note:** This was a (very successful) experiment with ChatGPT-4. I built this without any knowledge of (Micro-)Python. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and maybe two lines of code in the CicuitPython code).
+
 ## Features
 
 - Dynamically detects the active app and updates the keypad with its shortcuts
