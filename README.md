@@ -23,6 +23,12 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 - Pimoroni RGB Keypad for Raspberry Pi Pico
 - Micro-USB cable to connect the Pi Pico to your computer
 
+## How it Works
+
+The `keypad.py` script reads key definitions from a JSON file and maps them to specific key sequences and LED colors. It listens for the currently active application on the host computer and updates the keypad based on the key mappings for the active application.
+
+The `watchdog.py` script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad.
+
 ## Getting Started
 
 - Install CircuitPython on your Raspberry Pi Pico following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython).
