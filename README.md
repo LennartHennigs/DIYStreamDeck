@@ -25,9 +25,9 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 
 ## How it Works
 
-The `keypad.py` script reads key definitions from a JSON file and maps them to specific key sequences and LED colors. It listens for the currently active application on the host computer and updates the keypad based on the key mappings for the active application.
+The [`keypad.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/keypad.py) script reads key definitions from a JSON file and maps them to specific key sequences and LED colors. It listens for the currently active application on the host computer and updates the keypad based on the key mappings for the active application.
 
-The `watchdog.py` script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad.
+The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/watchdog.py) script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad.
 
 ## Getting Started
 
