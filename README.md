@@ -38,11 +38,12 @@ The `watchdog.py` script monitors the currently active application on the host c
 
 ## Configuration
 
-The `key_def.json` file contains the key configurations for each app. Each app is defined as a JSON object with key-value pairs, where the key is the key number (0-15) and the value is an array with two elements:
 
-The first element is either a string or an array containing the keycodes, representing the shortcut. If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T"). If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]).
+In the `key_def`.json configuration file, each app is defined as a JSON object with key-value pairs, where the key is the key number (0-15) and the value is an array with two elements. 
+The first element is either a string or an array containing the keycodes, representing the shortcut. If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T"). If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]). 
 In addition to specifying key combinations, you can also add delays between key presses within a shortcut. To do this, simply include a floating-point number in the list of keys for a specific shortcut in the `key_def.json` file. This number represents the delay in seconds between key presses.
-The second element is a string representing is the hex code of the color for the key. 
+The second element is a string representing the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue), instead of using the predefined color constants. This allows for a wider range of color options to choose from, and provides greater flexibility when customizing the keypad for different apps.
+
 For example, the configuration for the app "App1" could look like this:
 
 ``` json
