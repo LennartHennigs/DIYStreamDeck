@@ -1,86 +1,93 @@
 {
   "zoom.us": {
-    "0": [
-      "GUI+SHIFT+A",
-      "#FFFF00"
-    ],
-    "1": [
-      "GUI+SHIFT+V",
-      "#FFFF00"
-    ],
-    "2": [
-      "GUI+SHIFT+S",
-      "#FFFF00"
-    ],
-    "3": [
-      "ALT+Z",
-      "#FFA500"
-    ],
-    "4": [
-      "GUI+SHIFT+W",
-      "#FFFF00"
-    ],
-    "5": [
-      "GUI+U",
-      "#FFFF00"
-    ],
-    "6": [
-      [
-        "GUI+I",
-        0.1,
-        "TAB"
-      ],
-      "#00FF00"
-    ],
-    "7": [
-      [
-        "ESCAPE"
-      ],
-      "#000000"
-    ],
-    "8": [
-      "GUI+SHIFT+H",
-      "#FFFF00"
-    ],
-    "10": [
-      "GUI+SHIFT+C",
-      "#FF0000"
-    ],
-    "11": [
-      "GUI+SHIFT+P",
-      "#FFFFFF"
-    ],
-    "12": [
-      "GUI+SHIFT+F",
-      "#0000FF"
-    ],
-    "15": [
-      [
-        "GUI+W",
-        0.1,
-        "RETURN"
-      ],
-      "#FF0000"
-    ]
+    "0": {
+      "key_sequence": ["GUI+SHIFT+A"],
+      "color": "#FFFF00",
+      "description": "Mute/Unmute Audio"
+    },
+    "1": {
+      "key_sequence": ["GUI+SHIFT+V"],
+      "color": "#FFFF00",
+      "description": "Start/Stop Video"
+    },
+    "2": {
+      "key_sequence": ["GUI+SHIFT+S"],
+      "color": "#FFFF00",
+      "description": "Share Screen"
+    },
+    "3": {
+      "key_sequence": ["ALT+Z"],
+      "color": "#FFA500",
+      "description": "Toggle Zoom Controls"
+    },
+    "4": {
+      "key_sequence": ["GUI+SHIFT+W"],
+      "color": "#FFFF00",
+      "description": "Close All Zoom Windows"
+    },
+    "5": {
+      "key_sequence": ["GUI+U"],
+      "color": "#FFFF00",
+      "description": "Show Participants Panel"
+    },
+    "6": {
+      "key_sequence": ["GUI+I", 0.1, "TAB"],
+      "color": "#00FF00",
+      "description": "Invite Participants"
+    },
+    "7": {
+      "key_sequence": ["ESCAPE"],
+      "color": "#000000",
+      "description": "Exit Full Screen"
+    },
+    "8": {
+      "key_sequence": ["GUI+SHIFT+H"],
+      "color": "#FFFF00",
+      "description": "Show/Hide Chat"
+    },
+    "10": {
+      "key_sequence": ["GUI+SHIFT+C"],
+      "color": "#FF0000",
+      "description": "Record Meeting"
+    },
+    "11": {
+      "key_sequence": ["GUI+SHIFT+P"],
+      "color": "#FFFFFF",
+      "description": "Pause/Resume Recording"
+    },
+    "12": {
+      "key_sequence": ["GUI+SHIFT+F"],
+      "color": "#0000FF",
+      "description": "Enter/Exit Full Screen"
+    },
+    "15": {
+      "key_sequence": ["GUI+W", 0.1, "RETURN"],
+      "color": "#FF0000",
+      "description": "End Meeting"
+    }
   },
   "Microsoft Outlook": {
-    "0": [
-      "GUI+ONE",
-      "#FFFF00"
-    ],
-    "1": [
-      "GUI+TWO",
-      "#FFFF00"
-    ]
+    "0": {
+      "key_sequence": ["GUI+ONE"],
+      "color": "#FFFF00",
+      "description": "Switch to Mail"
+    },
+    "1": {
+      "key_sequence": ["GUI+TWO"],
+      "color": "#FFFF00",
+      "description": "Switch to Calendar"
+    }
   },
   "_otherwise": {
-    "0": [
-      "GUI+SPACE",
-      "#FFFFFF"
-    ],
-    "3": [
-      "GUI+LEFT_CONTROL+Q",
-      "#FF0000"
-    ]
+    "0": {
+      "key_sequence": ["GUI+SPACE"],
+      "color": "#FFFFFF",
+      "description": "Open Spotlight Search"
+    },
+    "3": {
+      "key_sequence": ["GUI+LEFT_CONTROL+Q"],
+      "color": "#FF0000",
+      "description": "Close Application"
+    }
   }
 }
