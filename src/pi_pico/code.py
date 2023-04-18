@@ -1,6 +1,6 @@
 # DIY Steamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0 
-# last changed: 23-04-18
+# last changed: 23-04-14
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import time
@@ -24,19 +24,19 @@ class KeyController:
         self.keyboard = Keyboard(usb_hid.devices)
         self.layout = KeyboardLayoutUS(self.keyboard)
         self.key_configs = self.read_key_configs(self.JSON_FILE)
-        self.key_config = self.key_configs.get("_otherwise", {})
+        self.key_config = self.key_configs.get("_otherwise", {})  # Add this line to set the initial key configuration
         self.usb_serial = usb_cdc.console
         self.update_keys()
 
     def key_action(self, key, press=True):
         if key.number in self.key_config:
-            key_sequences, color, _ = self.key_config[key.number]
+            key_sequences, color, _ = self.key_config[key.number]  # Add the underscore to ignore the description
             self.update_key_led(key, color, press)
             self.handle_key_sequences(key_sequences, press)
 
     def update_key_led(self, key, color, press):
         key.set_led(*color) if not press else key.led_off()
-        if press:  
+        if press:  # Only print the description when the key is pressed
             _, _, description = self.key_config[key.number]
             print(f" Key {key.number} pressed: {description}")
 
@@ -87,7 +87,7 @@ class KeyController:
             keycodes = []
             for key in keycode_list:
                 if key not in self.KEYCODE_MAPPING:
-                    raise ValueError(f"Unknown keycode constant: {key}")
+                    raise ValueError(f"Unknown keycode constant: {key} in '{keycode_string}'")
                 keycodes.append(self.KEYCODE_MAPPING[key])
             return tuple(keycodes)
 
@@ -111,8 +111,8 @@ class KeyController:
                 key_sequence = config['key_sequence']
                 key_sequences = tuple(convert_value(v) for v in key_sequence) if isinstance(key_sequence, list) else convert_keycode_string(key_sequence)
                 color_array = convert_color_string(config['color'])
-                description = config['description']
-                key_configs[app][int(key)] = (key_sequences, color_array, description)
+                description = config['description']  # Read the description
+                key_configs[app][int(key)] = (key_sequences, color_array, description)  # Store the description in the key_configs
         return key_configs
 
 if __name__ == "__main__":
