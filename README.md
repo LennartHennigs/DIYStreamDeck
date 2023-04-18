@@ -7,7 +7,6 @@ This project uses a Raspberry Pi Pico microcontroller and an [Pimoroni RGB Keypa
 
 If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
 
-
 **Note:** This was a (very successful) experiment with ChatGPT-4. I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and maybe two lines in the CicuitPython code).
 
 ## Features
@@ -90,7 +89,7 @@ python3 watchdog.py --port /dev/cu.usbmodem2101 --speed 9600 --verbose
 ```
 
 - The `--port` parameter should be set to the USB serial port corresponding to your Raspberry Pi Pico (e.g., `/dev/cu.usbmodem2101`).
-- The `--speed` parameter should be set to the desired baud rate for the serial communication (e.g., `9600`). 
+- The `--speed` parameter should be set to the desired baud rate for the serial communication (e.g., `9600`).
 - If the `--verbose` parameter is set, the current app will be printed to the console.
 
 When the watchdog script detects a change in the active app, it sends the app's name as a single line over the USB serial connection. The Pi Pico then reads this information, loads the corresponding shortcuts from the `key_def.json` file, and updates the keypad accordingly.
