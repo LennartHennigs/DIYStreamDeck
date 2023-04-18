@@ -1,6 +1,6 @@
 # DIY Steamdeck watchdog code for a Mac
 # L. Hennigs and ChatGPT 4.0 
-# last changed: 23-04-14
+# last changed: 23-04-18
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import Cocoa
@@ -13,24 +13,13 @@ import argparse
 from typing import Optional
 from contextlib import contextmanager
 
-# Functions to manage terminal echo
-@contextmanager
-def echo_disabled(fd):
-    old_settings = termios.tcgetattr(fd)
-    tty.setcbreak(fd, termios.TCSANOW)
-    try:
-        yield
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-
 # Function to create a serial connection
 def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Serial]:
     try:
-        return serial.Serial(port, baud_rate)
-    except serial.SerialException as e:
-        print(f"Error initializing serial connection: {e}")
+        return serial.Serial(port, baud_rate, timeout=1)
+    except serial.SerialException:
         return None
-
+    
 # Function to run the main loop
 def run_loop(observer: 'AppObserver'):
     run_loop = Cocoa.NSRunLoop.currentRunLoop()
@@ -57,7 +46,7 @@ class AppObserver(Cocoa.NSObject):
         if self.args.verbose:
             print(f'Active app: {app_name}')
         try:
-            self.ser.write((app_name + '\n').encode())
+            self.ser.write((app_name + '\n').encode('ascii', 'replace'))
         except (serial.SerialException, UnicodeEncodeError) as e:
             print(f"Error sending app name to microcontroller: {e}")
 
@@ -69,32 +58,31 @@ def main():
     parser.add_argument('--verbose', action='store_true', default=False, help='Print the name of the current active window (default: False)')
     args = parser.parse_args()
 
-    with create_serial_connection(args.port, args.speed) as ser:
-        if not ser:
-            print("Failed to create serial connection.")
-            return
+    ser = create_serial_connection(args.port, args.speed)
+    if ser is None:
+        print(" Failed to create serial connection.")
+        return
 
-        print()
-        print("RGB Keypad watchdog is running...")
-        app_observer = AppObserver.alloc().initWithSerial_args_(ser, args)
-        notification_center = Cocoa.NSWorkspace.sharedWorkspace().notificationCenter()
-        notification_center.addObserver_selector_name_object_(
-            app_observer,
-            objc.selector(app_observer.applicationActivated_, signature=b'v@:@'),
-            Cocoa.NSWorkspaceDidActivateApplicationNotification,
-            None,
-        )
+    print()
+    print("RGB Keypad watchdog is running...")
+    app_observer = AppObserver.alloc().initWithSerial_args_(ser, args)
+    notification_center = Cocoa.NSWorkspace.sharedWorkspace().notificationCenter()
+    notification_center.addObserver_selector_name_object_(
+        app_observer,
+        objc.selector(app_observer.applicationActivated_, signature=b'v@:@'),
+        Cocoa.NSWorkspaceDidActivateApplicationNotification,
+        None,
+    )
 
-        with echo_disabled(sys.stdin.fileno()):
-            try:
-                run_loop(app_observer)
-            except KeyboardInterrupt: 
-                pass  # User pressed CTRL-C to exit
-            except Exception as e:
-                print(f"An error occurred during the execution: {e}")
+    try:
+        run_loop(app_observer)
+    except KeyboardInterrupt: 
+        pass  # User pressed CTRL-C to exit
+    except Exception as e:
+        print(f"An error occurred during the execution: {e}")
 
-        print("Good bye!")
-        print()
+    print("Good bye!")
+    print()
 
 # Entry point for the script
 if __name__ == "__main__":
