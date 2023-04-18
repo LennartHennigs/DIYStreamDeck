@@ -38,27 +38,46 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 
 ## Configuration
 
+In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, where the key is the key number (0-15) and the value is an object with the following properties:
 
-In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, where the key is the key number (0-15) and the value is an array with two elements. 
-The first element is either a string or an array containing the keycodes, representing the shortcut. If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T"). If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]). 
-In addition to specifying key combinations, you can also add delays between key presses within a shortcut. To do this, simply include a floating-point number in the list of keys for a specific shortcut in the `key_def.json` file. This number represents the delay in seconds between key presses.
-The second element is a string representing the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue), instead of using the predefined color constants. This allows for a wider range of color options to choose from, and provides greater flexibility when customizing the keypad for different apps.
-
+- `key_sequence`: This can be either a string or an array containing the keycodes representing the shortcut. If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T"). If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]). In addition to specifying key combinations, you can also add delays between key presses within a shortcut. To do this, simply include a floating-point number in the list of keys for a specific shortcut in the key_def.json file. This number represents the delay in seconds between key presses.
+- `color`: A string representing the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue), instead of using the predefined color constants. This allows for a wider range of color options to choose from and provides greater flexibility when customizing the keypad for different apps.
+- `description`: A string describing the function of the key, which is useful for understanding the purpose of each key when printed in the console.
 For example, the configuration for the app "App1" could look like this:
 
 ``` json
 {
   "App1": {
-    "0": ["CTRL+ALT+T", "#FF0000"],
-    "1": ["CTRL+C", "#FF0000"],
-    "2": ["CTRL+V", "#00FF00"],
-    "3": [["TAB", "S"], "#FF0000"],
-    "15": [["GUI+W", 0.1, "RETURN"], "#0000FF"]
+    "0": {
+      "key_sequence": ["CTRL+ALT+T"],
+      "color": "#FF0000",
+      "description": "Open terminal"
+    },
+    "1": {
+      "key_sequence": ["CTRL+C"],
+      "color": "#FF0000",
+      "description": "Copy"
+    },
+    "2": {
+      "key_sequence": ["CTRL+V"],
+      "color": "#00FF00",
+      "description": "Paste"
+    },
+    "3": {
+      "key_sequence": [["TAB", "S"]],
+      "color": "#FF0000",
+      "description": "Tab and save"
+    },
+    "15": {
+      "key_sequence": [["GUI+W", 0.1, "RETURN"]],
+      "color": "#0000FF",
+      "description": "Close window and confirm"
+    }
   }
 }
 ```
 
-In the `key_def.json` file, you will find a special app key called `_otherwise`. This key is used to define shortcut keys that are not specific to any particular app. When the Python script is running, it constantly monitors the active application on your computer, and if the active application matches any of the keys in the JSON file, it will load the relevant shortcut keys onto the keypad. If the active application does not match any of the defined keys, the "_otherwise" key is used as a fallback, and the shortcut keys defined under this key are loaded onto the keypad. This means that you can define a set of general purpose shortcut keys that are always available, regardless of which application is currently active.
+In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file, you will find a special app key called `_otherwise`. This key is used to define shortcut keys that are not specific to any particular app. When the Python script is running, it constantly monitors the active application on your computer, and if the active application matches any of the keys in the JSON file, it will load the relevant shortcut keys onto the keypad. If the active application does not match any of the defined keys, the "_otherwise" key is used as a fallback, and the shortcut keys defined under this key are loaded onto the keypad. This means that you can define a set of general-purpose shortcut keys that are always available, regardless of which application is currently active.
 
 ## Watchdog
 
