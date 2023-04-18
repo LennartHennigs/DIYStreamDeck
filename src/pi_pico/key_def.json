@@ -76,6 +76,11 @@
       "key_sequence": ["GUI+TWO"],
       "color": "#FFFF00",
       "description": "Switch to Calendar"
+    },
+    "3": {
+      "key_sequence": ["GUI+ALT+N"],
+      "color": "#00FF00",
+      "description": "New Email"
     }
   },
   "_otherwise": {
