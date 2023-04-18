@@ -30,13 +30,17 @@
         0.1,
         "TAB"
       ],
-      "#000FF00"
+      "#00FF00"
     ],
     "7": [
       [
         "ESCAPE"
       ],
       "#000000"
+    ],
+    "8": [
+      "GUI+SHIFT+H",
+      "#FFFF00"
     ],
     "10": [
       "GUI+SHIFT+C",
@@ -59,7 +63,17 @@
       "#FF0000"
     ]
   },
-  "Finder": {
+  "Microsoft Outlook": {
+    "0": [
+      "GUI+ONE",
+      "#FFFF00"
+    ],
+    "1": [
+      "GUI+TWO",
+      "#FFFF00"
+    ]
+  },
+  "_otherwise": {
     "0": [
       "GUI+SPACE",
       "#FFFFFF"
@@ -67,12 +81,6 @@
     "3": [
       "GUI+LEFT_CONTROL+Q",
       "#FF0000"
-    ]
-  },
-  "_otherwise": {
-    "0": [
-      "GUI+SPACE",
-      "#FFFFFF"
     ]
   }
 }
