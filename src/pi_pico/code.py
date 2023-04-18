@@ -24,7 +24,7 @@ class KeyController:
         self.keyboard = Keyboard(usb_hid.devices)
         self.layout = KeyboardLayoutUS(self.keyboard)
         self.key_configs = self.read_key_configs(self.JSON_FILE)
-        self.key_config = {}
+        self.key_config = self.key_configs.get("_otherwise", {})  # Add this line to set the initial key configuration
         self.usb_serial = usb_cdc.console
         self.update_keys()
 
