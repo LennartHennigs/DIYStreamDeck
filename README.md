@@ -41,8 +41,8 @@ In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/mai
 
 - `key_sequence`: This can be either a string or an array containing the keycodes representing the shortcut. You can find a [list of possible keycode here](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html).
   - If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T").
-  - If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]). 
-  - You can also add delays between key presses within a shortcut. To do this, simply include a floating-point number in the list of keys for a specific shortcut in the key_def.json file. This number represents the delay in seconds between key presses. 
+  - If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]).
+  - You can also add delays between key presses within a shortcut. To do this, simply include a floating-point number in the list of keys for a specific shortcut in the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file. This number represents the delay in seconds between key presses.
   
 - `color`: A string representing the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue).
 - `description`: A string describing the function of the key, which is useful for understanding the purpose of each key when printed in the console.
