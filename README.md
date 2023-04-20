@@ -39,8 +39,12 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 
 In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, where the key is the key number (0-15) and the value is an object with the following properties:
 
-- `key_sequence`: This can be either a string or an array containing the keycodes representing the shortcut. If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T"). If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]). In addition to specifying key combinations, you can also add delays between key presses within a shortcut. To do this, simply include a floating-point number in the list of keys for a specific shortcut in the key_def.json file. This number represents the delay in seconds between key presses. You can find a [list of possible keycode here](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html).
-- `color`: A string representing the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue), instead of using the predefined color constants. This allows for a wider range of color options to choose from and provides greater flexibility when customizing the keypad for different apps.
+- `key_sequence`: This can be either a string or an array containing the keycodes representing the shortcut. You can find a [list of possible keycode here](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html).
+  - If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T").
+  - If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]). 
+  - You can also add delays between key presses within a shortcut. To do this, simply include a floating-point number in the list of keys for a specific shortcut in the key_def.json file. This number represents the delay in seconds between key presses. 
+  
+- `color`: A string representing the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue).
 - `description`: A string describing the function of the key, which is useful for understanding the purpose of each key when printed in the console.
 For example, the configuration for the app "App1" could look like this:
 
