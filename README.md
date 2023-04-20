@@ -7,7 +7,7 @@ This project uses a Raspberry Pi Pico microcontroller and an [Pimoroni RGB Keypa
 
 If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
 
-**Note:** This was a (very successful) experiment with ChatGPT-4. I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and maybe two lines in the CicuitPython code).
+**Note:** This was a (very successful) experiment with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and maybe two lines in the CicuitPython code).
 
 ## Features
 
