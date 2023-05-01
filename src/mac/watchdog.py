@@ -1,4 +1,4 @@
-# DIY Steamdeck watchdog code for a Mac
+# DIY Streamdeck watchdog code for a Mac
 # L. Hennigs and ChatGPT 4.0
 # last changed: 23-04-18
 # https://github.com/LennartHennigs/DIYStreamDeck

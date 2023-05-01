@@ -1,4 +1,4 @@
-# DIY Steamdeck code for a Pi Pico - CircuitPython
+# DIY Streamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0
 # last changed: 23-04-14
 # https://github.com/LennartHennigs/DIYStreamDeck
