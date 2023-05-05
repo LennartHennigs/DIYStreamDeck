@@ -1,11 +1,13 @@
 
 # DIY Stream Deck with the Pimoroni RGB Keypad
 
-This project uses a Raspberry Pi Pico microcontroller and an [Pimoroni RGB Keypad](https://shop.pimoroni.com/products/pico-rgb-keypad-base) to provide dynamic app-specific shortcut keys. By monitoring the currently active app on your computer, it automatically loads and displays relevant shortcuts to streamline your workflow and increase productivity.
+This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keypad](https://shop.pimoroni.com/products/pico-rgb-keypad-base) to provide dynamic app-specific shortcut keys. By monitoring the currently active app on your computer, it automatically loads and displays relevant shortcuts to streamline your workflow and increase productivity.
 
 ![Keypad with Zoom Shortcuts](images/keypad.png)
 
 If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
+
+For the latest changes and the history of changes, please take a look at the CHANGELOG.
 
 **Note:** This was a (very successful) experiment with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and maybe two lines in the CicuitPython code).
 
@@ -39,13 +41,18 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 
 In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, where the key is the key number (0-15) and the value is an object with the following properties:
 
-- `key_sequence`: This can be either a string or an array containing the keycodes representing the shortcut. You can find a [list of possible keycode here](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html).
-  - If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T").
-  - If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]).
-  - You can also add delays between key presses within a shortcut. To do this, simply include a floating-point number in the list of keys for a specific shortcut in the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file. This number represents the delay in seconds between key presses.
-  
-- `color`: A string representing the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue).
-- `description`: A string describing the function of the key, which is useful for understanding the purpose of each key when printed in the console.
+- `key_sequence`: This field specifies the key combination to be executed when the key is pressed. You can use either a string or an array to specify the key sequence. If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T"). If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]). You can also add delays between key presses within a shortcut by including a floating-point number in the list of keys for a specific shortcut in the key_def.json file. This number represents the delay in seconds between key presses. You can find a list of possible keycodes here.
+- `application`: This field is used to specify the application to be launched when an application key is pressed.
+- `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue).
+- `description`: This field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
+
+With these fields you can define two types of keys, shortcut keys and application launch keys.
+
+- *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
+- Application keys have an `application` field which launches the specified application when the key is pressed.
+
+In addition to the regular shortcut keys for an app, there is a special app key called `_otherwise`, which is used as a fallback when no app definition is found in the JSON file. The `_otherwise` key can include its own set of general-purpose shortcut keys, similar to those defined for "App1". When the Python script is running, it constantly monitors the active application on the computer, and if the active application matches any of the keys in the JSON file, the relevant shortcut keys are loaded onto the keypad. If not, the shortcut keys defined under the "_otherwise" key are loaded onto the keypad.
+
 For example, the configuration for the app "App1" could look like this:
 
 ``` json
@@ -71,10 +78,15 @@ For example, the configuration for the app "App1" could look like this:
       "color": "#FF0000",
       "description": "Tab and save"
     },
-    "15": {
+    "14": {
       "key_sequence": [["GUI+W", 0.1, "RETURN"]],
       "color": "#0000FF",
       "description": "Close window and confirm"
+    },
+    "15": {
+      "application": "Microsoft Outlook",
+      "color": "#A2BAF5",
+      "description": "Launch Outlook"
     }
   }
 }
