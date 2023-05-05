@@ -1,6 +1,6 @@
 # DIY Streamdeck watchdog code for a Mac
 # L. Hennigs and ChatGPT 4.0
-# last changed: 23-04-18
+# last changed: 23-05-05
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import Cocoa
@@ -10,6 +10,8 @@ import sys
 import termios
 import tty
 import argparse
+import re
+import subprocess
 from typing import Optional
 from contextlib import contextmanager
 
@@ -22,6 +24,7 @@ def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Seria
     except serial.SerialException:
         return None
 
+
 # Function to run the main loop
 
 
@@ -30,6 +33,7 @@ def run_loop(observer: 'AppObserver'):
     while True:
         run_loop.runMode_beforeDate_(
             Cocoa.NSDefaultRunLoopMode, Cocoa.NSDate.dateWithTimeIntervalSinceNow_(0.1))
+
 
 # Main AppObserver class
 
@@ -45,22 +49,43 @@ class AppObserver(Cocoa.NSObject):
 
     @objc.signature(b'v@:@')  # Encoded the signature string as bytes
     def applicationActivated_(self, notification):
-        self.send_app_name_to_microcontroller(notification)
+        app_name = notification.userInfo()['NSWorkspaceApplicationKey'].localizedName()
+        self.send_app_name_to_microcontroller(app_name)
 
-    @objc.signature(b'v@:@')  # Encoded the signature string as bytes
-    def send_app_name_to_microcontroller(self, notification):
-        app_name = notification.userInfo(
-        )['NSWorkspaceApplicationKey'].localizedName()
+    @objc.signature(b'v@:@')
+    def send_app_name_to_microcontroller(self, app_name):
         if self.args.verbose:
             print(f'Active app: {app_name}')
         try:
             self.ser.write((app_name + '\n').encode('ascii', 'replace'))
+            self.handle_launch_command()
         except (serial.SerialException, UnicodeEncodeError) as e:
             print(f"Error sending app name to microcontroller: {e}")
 
+    def handle_launch_command(self):
+        launch_pattern = r"^Launch: (.+)$"
+
+        # Check if there's any data in the buffer
+        if self.ser.in_waiting > 0:
+            try:
+                command = self.ser.readline().decode().strip()
+                print(f"Received from serial: {command}")  # Add this line to print all data received via serial
+            except serial.SerialException as e:
+                print(f"Error reading from microcontroller: {e}")
+                return
+
+            match = re.match(launch_pattern, command)
+            if match:
+                launch_app_name = match.group(1)
+                print(f"Launch command received: {launch_app_name}")
+                try:
+                    subprocess.run(["open", "-a", launch_app_name], check=True)
+                except subprocess.CalledProcessError as e:
+                    print(f"Error launching application: {e}")
+            else:
+                print(f"Error: Invalid command received: {command}")
+
 # Main function
-
-
 def main():
     parser = argparse.ArgumentParser(
         description='Monitor active app and send data to microcontroller')

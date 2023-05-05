@@ -11,9 +11,9 @@
       "description": "Start/Stop Video"
     },
     "2": {
-      "key_sequence": ["GUI+SHIFT+S"],
-      "color": "#FFFF00",
-      "description": "Share Screen"
+      "key_sequence": ["ESCAPE"],
+      "color": "#000000",
+      "description": "Exit Full Screen"
     },
     "3": {
       "key_sequence": ["ALT+Z"],
@@ -21,29 +21,24 @@
       "description": "Toggle Zoom Controls"
     },
     "4": {
-      "key_sequence": ["GUI+SHIFT+W"],
-      "color": "#FFFF00",
-      "description": "Close All Zoom Windows"
+      "key_sequence": ["GUI+SHIFT+S"],
+      "color": "#00FF00",
+      "description": "Share Screen"
     },
     "5": {
+      "key_sequence": ["GUI+SHIFT+H"],
+      "color": "#FFFF00",
+      "description": "Show/Hide Chat"
+    },
+    "6": {
       "key_sequence": ["GUI+U"],
       "color": "#FFFF00",
       "description": "Show Participants Panel"
     },
-    "6": {
+    "7": {
       "key_sequence": ["GUI+I", 0.1, "TAB"],
       "color": "#00FF00",
       "description": "Invite Participants"
-    },
-    "7": {
-      "key_sequence": ["ESCAPE"],
-      "color": "#000000",
-      "description": "Exit Full Screen"
-    },
-    "8": {
-      "key_sequence": ["GUI+SHIFT+H"],
-      "color": "#FFFF00",
-      "description": "Show/Hide Chat"
     },
     "10": {
       "key_sequence": ["GUI+SHIFT+C"],
@@ -93,6 +88,26 @@
       "key_sequence": ["GUI+LEFT_CONTROL+Q"],
       "color": "#FF0000",
       "description": "Close Application"
+    },
+    "12": {
+      "application": "zoom.us",
+      "color": "#0000FF",
+      "description": "Launch Zoom"
+    },
+    "13": {
+      "application": "Slack",
+      "color": "#FF0000",
+      "description": "Launch Slack"
+    },
+    "14": {
+      "application": "Sketch",
+      "color": "#FFFF00",
+      "description": "Launch Sketch"
+    },
+    "15": {
+      "application": "Microsoft Outlook",
+      "color": "#A2BAF5",
+      "description": "Launch Outlook"
     }
   }
 }
