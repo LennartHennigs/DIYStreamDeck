@@ -1,6 +1,6 @@
 # DIY Streamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0
-# last changed: 23-04-14
+# last changed: 23-05-05
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import time
@@ -34,16 +34,20 @@ class KeyController:
 
     def key_action(self, key, press=True):
         if key.number in self.key_config:
-            # Add the underscore to ignore the description
-            key_sequences, color, _ = self.key_config[key.number]
+            # Add the underscore to ignore the description and application
+            key_sequences, color, _, _ = self.key_config[key.number]
             self.update_key_led(key, color, press)
             self.handle_key_sequences(key_sequences, press)
+
+            if 'application' in self.key_config[key.number]:
+                app_name = self.key_config[key.number]['application']
+                self.send_application_name(app_name)
 
     def update_key_led(self, key, color, press):
         key.set_led(*color) if not press else key.led_off()
         if press:  # Only print the description when the key is pressed
-            _, _, description = self.key_config[key.number]
-            print(f" Key {key.number} pressed: {description}")
+            _, _, description, _ = self.key_config[key.number]
+            print(f"Key {key.number} pressed: {description}")
 
     def handle_key_sequences(self, key_sequences, press):
         for item in key_sequences:
@@ -78,11 +82,18 @@ class KeyController:
                 pass
         return None
 
+    def send_application_name(self, app_name):
+        try:
+            self.usb_serial.write(f"Launch: {app_name}\n")
+            print(f"Sent to Mac: Launch: {app_name}")
+        except Exception as e:
+            print(f"Could not launch {app_name}: {e}\n")
+
     def run(self):
         while True:
             app_name = self.read_serial_line()
             if app_name is not None:
-                print(app_name)
+                print(f"Active App: {app_name}")
                 self.key_config = self.key_configs.get(
                     app_name, self.key_configs.get("_otherwise", {}))
                 self.update_keys()
@@ -118,14 +129,15 @@ class KeyController:
         for app, configs in json_data.items():
             key_configs[app] = {}
             for key, config in configs.items():
-                key_sequence = config['key_sequence']
+                key_sequence = config.get('key_sequence', [])
                 key_sequences = tuple(convert_value(v) for v in key_sequence) if isinstance(
                     key_sequence, list) else convert_keycode_string(key_sequence)
-                color_array = convert_color_string(config['color'])
-                description = config['description']  # Read the description
+                color_array = convert_color_string(config.get('color', ''))
+                description = config.get('description', '')  # Read the description
+                application = config.get('application', '')  # Read the application
                 # Store the description in the key_configs
                 key_configs[app][int(key)] = (
-                    key_sequences, color_array, description)
+                    key_sequences, color_array, description, application)
         return key_configs
 
 
