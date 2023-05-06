@@ -16,8 +16,8 @@ For the latest changes and the history of changes, please take a look at the [CH
 - Allows to assign keyboard shortcuts/key sequences to its keys
 - Dynamically detects the active app and updates the keypad with its shortcuts
 - Default keypad lapyout can be defined when no app specific layout is defined
-- Alternatively, app can be launched via the keypad 🆕
-- You can also define "folders" - a new keypad definition scheme that can be tied to a single key🆕    
+- Alternatively, apps can be launched via the keypad 🆕
+- You can also define "folders" - a new keypad definition scheme that can be tied to a single key 🆕    
 - Keypad definitions are stored and loaded in a JSON configuration file
 
 ## Hardware Requirements
