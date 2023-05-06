@@ -41,56 +41,118 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 
 ## Configuration
 
-In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, where the key is the key number (0-15) and the value is an object with the following properties:
+In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with two entries: `key_definitions` and `folders`. In the `key_definitions` area the different keys for various apps are defined with the key numbers (0-15). In `folders` key sets can be definied that can be assigned to a key.
 
-- `key_sequence`: This field specifies the key combination to be executed when the key is pressed. You can use either a string or an array to specify the key sequence. If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T"). If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]). You can also add delays between key presses within a shortcut by including a floating-point number in the list of keys for a specific shortcut in the key_def.json file. This number represents the delay in seconds between key presses. You can find a list of possible keycodes here.
+These are the possible fields for a key entry:
+
+- `key_sequence`: This field specifies the key combination to be executed when the key is pressed. You can use either a string or an array [to specify the key sequence](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html). If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T"). If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]). You can also add delays between key presses within a shortcut by including a floating-point number in the list of keys for a specific shortcut in the key_def.json file. This number represents the delay in seconds between key presses. You can find a list of possible keycodes here.
 - `application`: This field is used to specify the application to be launched when an application key is pressed.
 - `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue).
 - `description`: This field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
+- `folder`: This field allows you assign a "folder" to be opened. The entry also needs the `action` field
+- `action`: This field can have the values `open_folder` or `close_folder`. The later is needed inside a folder definition.
+
 
 With these fields you can define two types of keys, shortcut keys and application launch keys.
 
 - *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
 - *Application keys* have an `application` field which launches the specified application when the key is pressed.
 
-**TODO** *explain folder structure* !!!
-
 In addition to the regular shortcut keys for an app, there is a special app key called `_otherwise`, which is used as a fallback when no app definition is found in the JSON file. The `_otherwise` key can include its own set of general-purpose shortcut keys, similar to those defined for "App1". When the Python script is running, it constantly monitors the active application on the computer, and if the active application matches any of the keys in the JSON file, the relevant shortcut keys are loaded onto the keypad. If not, the shortcut keys defined under the "_otherwise" key are loaded onto the keypad.
 
-For example, the configuration for the app "App1" could look like this:
+For example, the configuration could look like this:
 
 ``` json
 {
-  "App1": {
-    "0": {
-      "key_sequence": ["CTRL+ALT+T"],
-      "color": "#FF0000",
-      "description": "Open terminal"
+  "key_definitions": {
+    "zoom.us": {
+      "0": {
+        "key_sequence": [
+          "GUI+SHIFT+A"
+        ],
+        "color": "#FFFF00",
+        "description": "Mute/Unmute Audio"
+      },
+      "1": {
+        "key_sequence": [
+          "GUI+SHIFT+V"
+        ],
+        "color": "#FFFF00",
+        "description": "Start/Stop Video"
+      },
+      "15": {
+        "key_sequence": [
+          "GUI+W",
+          0.1,
+          "RETURN"
+        ],
+        "color": "#FF0000",
+        "description": "End Meeting"
+      }
     },
-    "1": {
-      "key_sequence": ["CTRL+C"],
-      "color": "#FF0000",
-      "description": "Copy"
+    "Microsoft Outlook": {
+      "0": {
+        "key_sequence": [
+          "GUI+ONE"
+        ],
+        "color": "#FFFF00",
+        "description": "Switch to Mail"
+      },
+      "1": {
+        "key_sequence": [
+          "GUI+TWO"
+        ],
+        "color": "#FFFF00",
+        "description": "Switch to Calendar"
+      },
+      "3": {
+        "key_sequence": [
+          "GUI+ALT+N"
+        ],
+        "color": "#00FF00",
+        "description": "New Email"
+      }
     },
-    "2": {
-      "key_sequence": ["CTRL+V"],
-      "color": "#00FF00",
-      "description": "Paste"
-    },
-    "3": {
-      "key_sequence": [["TAB", "S"]],
-      "color": "#FF0000",
-      "description": "Tab and save"
-    },
-    "14": {
-      "key_sequence": [["GUI+W", 0.1, "RETURN"]],
-      "color": "#0000FF",
-      "description": "Close window and confirm"
-    },
-    "15": {
-      "application": "Microsoft Outlook",
-      "color": "#A2BAF5",
-      "description": "Launch Outlook"
+    "_otherwise": {
+      "0": {
+        "key_sequence": [
+          "GUI+SPACE"
+        ],
+        "color": "#FFFFFF",
+        "description": "Open Spotlight Search"
+      },
+      "3": {
+        "key_sequence": [
+          "GUI+LEFT_CONTROL+Q"
+        ],
+        "color": "#FF0000",
+        "description": "Close Application"
+      },
+      "13": {
+        "action": "open_folder",
+        "folder": "apps",
+        "color": "#FFFFFF",
+        "description": "Apps Folder"
+      }
+    }
+  },
+  "folders": {
+    "apps": {
+      "0": {
+        "action": "close_folder",
+        "color": "#FFFFFF",
+        "description": "Close"
+      },
+      "12": {
+        "application": "zoom.us",
+        "color": "#0000FF",
+        "description": "Launch Zoom"
+      },
+      "13": {
+        "application": "Slack",
+        "color": "#FF0000",
+        "description": "Launch Slack"
+      }
     }
   }
 }
@@ -108,8 +170,8 @@ To run the watchdog script, navigate to the directory containing the watchdog.py
 python3 watchdog.py --port /dev/cu.usbmodem2101 --speed 9600 --verbose
 ```
 
-- The `--port` parameter should be set to the USB serial port corresponding to your Raspberry Pi Pico (e.g., `/dev/cu.usbmodem2101`).
-- The `--speed` parameter should be set to the desired baud rate for the serial communication (e.g., `9600`).
-- If the `--verbose` parameter is set, the current app will be printed to the console.
+- The `--port` parameter needs to be set to the USB serial port corresponding to your Raspberry Pi Pico (e.g., `/dev/cu.usbmodem2101`).
+- The optional `--speed` parameter should be set to the desired baud rate for the serial communication (default: `9600`).
+- If the optional `--verbose` parameter is set, the current app will be printed to the console.
 
 When the watchdog script detects a change in the active app, it sends the app's name as a single line over the USB serial connection. The Pi Pico then reads this information, loads the corresponding shortcuts from the `key_def.json` file, and updates the keypad accordingly.
