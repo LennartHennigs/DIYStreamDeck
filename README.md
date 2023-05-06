@@ -1,5 +1,5 @@
 
-# DIY Stream Deck with the Pimoroni RGB Keypad
+# DIY Streamdeck with the Pimoroni RGB Keypad
 
 This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keypad](https://shop.pimoroni.com/products/pico-rgb-keypad-base) to provide dynamic app-specific shortcut keys. By monitoring the currently active app on your computer, it automatically loads and displays relevant shortcuts to streamline your workflow and increase productivity.
 
