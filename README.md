@@ -51,9 +51,9 @@ In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/mai
 With these fields you can define two types of keys, shortcut keys and application launch keys.
 
 - *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
-- Application keys have an `application` field which launches the specified application when the key is pressed.
+- *Application keys* have an `application` field which launches the specified application when the key is pressed.
 
-::TODO:: *explain folder structure* !!!
+**TODO** *explain folder structure* !!!
 
 In addition to the regular shortcut keys for an app, there is a special app key called `_otherwise`, which is used as a fallback when no app definition is found in the JSON file. The `_otherwise` key can include its own set of general-purpose shortcut keys, similar to those defined for "App1". When the Python script is running, it constantly monitors the active application on the computer, and if the active application matches any of the keys in the JSON file, the relevant shortcut keys are loaded onto the keypad. If not, the shortcut keys defined under the "_otherwise" key are loaded onto the keypad.
 
