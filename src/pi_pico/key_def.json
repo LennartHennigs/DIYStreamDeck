@@ -114,6 +114,8 @@
         "description": "New Email"
       }
     },
+    "loginwindow": {
+    },
     "_otherwise": {
       "0": {
         "key_sequence": [
