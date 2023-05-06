@@ -34,6 +34,7 @@ def run_loop(observer: 'AppObserver'):
         run_loop.runMode_beforeDate_(
             Cocoa.NSDefaultRunLoopMode, Cocoa.NSDate.dateWithTimeIntervalSinceNow_(0.1))
 
+        observer.handle_launch_command()
 
 # Main AppObserver class
 
@@ -58,7 +59,6 @@ class AppObserver(Cocoa.NSObject):
             print(f'Active app: {app_name}')
         try:
             self.ser.write((app_name + '\n').encode('ascii', 'replace'))
-            self.handle_launch_command()
         except (serial.SerialException, UnicodeEncodeError) as e:
             print(f"Error sending app name to microcontroller: {e}")
 
