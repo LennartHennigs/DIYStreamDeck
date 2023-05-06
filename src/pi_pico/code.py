@@ -33,8 +33,6 @@ class KeyController:
         self.folder_open = False
         self.active_app = None
 
-
-        
     def open_folder(self, folder_name):
         if folder_name in self.folders:
             self.folder_open = True
@@ -44,7 +42,8 @@ class KeyController:
 
     def close_folder(self):
         self.folder_open = False
-        self.key_config = self.key_configs.get(self.active_app, self.key_configs.get("_otherwise", {}))
+        self.key_config = self.key_configs.get(
+            self.active_app, self.key_configs.get("_otherwise", {}))
         self.update_keys()
 
     def key_action(self, key, press=True):
@@ -52,7 +51,8 @@ class KeyController:
             key_sequences, color, _, _, action, _ = self.key_config[key.number]
             self.update_key_led(key, color, press)
 
-            key_config_dict = dict(zip(['key_sequences', 'color', 'description', 'application', 'action', 'folder'], self.key_config[key.number]))
+            key_config_dict = dict(zip(['key_sequences', 'color', 'description',
+                                   'application', 'action', 'folder'], self.key_config[key.number]))
 
             if key_config_dict.get('action') and press:
                 action = key_config_dict['action']
@@ -76,7 +76,7 @@ class KeyController:
             key.set_led(*color) if not press else key.led_off()
             if press:  # Only print the description when the key is pressed
                 _, _, description, _, _, _ = self.key_config[key.number]
-                #print(f"Key {key.number} pressed: {description}")
+                # print(f"Key {key.number} pressed: {description}")
 
     def handle_key_sequences(self, key_sequences, press):
         for item in key_sequences:
@@ -93,7 +93,8 @@ class KeyController:
     def update_keys(self):
         for key in self.keys:
             if key.number in self.key_config:
-                key_config_dict = dict(zip(['key_sequences', 'color', 'description', 'application', 'action', 'folder'], self.key_config[key.number]))
+                key_config_dict = dict(zip(['key_sequences', 'color', 'description',
+                                       'application', 'action', 'folder'], self.key_config[key.number]))
 
                 color = key_config_dict['color']
                 key.set_led(*color)
@@ -104,7 +105,6 @@ class KeyController:
                 key.led_off()
                 self.keypad.on_press(key, lambda _, key=key: None)
                 self.keypad.on_release(key, lambda _, key=key: None)
-
 
     def read_serial_line(self):
         if usb_cdc.console.in_waiting > 0:
@@ -117,17 +117,18 @@ class KeyController:
 
     def send_application_name(self, app_name):
         try:
-            usb_cdc.console.write(f"Launch: {app_name}\n".encode('utf-8'))  # Encode the string to bytes
+            usb_cdc.console.write(f"Launch: {app_name}\n".encode(
+                'utf-8'))  # Encode the string to bytes
             # print(f"Sent to Mac: Launch: {app_name}")
         except Exception as e:
             # print(f"Could not launch {app_name}: {e}\n")
             pass
-    
+
     def run(self):
         while True:
             app_name = self.read_serial_line()
             if app_name is not None:
-                #print(f"Active App: {app_name}")
+                # print(f"Active App: {app_name}")
                 self.key_config = self.key_configs.get(
                     app_name, self.key_configs.get("_otherwise", {}))
                 self.update_keys()
@@ -174,9 +175,10 @@ class KeyController:
                 folder = config.get('folder', '')
 
                 if action == 'open_folder' and folder not in json_data["folders"]:
-                    print(f"Error: Folder '{folder}' not found. Disabling key binding.")
+                    print(
+                        f"Error: Folder '{folder}' not found. Disabling key binding.")
                     key_sequences = ()
-                    color_array = (0,0,0)
+                    color_array = (0, 0, 0)
                     description = ''
                     application = ''
                     action = ''
@@ -208,7 +210,8 @@ class KeyController:
                     key_sequences, color_array, description, application, action, folder)
 
             if not close_folder_found:
-                raise ValueError(f"Error: Folder '{folder_name}' does not have a 'close_folder' action defined.")
+                raise ValueError(
+                    f"Error: Folder '{folder_name}' does not have a 'close_folder' action defined.")
 
         return key_configs, folders
 
@@ -216,5 +219,3 @@ class KeyController:
 if __name__ == "__main__":
     controller = KeyController()
     controller.run()
-
-
