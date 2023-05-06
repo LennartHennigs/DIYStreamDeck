@@ -69,7 +69,6 @@ class AppObserver(Cocoa.NSObject):
         if self.ser.in_waiting > 0:
             try:
                 command = self.ser.readline().decode().strip()
-                print(f"Received from serial: {command}")  # Add this line to print all data received via serial
             except serial.SerialException as e:
                 print(f"Error reading from microcontroller: {e}")
                 return
@@ -77,13 +76,12 @@ class AppObserver(Cocoa.NSObject):
             match = re.match(launch_pattern, command)
             if match:
                 launch_app_name = match.group(1)
-                print(f"Launch command received: {launch_app_name}")
+                if self.args.verbose:
+                    print(f"Launching: {launch_app_name}")
                 try:
                     subprocess.run(["open", "-a", launch_app_name], check=True)
                 except subprocess.CalledProcessError as e:
-                    print(f"Error launching application: {e}")
-            else:
-                print(f"Error: Invalid command received: {command}")
+                    pass
 
 # Main function
 def main():
