@@ -1,113 +1,184 @@
 {
-  "zoom.us": {
-    "0": {
-      "key_sequence": ["GUI+SHIFT+A"],
-      "color": "#FFFF00",
-      "description": "Mute/Unmute Audio"
+  "key_definitions": {
+    "zoom.us": {
+      "0": {
+        "key_sequence": [
+          "GUI+SHIFT+A"
+        ],
+        "color": "#FFFF00",
+        "description": "Mute/Unmute Audio"
+      },
+      "1": {
+        "key_sequence": [
+          "GUI+SHIFT+V"
+        ],
+        "color": "#FFFF00",
+        "description": "Start/Stop Video"
+      },
+      "2": {
+        "key_sequence": [
+          "ESCAPE"
+        ],
+        "color": "#000000",
+        "description": "Exit Full Screen"
+      },
+      "3": {
+        "key_sequence": [
+          "ALT+Z"
+        ],
+        "color": "#FFA500",
+        "description": "Toggle Zoom Controls"
+      },
+      "4": {
+        "key_sequence": [
+          "GUI+SHIFT+S"
+        ],
+        "color": "#00FF00",
+        "description": "Share Screen"
+      },
+      "5": {
+        "key_sequence": [
+          "GUI+SHIFT+H"
+        ],
+        "color": "#FFFF00",
+        "description": "Show/Hide Chat"
+      },
+      "6": {
+        "key_sequence": [
+          "GUI+U"
+        ],
+        "color": "#FFFF00",
+        "description": "Show Participants Panel"
+      },
+      "7": {
+        "key_sequence": [
+          "GUI+I",
+          0.1,
+          "TAB"
+        ],
+        "color": "#00FF00",
+        "description": "Invite Participants"
+      },
+      "10": {
+        "key_sequence": [
+          "GUI+SHIFT+C"
+        ],
+        "color": "#FF0000",
+        "description": "Record Meeting"
+      },
+      "11": {
+        "key_sequence": [
+          "GUI+SHIFT+P"
+        ],
+        "color": "#FFFFFF",
+        "description": "Pause/Resume Recording"
+      },
+      "12": {
+        "key_sequence": [
+          "GUI+W",
+          0.1,
+          "RETURN"
+        ],
+        "color": "#FF0000",
+        "description": "End Meeting"
+      },
+      "13": {
+        "key_sequence": [
+          "GUI+SHIFT+F"
+        ],
+        "color": "#0000FF",
+        "description": "Enter/Exit Full Screen"
+      }
+
     },
-    "1": {
-      "key_sequence": ["GUI+SHIFT+V"],
-      "color": "#FFFF00",
-      "description": "Start/Stop Video"
+    "Microsoft Outlook": {
+      "0": {
+        "key_sequence": [
+          "GUI+ONE"
+        ],
+        "color": "#FFFF00",
+        "description": "Switch to Mail"
+      },
+      "1": {
+        "key_sequence": [
+          "GUI+TWO"
+        ],
+        "color": "#FFFF00",
+        "description": "Switch to Calendar"
+      },
+      "3": {
+        "key_sequence": [
+          "GUI+ALT+N"
+        ],
+        "color": "#00FF00",
+        "description": "New Email"
+      }
     },
-    "2": {
-      "key_sequence": ["ESCAPE"],
-      "color": "#000000",
-      "description": "Exit Full Screen"
-    },
-    "3": {
-      "key_sequence": ["ALT+Z"],
-      "color": "#FFA500",
-      "description": "Toggle Zoom Controls"
-    },
-    "4": {
-      "key_sequence": ["GUI+SHIFT+S"],
-      "color": "#00FF00",
-      "description": "Share Screen"
-    },
-    "5": {
-      "key_sequence": ["GUI+SHIFT+H"],
-      "color": "#FFFF00",
-      "description": "Show/Hide Chat"
-    },
-    "6": {
-      "key_sequence": ["GUI+U"],
-      "color": "#FFFF00",
-      "description": "Show Participants Panel"
-    },
-    "7": {
-      "key_sequence": ["GUI+I", 0.1, "TAB"],
-      "color": "#00FF00",
-      "description": "Invite Participants"
-    },
-    "10": {
-      "key_sequence": ["GUI+SHIFT+C"],
-      "color": "#FF0000",
-      "description": "Record Meeting"
-    },
-    "11": {
-      "key_sequence": ["GUI+SHIFT+P"],
-      "color": "#FFFFFF",
-      "description": "Pause/Resume Recording"
-    },
-    "12": {
-      "key_sequence": ["GUI+SHIFT+F"],
-      "color": "#0000FF",
-      "description": "Enter/Exit Full Screen"
-    },
-    "15": {
-      "key_sequence": ["GUI+W", 0.1, "RETURN"],
-      "color": "#FF0000",
-      "description": "End Meeting"
+    "_otherwise": {
+      "0": {
+        "key_sequence": [
+          "GUI+SPACE"
+        ],
+        "color": "#FFFFFF",
+        "description": "Open Spotlight Search"
+      },
+      "3": {
+        "key_sequence": [
+          "GUI+LEFT_CONTROL+Q"
+        ],
+        "color": "#FF0000",
+        "description": "Close Application"
+      },
+      "12": {
+        "action": "open_folder",
+        "folder": "apps",
+        "color": "#FFFFFF",
+        "description": "Apps Folder"
+      }
     }
   },
-  "Microsoft Outlook": {
-    "0": {
-      "key_sequence": ["GUI+ONE"],
-      "color": "#FFFF00",
-      "description": "Switch to Mail"
-    },
-    "1": {
-      "key_sequence": ["GUI+TWO"],
-      "color": "#FFFF00",
-      "description": "Switch to Calendar"
-    },
-    "3": {
-      "key_sequence": ["GUI+ALT+N"],
-      "color": "#00FF00",
-      "description": "New Email"
-    }
-  },
-  "_otherwise": {
-    "0": {
-      "key_sequence": ["GUI+SPACE"],
-      "color": "#FFFFFF",
-      "description": "Open Spotlight Search"
-    },
-    "3": {
-      "key_sequence": ["GUI+LEFT_CONTROL+Q"],
-      "color": "#FF0000",
-      "description": "Close Application"
-    },
-    "12": {
-      "application": "zoom.us",
-      "color": "#0000FF",
-      "description": "Launch Zoom"
-    },
-    "13": {
-      "application": "Slack",
-      "color": "#FF0000",
-      "description": "Launch Slack"
-    },
-    "14": {
-      "application": "Sketch",
-      "color": "#FFFF00",
-      "description": "Launch Sketch"
-    },
-    "15": {
-      "application": "Microsoft Outlook",
-      "color": "#A2BAF5",
-      "description": "Launch Outlook"
+  "folders": {
+    "apps": {
+      "0": {
+        "application": "zoom.us",
+        "color": "#0000FF",
+        "description": "Launch Zoom"
+      },
+      "1": {
+        "application": "Slack",
+        "color": "#FF0000",
+        "description": "Launch Slack"
+      },
+      "2": {
+        "application": "Microsoft Outlook",
+        "color": "#A2BAF5",
+        "description": "Launch Outlook"
+      },
+      "3": {
+        "application": "Notes",
+        "color": "#FFFF00",
+        "description": "Launch Notes"
+      },
+      "4": {
+        "application": "Sketch",
+        "color": "#F1C232",
+        "description": "Launch Sketch"
+      },
+      "5": {
+        "application": "Zeplin",
+        "color": "#FF4D04",
+        "description": "Launch Zeplin"
+      },
+      "6": {
+        "application": "Visual Studio Code",
+        "color": "#0000FF",
+        "description": "Launch VS Code"
+      },
+      "12": {
+        "action": "close_folder",
+        "color": "#FF0000",
+        "description": "Close"
+      }
     }
   }
 }
