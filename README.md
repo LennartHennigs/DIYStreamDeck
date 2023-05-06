@@ -7,9 +7,9 @@ This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keyp
 
 If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
 
-For the latest changes and the history of changes, please take a look at the CHANGELOG.
+For the latest changes and the history of changes, please take a look at the [CHANGELOG](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
 
-**Note:** This was a (very successful) experiment with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and maybe two lines in the CicuitPython code).
+**Note:** This was (and is) a very successful experiment with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and maybe five lines in the CicuitPython code).
 
 ## Features
 
@@ -50,6 +50,8 @@ With these fields you can define two types of keys, shortcut keys and applicatio
 
 - *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
 - Application keys have an `application` field which launches the specified application when the key is pressed.
+
+::TODO:: *explain folder structure* !!!
 
 In addition to the regular shortcut keys for an app, there is a special app key called `_otherwise`, which is used as a fallback when no app definition is found in the JSON file. The `_otherwise` key can include its own set of general-purpose shortcut keys, similar to those defined for "App1". When the Python script is running, it constantly monitors the active application on the computer, and if the active application matches any of the keys in the JSON file, the relevant shortcut keys are loaded onto the keypad. If not, the shortcut keys defined under the "_otherwise" key are loaded onto the keypad.
 
