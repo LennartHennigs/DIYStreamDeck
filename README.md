@@ -53,7 +53,7 @@ These are the possible fields for a key entry:
 - `action`: This field can have the values `open_folder` or `close_folder`. The later is needed inside a folder definition.
 
 
-With these fields you can define two types of keys, shortcut keys and application launch keys.
+With these fields you can define three types of keys, shortcut keys, application launch keys, and folder keys.
 
 - *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
 - *Application keys* have an `application` field which launches the specified application when the key is pressed.
