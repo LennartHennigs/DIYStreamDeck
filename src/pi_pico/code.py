@@ -1,6 +1,6 @@
 # DIY Streamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0
-# last changed: 23-05-05
+# last changed: 23-05-11
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import time
@@ -50,34 +50,36 @@ class KeyController:
 
     def key_action(self, key, press=True):
         if key.number in self.key_config:
-            key_sequences, color, _, _, action, _ = self.key_config[key.number]
-            self.update_key_led(key, color, press)
-
             key_config_dict = dict(zip(['key_sequences', 'color', 'description',
                                    'application', 'action', 'folder'], self.key_config[key.number]))
 
-            if key_config_dict.get('action') and press:
-                action = key_config_dict['action']
-                if action == 'open_folder':
-                    folder_name = key_config_dict['folder']
-                    if folder_name in self.folders:
-                        self.open_folder(folder_name)
+            key_sequences = key_config_dict['key_sequences']
+            color = key_config_dict['color']
+            action = key_config_dict.get('action')
+            folder = key_config_dict.get('folder')
+
+            self.update_key_led(key, color, press)
+
+            if press:
+                if folder:
+                    self.open_folder(folder)
                 elif action == 'close_folder':
                     self.close_folder()
-            else:
-                self.handle_key_sequences(key_sequences, press)
-
-                if isinstance(self.key_config[key.number], tuple):
-                    if key_config_dict.get('application') and press:
+                else:
+                    self.handle_key_sequences(key_sequences, press)
+                    if key_config_dict.get('application'):
                         app_name = key_config_dict['application']
                         self.send_application_name(app_name)
 
     def update_key_led(self, key, color, press):
         if key.number in self.key_config:
-            _, color, _, _, _, _ = self.key_config[key.number]
+            key_config_dict = dict(zip(['key_sequences', 'color', 'description',
+                                   'application', 'action', 'folder'], self.key_config[key.number]))
+
+            color = key_config_dict['color']
             key.set_led(*color) if not press else key.led_off()
             if press:  # Only print the description when the key is pressed
-                _, _, description, _, _, _ = self.key_config[key.number]
+                description = key_config_dict.get('description', '')
                 # print(f"Key {key.number} pressed: {description}")
 
     def handle_key_sequences(self, key_sequences, press):
@@ -176,7 +178,7 @@ class KeyController:
                 action = config.get('action', '')
                 folder = config.get('folder', '')
 
-                if action == 'open_folder' and folder not in json_data["folders"]:
+                if folder and folder not in json_data["folders"]:
                     print(
                         f"Error: Folder '{folder}' not found. Disabling key binding.")
                     key_sequences = ()
