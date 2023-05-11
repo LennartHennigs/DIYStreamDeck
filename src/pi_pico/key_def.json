@@ -74,6 +74,18 @@
         "description": "Pause/Resume Recording"
       },
       "12": {
+        "folder": "apps",
+        "color": "#FFFFFF",
+        "description": "Apps Folder"
+      },
+      "14": {
+        "key_sequence": [
+          "GUI+SHIFT+F"
+        ],
+        "color": "#0000FF",
+        "description": "Enter/Exit Full Screen"
+      },
+      "15": {
         "key_sequence": [
           "GUI+W",
           0.1,
@@ -81,15 +93,7 @@
         ],
         "color": "#FF0000",
         "description": "End Meeting"
-      },
-      "13": {
-        "key_sequence": [
-          "GUI+SHIFT+F"
-        ],
-        "color": "#0000FF",
-        "description": "Enter/Exit Full Screen"
       }
-
     },
     "Microsoft Outlook": {
       "0": {
@@ -112,6 +116,11 @@
         ],
         "color": "#00FF00",
         "description": "New Email"
+      },
+      "12": {
+        "folder": "apps",
+        "color": "#FFFFFF",
+        "description": "Apps Folder"
       }
     },
     "loginwindow": {
@@ -132,10 +141,14 @@
         "description": "Close Application"
       },
       "12": {
-        "action": "open_folder",
         "folder": "apps",
         "color": "#FFFFFF",
         "description": "Apps Folder"
+      },
+      "15": {
+        "key_sequence": "GUI+Q",
+        "color": "#FF0000",
+        "description": "Close Application"
       }
     }
   },
@@ -176,10 +189,25 @@
         "color": "#0000FF",
         "description": "Launch VS Code"
       },
+      "10": {
+        "key_sequence": "GUI+F3",
+        "color": "#FFFF00",
+        "description": "Show Desktop"
+      },
+      "11": {
+        "key_sequence": "F3",
+        "color": "#FFFF00",
+        "description": "Show All Windows"
+      },
       "12": {
         "action": "close_folder",
-        "color": "#FF0000",
+        "color": "#FFFFFF",
         "description": "Close"
+      },
+      "15": {
+        "key_sequence": "GUI+Q",
+        "color": "#FF0000",
+        "description": "Close Application"
       }
     }
   }
