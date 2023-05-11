@@ -222,4 +222,9 @@ class KeyController:
 
 if __name__ == "__main__":
     controller = KeyController()
-    controller.run()
+    try:
+        controller.run()
+    except KeyboardInterrupt:
+        # turn off all the LEDs when the program is interrupted
+        for key in controller.keys:
+            key.led_off()
