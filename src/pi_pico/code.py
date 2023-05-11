@@ -32,9 +32,11 @@ class KeyController:
         self.update_keys()
         self.folder_open = False
         self.active_app = None
+        self.last_key_config = None
 
     def open_folder(self, folder_name):
         if folder_name in self.folders:
+            self.last_key_config = self.key_config
             self.folder_open = True
             self.folder_name = folder_name
             self.key_config = self.folders[folder_name]
@@ -42,8 +44,8 @@ class KeyController:
 
     def close_folder(self):
         self.folder_open = False
-        self.key_config = self.key_configs.get(
-            self.active_app, self.key_configs.get("_otherwise", {}))
+        self.key_config = self.last_key_config
+        self.last_key_config = None
         self.update_keys()
 
     def key_action(self, key, press=True):
