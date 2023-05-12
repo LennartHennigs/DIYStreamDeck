@@ -130,11 +130,20 @@ class KeyController:
 
     def run(self):
         while True:
-            app_name = self.read_serial_line()
-            if app_name is not None:
-                # print(f"Active App: {app_name}")
+            raw_app_name = self.read_serial_line()
+            if raw_app_name is not None:
+                # Split the app_name string on the first occurrence of " ("
+                split_app_name = raw_app_name.split(" (", 1)
+                # The first part is always the app name
+                app_name = split_app_name[0]
+                # The second part is the details, if they exist
+                url = None
+                if len(split_app_name) > 1:
+                    # Remove the trailing ")" from the details
+                    url = split_app_name[1].rstrip(')')
+                # print(f"Active App: {app_name}, URL: {url}")
                 self.key_config = self.key_configs.get(
-                    app_name, self.key_configs.get("_otherwise", {}))
+                    app_name, self.key_configs.get("_otherwise", {}))   
                 self.update_keys()
             else:
                 time.sleep(0.1)
