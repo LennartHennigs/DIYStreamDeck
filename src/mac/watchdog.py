@@ -1,6 +1,6 @@
 # DIY Streamdeck watchdog code for a Mac
 # L. Hennigs and ChatGPT 4.0
-# last changed: 23-05-05
+# last changed: 23-05-12
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import Cocoa
@@ -58,17 +58,16 @@ class AppObserver(Cocoa.NSObject):
 
     @objc.signature(b'v@:@')
     def send_app_name_to_microcontroller(self, app_name):
+        command_dict = {
+            "Google Chrome": 'get URL of active tab of first window',
+            "Safari": 'get URL of current tab of front window'
+        }
+
         script = None
-        if app_name == "Google Chrome":
-            script = '''
-                tell application "Google Chrome"
-                    get URL of active tab of first window
-                end tell
-            '''
-        elif app_name == "Safari":
-            script = '''
-                tell application "Safari"
-                    get URL of current tab of front window
+        if app_name in command_dict:
+            script = f'''
+                tell application "{app_name}"
+                    {command_dict[app_name]}
                 end tell
             '''
 
