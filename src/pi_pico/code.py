@@ -1,6 +1,6 @@
 # DIY Streamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0
-# last changed: 23-05-11
+# last changed: 23-05-12
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import time
@@ -51,7 +51,7 @@ class KeyController:
     def key_action(self, key, press=True):
         if key.number in self.key_config:
             key_config_dict = dict(zip(['key_sequences', 'color', 'description',
-                                   'application', 'action', 'folder'], self.key_config[key.number]))
+                                'application', 'action', 'folder'], self.key_config[key.number]))
 
             key_sequences = key_config_dict['key_sequences']
             color = key_config_dict['color']
@@ -70,6 +70,8 @@ class KeyController:
                     if key_config_dict.get('application'):
                         app_name = key_config_dict['application']
                         self.send_application_name(app_name)
+            else:
+                self.handle_key_sequences(key_sequences, press)
 
     def update_key_led(self, key, color, press):
         if key.number in self.key_config:
