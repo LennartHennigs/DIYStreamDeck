@@ -14,6 +14,8 @@ import re
 import subprocess
 from typing import Optional
 from contextlib import contextmanager
+from urllib.parse import urlparse
+
 
 # Function to create a serial connection
 
@@ -50,11 +52,36 @@ class AppObserver(Cocoa.NSObject):
 
     @objc.signature(b'v@:@')  # Encoded the signature string as bytes
     def applicationActivated_(self, notification):
-        app_name = notification.userInfo()['NSWorkspaceApplicationKey'].localizedName()
+        app_name = notification.userInfo(
+        )['NSWorkspaceApplicationKey'].localizedName()
         self.send_app_name_to_microcontroller(app_name)
 
     @objc.signature(b'v@:@')
     def send_app_name_to_microcontroller(self, app_name):
+        script = None
+        if app_name == "Google Chrome":
+            script = '''
+                tell application "Google Chrome"
+                    get URL of active tab of first window
+                end tell
+            '''
+        elif app_name == "Safari":
+            script = '''
+                tell application "Safari"
+                    get URL of current tab of front window
+                end tell
+            '''
+
+        if script is not None:
+            osa = subprocess.Popen(
+                ['osascript', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            output, error = osa.communicate(script.encode())
+            full_url = output.decode().strip()
+
+            parsed_url = urlparse(full_url)
+            base_url = parsed_url.netloc
+            app_name = app_name + " (" + base_url + ")"
+
         if self.args.verbose:
             print(f'Active app: {app_name}')
         try:
@@ -84,6 +111,8 @@ class AppObserver(Cocoa.NSObject):
                     pass
 
 # Main function
+
+
 def main():
     parser = argparse.ArgumentParser(
         description='Monitor active app and send data to microcontroller')
