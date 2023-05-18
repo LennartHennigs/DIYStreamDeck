@@ -19,10 +19,11 @@ class SpotifyPlugin(BasePlugin):
                 'spotify.prev': self.prev,
                 'spotify.volume_up': self.volume_up,
                 'spotify.volume_down': self.volume_down,
-                'spotify.playpause': self.playpause,
+                'spotify.playpause': self.play_pause,
             }
 
-    def __init__(self, config_file):
+    def __init__(self, config_file, verbose):
+        self.verbose = verbose
         try:
             self.config = self.load_config(config_file)
             self.sp = self.authenticate()
@@ -75,64 +76,52 @@ class SpotifyPlugin(BasePlugin):
             pass
             # print(f"Failed to execute the command: {e}")
 
-    def playpause(self):
+    def play_pause(self):
         try:
             current_playback = self.sp.current_playback()
             if current_playback is not None and current_playback['is_playing']:
+                if self.verbose:
+                    print("Pause")
                 self.pause()
             else:
                 self.play()
         except Exception as e:
-            # print(f"Failed to toggle play/pause: {e}")
-            pass
-
+            print(f"An error occurred: {e}")
+    
     def play(self):
         try:
             current_playback = self.sp.current_playback()
             if current_playback is None or not current_playback['is_playing']:
                 self.sp.start_playback()
-                print(self.get_current_song_info())
+                if self.verbose:
+                    print(self.get_current_song_info())
             else:
                 print("No song is currently playing.")
 
         except Exception as e:
             pass
-            # print(f"Failed to execute play command: {e}")
-
-
-    def get_current_song_info(self):
-        current_song = self.sp.current_user_playing_track()
-        if current_song is not None and current_song['is_playing']:
-            track = current_song['item']
-            artist = track['artists'][0]['name']
-            song_name = track['name']
-            return f"{artist} - {song_name}"
-        else:
-            return None
-
 
     def pause(self):
         try:
             self.sp.pause_playback()
         except Exception as e:
             pass
-            # print(f"Failed to execute pause command: {e}")
 
     def next(self):
         try:
             self.sp.next_track()
-            print(self.get_current_song_info())
+            if self.verbose:
+                print(self.get_current_song_info())
         except Exception as e:
             pass
-            # print(f"Failed to execute next command: {e}")
 
     def prev(self):
         try:
             self.sp.previous_track()
-            print(self.get_current_song_info())
+            if self.verbose:
+                print(self.get_current_song_info())
         except Exception as e:
             pass
-            # print(f"Failed to execute next command: {e}")
 
     def volume_up(self, volume_change=10):
         try:
@@ -155,3 +144,13 @@ class SpotifyPlugin(BasePlugin):
             print(f"Volume decreased to {new_volume}%")
         except Exception as e:
             print(f"Failed to decrease volume: {e}")
+
+    def get_current_song_info(self):
+        current_song = self.sp.current_user_playing_track()
+        if current_song is not None and current_song['is_playing']:
+            track = current_song['item']
+            artist = track['artists'][0]['name']
+            song_name = track['name']
+            return f"{artist} - {song_name}"
+        else:
+            return None
