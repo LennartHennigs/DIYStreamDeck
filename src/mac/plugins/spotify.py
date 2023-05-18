@@ -5,6 +5,16 @@ from base_plugin import BasePlugin
 
 
 class SpotifyPlugin(BasePlugin):
+    def commands(self):
+            return {
+                'spotify.play': self.play,
+                'spotify.pause': self.pause,
+                'spotify.next': self.next,
+                'spotify.prev': self.prev,
+                'spotify.volume_up': self.volume_up,
+                'spotify.volume_down': self.volume_down,
+                'spotify.playpause': self.playpause,
+            }
 
     def __init__(self, config_file):
         try:
@@ -125,14 +135,3 @@ class SpotifyPlugin(BasePlugin):
             print(f"Volume decreased to {new_volume}%")
         except Exception as e:
             print(f"Failed to decrease volume: {e}")
-
-    def commands(self):
-        return {
-            'spotify.play': self.play,
-            'spotify.pause': self.pause,
-            'spotify.next': self.next,
-            'spotify.prev': self.prev,
-            'spotify.volume_up': self.volume_up,
-            'spotify.volume_down': self.volume_down,
-            'spotify.playpause': self.playpause,
-        }
