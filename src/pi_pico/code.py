@@ -1,6 +1,6 @@
 # DIY Streamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0
-# last changed: 23-05-12
+# last changed: 23-05-18
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import time
@@ -66,10 +66,13 @@ class KeyController:
                 elif action == 'close_folder':
                     self.close_folder()
                 else:
-                    self.handle_key_sequences(key_sequences, press)
-                    if key_config_dict.get('application'):
-                        app_name = key_config_dict['application']
-                        self.send_application_name(app_name)
+                    if isinstance(action, tuple):  # Check if action is a plugin command
+                        self.send_plugin_command(*action)  # If it is, call send_plugin_command
+                    else:
+                        self.handle_key_sequences(key_sequences, press)
+                        if key_config_dict.get('application'):
+                            app_name = key_config_dict['application']
+                            self.send_application_name(app_name)
             else:
                 self.handle_key_sequences(key_sequences, press)
 
@@ -130,6 +133,12 @@ class KeyController:
             # print(f"Could not launch {app_name}: {e}\n")
             pass
 
+    def send_plugin_command(self, plugin, command):
+        try:
+            usb_cdc.console.write(f"Run: {plugin}.{command}\n".encode('utf-8'))
+        except Exception as e:
+            pass
+
     def run(self):
         while True:
             raw_app_name = self.read_serial_line()
@@ -187,6 +196,9 @@ class KeyController:
                 description = config.get('description', '')
                 application = config.get('application', '')
                 action = config.get('action', '')
+                if action:
+                    if '.' in action:
+                        action = tuple(action.split('.'))
                 folder = config.get('folder', '')
 
                 if folder and folder not in json_data["folders"]:
