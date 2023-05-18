@@ -91,29 +91,6 @@ For example, the configuration could look like this:
         "description": "End Meeting"
       }
     },
-    "Microsoft Outlook": {
-      "0": {
-        "key_sequence": [
-          "GUI+ONE"
-        ],
-        "color": "#FFFF00",
-        "description": "Switch to Mail"
-      },
-      "1": {
-        "key_sequence": [
-          "GUI+TWO"
-        ],
-        "color": "#FFFF00",
-        "description": "Switch to Calendar"
-      },
-      "3": {
-        "key_sequence": [
-          "GUI+ALT+N"
-        ],
-        "color": "#00FF00",
-        "description": "New Email"
-      }
-    },
     "_otherwise": {
       "0": {
         "key_sequence": [
@@ -122,12 +99,20 @@ For example, the configuration could look like this:
         "color": "#FFFFFF",
         "description": "Open Spotlight Search"
       },
-      "3": {
-        "key_sequence": [
-          "GUI+LEFT_CONTROL+Q"
-        ],
-        "color": "#FF0000",
-        "description": "Close Application"
+      "4": {
+        "action": "spotify.prev",
+        "color": "#00FF00",
+        "description": "Spotify - Previous Song"
+      },
+      "5": {
+        "action": "spotify.playpause",
+        "color": "#00FF00",
+        "description": "Spotify - Play or Pause"
+      },
+      "6": {
+        "action": "spotify.next",
+        "color": "#00FF00",
+        "description": "Spotify - Next Song"
       },
       "13": {
         "action": "open_folder",
@@ -160,6 +145,25 @@ For example, the configuration could look like this:
 ```
 
 In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file, you will find a special app key called `_otherwise`. This key is used to define shortcut keys that are not specific to any particular app. When the Python script is running, it constantly monitors the active application on your computer, and if the active application matches any of the keys in the JSON file, it will load the relevant shortcut keys onto the keypad. If the active application does not match any of the defined keys, the "_otherwise" key is used as a fallback, and the shortcut keys defined under this key are loaded onto the keypad. This means that you can define a set of general-purpose shortcut keys that are always available, regardless of which application is currently active.
+
+## Plugins
+
+You can build your own plugins for the keypad. They are stored in the `plugins/` folder. A plugin defines set of commands that can be used in the `action` key in the JSON config. In the JSON above you can see three commands being called in the `_otherwise` section. If needed, the plugin can have a config file to load settings.
+
+### Spotify Plugon
+
+As an example I included a Spotify plugin called [spotify.py](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins/spotify.py).
+The Spotify plugin has the following commands:
+
+- spotify.play
+- spotify.pause
+- spotify.playpause
+- spotify.next
+- spotify.prev
+- spotify.volume_up
+- spotify.volume_down
+
+To use it you need to have a Spotify premium account and need to add you API credentials to the [spotify.json](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins/config/spotify.json) config file.
 
 ## Watchdog
 

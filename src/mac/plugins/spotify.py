@@ -1,3 +1,9 @@
+# DIY Streamdeck Plugin code
+# L. Hennigs and ChatGPT 4.0
+# last changed: 23-05-18
+# https://github.com/LennartHennigs/DIYStreamDeck
+
+
 import json
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
