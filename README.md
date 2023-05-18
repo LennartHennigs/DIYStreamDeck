@@ -13,12 +13,12 @@ For the latest changes and the history of changes, please take a look at the [CH
 
 ## Features
 
-- Allows to assign keyboard shortcuts/key sequences to its keys
-- The keypad can detect the active app and updates the keypad with its shortcuts
-- Apps can also be launched via keys 🆕
+- Assign keyboard shortcuts or key sequences to keys
+- Shortcuts can be defined for specific app or globally
+- Launch applications 🆕
+- Build and define your own plugins and its commands – a Spotify plugin is now included 🆕
 - You can also define "folders" - a new keypad definition scheme that can be tied to a single key 🆕
-- A default keypad layout can be defined when no app specific layout is defined
-- Keypad definitions are stored and loaded in a JSON configuration file
+- Keypad definitions are stored in a JSON configuration file
 
 ## Hardware Requirements
 
@@ -50,7 +50,7 @@ These are the possible fields for a key entry:
 - `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue).
 - `description`: This field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
 - `folder`: This field allows you assign a "folder" to be opened. The entry also needs the `action` field
-- `action`: This field can have the values `open_folder` or `close_folder`. The later is needed inside a folder definition.
+- `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is needed inside a folder definition.
 
 
 With these fields you can define three types of keys, shortcut keys, application launch keys, and folder keys.
