@@ -136,7 +136,7 @@ class AppObserver(Cocoa.NSObject):
                     print(f"Unknown command {plugin_command}")
 
 
-def load_plugins(path='plugins'):
+def load_plugins(path='plugins', verbose=False):
     plugins = {}
 
     # Get the directory that contains the current script
@@ -145,26 +145,23 @@ def load_plugins(path='plugins'):
     # Construct the full path to the plugins directory
     full_path = os.path.join(base_path, path)
 
-    for plugin_file in os.listdir(full_path):
-        if plugin_file.endswith('.py') and plugin_file != 'base_plugin.py':
-            plugin_name = plugin_file[:-3]  # strip '.py' from the file name
+    plugin_files = [f for f in os.scandir(full_path) if f.is_file() and f.name.endswith('.py') and f.name != 'base_plugin.py']
+    for plugin_file in plugin_files:
+        plugin_name = os.path.splitext(plugin_file.name)[0]
 
-            abs_path = os.path.join(full_path, plugin_file)
+        abs_path = os.path.join(full_path, plugin_file.name)
 
-            spec = importlib.util.spec_from_file_location(
-                plugin_name, abs_path)
-            plugin_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(plugin_module)
+        spec = importlib.util.spec_from_file_location(plugin_name, abs_path)
+        plugin_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(plugin_module)
 
-            plugin_class = getattr(plugin_module, f'{plugin_name.capitalize()}Plugin')
-            plugins[plugin_name] = plugin_class(os.path.join(full_path, 'config', f'{plugin_name}.json'))
+        plugin_class = getattr(plugin_module, f'{plugin_name.capitalize()}Plugin')
+        plugins[plugin_name] = plugin_class(os.path.join(full_path, 'config', f'{plugin_name}.json'), verbose)
 
-            print(f"Loaded plugin: {plugin_name}")
+        print(f"Loaded plugin: {plugin_name}")
+
     print()
     return plugins
-
-
-
 
 
 # Main function
@@ -180,37 +177,32 @@ def main():
                         help='Print the name of the current active window (default: False)')
     args = parser.parse_args()
 
-    ser = create_serial_connection(args.port, args.speed)
-    if ser is None:
-        print(" Failed to create serial connection.")
-        return
-
-    print()
-    print("RGB Keypad watchdog is running...")
-
-    plugins = load_plugins()
-
-    app_observer = AppObserver.alloc().initWithSerial_args_plugins_(ser, args, plugins)
-    notification_center = Cocoa.NSWorkspace.sharedWorkspace().notificationCenter()
-    notification_center.addObserver_selector_name_object_(
-        app_observer,
-        objc.selector(app_observer.applicationActivated_, signature=b'v@:@'),
-        Cocoa.NSWorkspaceDidActivateApplicationNotification,
-        None,
-    )
-
     try:
-        run_loop(app_observer)
-    except KeyboardInterrupt:
-        pass  # User pressed CTRL-C to exit
-    except Exception as e:
-        print(f"An error occurred during the execution: {e}")
+        with create_serial_connection(args.port, args.speed) as ser:
+            print("RGB Keypad watchdog is running...")
 
-    print("Good bye!")
-    print()
+            plugins = load_plugins(verbose=args.verbose)
 
+            app_observer = AppObserver.alloc().initWithSerial_args_plugins_(ser, args, plugins)
+            notification_center = Cocoa.NSWorkspace.sharedWorkspace().notificationCenter()
+            notification_center.addObserver_selector_name_object_(
+                app_observer,
+                objc.selector(app_observer.applicationActivated_, signature=b'v@:@'),
+                Cocoa.NSWorkspaceDidActivateApplicationNotification,
+                None,
+            )
 
-print(sys.executable)
+            try:
+                run_loop(app_observer)
+            except KeyboardInterrupt:
+                pass  # User pressed CTRL-C to exit
+            except Exception as e:
+                print(f"An error occurred during the execution: {e}")
+            finally:
+                notification_center.removeObserver_(app_observer)
+
+    except TypeError:
+        print("Error: Lost serial connection.")
 
 # Entry point for the script
 if __name__ == "__main__":

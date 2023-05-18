@@ -21,7 +21,8 @@ class KeyController:
     KEYCODE_MAPPING = {name: getattr(Keycode, name) for name in dir(
         Keycode) if not name.startswith("__")}
 
-    def __init__(self):
+    def __init__(self, verbose=False):
+        self.verbose=verbose
         self.keypad = RgbKeypad()
         self.keys = self.keypad.keys
         self.keyboard = Keyboard(usb_hid.devices)
