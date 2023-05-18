@@ -139,6 +139,11 @@
         "color": "#00FF00",
         "description": "Spotify - Next Song"
       },
+      "12": {
+        "folder": "apps",
+        "color": "#FFFFFF",
+        "description": "Apps Folder"
+      },
       "15": {
         "key_sequence": "GUI+Q",
         "color": "#FF0000",
