@@ -150,17 +150,17 @@
       "4": {
         "action": "spotify.prev",
         "color": "#00FF00",
-        "description": "test"
+        "description": "Spotify - Previous Song"
       },
       "5": {
         "action": "spotify.playpause",
         "color": "#00FF00",
-        "description": "test"
+        "description": "Spotify - Play or Pause"
       },
       "6": {
         "action": "spotify.next",
         "color": "#00FF00",
-        "description": "test"
+        "description": "Spotify - Next Song"
       },
       "12": {
         "folder": "apps",
