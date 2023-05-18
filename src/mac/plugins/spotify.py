@@ -86,18 +86,30 @@ class SpotifyPlugin(BasePlugin):
             # print(f"Failed to toggle play/pause: {e}")
             pass
 
-
     def play(self):
         try:
             current_playback = self.sp.current_playback()
-            if current_playback is not None and current_playback['is_playing']:
-                print("The device is already playing.")
-            else:
+            if current_playback is None or not current_playback['is_playing']:
                 self.sp.start_playback()
-                print("Playback started.")
+                print(self.get_current_song_info())
+            else:
+                print("No song is currently playing.")
+
         except Exception as e:
             pass
             # print(f"Failed to execute play command: {e}")
+
+
+    def get_current_song_info(self):
+        current_song = self.sp.current_user_playing_track()
+        if current_song is not None and current_song['is_playing']:
+            track = current_song['item']
+            artist = track['artists'][0]['name']
+            song_name = track['name']
+            return f"{artist} - {song_name}"
+        else:
+            return None
+
 
     def pause(self):
         try:
@@ -109,6 +121,7 @@ class SpotifyPlugin(BasePlugin):
     def next(self):
         try:
             self.sp.next_track()
+            print(self.get_current_song_info())
         except Exception as e:
             pass
             # print(f"Failed to execute next command: {e}")
@@ -116,6 +129,7 @@ class SpotifyPlugin(BasePlugin):
     def prev(self):
         try:
             self.sp.previous_track()
+            print(self.get_current_song_info())
         except Exception as e:
             pass
             # print(f"Failed to execute next command: {e}")
