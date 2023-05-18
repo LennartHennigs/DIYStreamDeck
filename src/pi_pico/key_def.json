@@ -133,12 +133,34 @@
         "color": "#FFFFFF",
         "description": "Open Spotlight Search"
       },
+      "2": {
+        "key_sequence": [
+          "ESCAPE"
+        ],
+        "color": "#000000",
+        "description": "Exit Full Screen"
+      },
       "3": {
         "key_sequence": [
           "GUI+LEFT_CONTROL+Q"
         ],
         "color": "#FF0000",
         "description": "Close Application"
+      },
+      "4": {
+        "action": "spotify.prev",
+        "color": "#00FF00",
+        "description": "test"
+      },
+      "5": {
+        "action": "spotify.playpause",
+        "color": "#00FF00",
+        "description": "test"
+      },
+      "6": {
+        "action": "spotify.next",
+        "color": "#00FF00",
+        "description": "test"
       },
       "12": {
         "folder": "apps",
@@ -212,3 +234,4 @@
     }
   }
 }
+
