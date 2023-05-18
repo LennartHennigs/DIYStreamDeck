@@ -1,8 +1,9 @@
 # DIY Streamdeck watchdog code for a Mac
 # L. Hennigs and ChatGPT 4.0
-# last changed: 23-05-12
+# last changed: 23-05-18
 # https://github.com/LennartHennigs/DIYStreamDeck
 
+import sys
 import Cocoa
 import serial
 import objc
@@ -15,7 +16,12 @@ import subprocess
 from typing import Optional
 from contextlib import contextmanager
 from urllib.parse import urlparse
+import importlib.util
+import os
 
+
+plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
+sys.path.append(plugins_directory)
 
 # Function to create a serial connection
 
@@ -42,12 +48,13 @@ def run_loop(observer: 'AppObserver'):
 
 
 class AppObserver(Cocoa.NSObject):
-    def initWithSerial_args_(self, ser: serial.Serial, args):
+    def initWithSerial_args_plugins_(self, ser: serial.Serial, args, plugins):
         self = objc.super(AppObserver, self).init()
         if self is None:
             return None
         self.ser = ser
         self.args = args
+        self.plugins = plugins
         return self
 
     @objc.signature(b'v@:@')  # Encoded the signature string as bytes
@@ -88,8 +95,10 @@ class AppObserver(Cocoa.NSObject):
         except (serial.SerialException, UnicodeEncodeError) as e:
             print(f"Error sending app name to microcontroller: {e}")
 
+    
     def handle_launch_command(self):
         launch_pattern = r"^Launch: (.+)$"
+        run_pattern = r"^Run: (.+)$"
 
         # Check if there's any data in the buffer
         if self.ser.in_waiting > 0:
@@ -108,9 +117,57 @@ class AppObserver(Cocoa.NSObject):
                     subprocess.run(["open", "-a", launch_app_name], check=True)
                 except subprocess.CalledProcessError as e:
                     pass
+            else:
+                match = re.match(run_pattern, command)
+                if match:
+                    plugin_command = match.group(1)
+                    plugin_name, command_name = plugin_command.split('.')
+                    if plugin_name in self.plugins:
+                        plugin = self.plugins[plugin_name]
+                        if plugin_command in plugin.commands():
+                            if self.args.verbose:
+                                print(f"Executing: {plugin_command}")  # Echo when a command is detected
+                            plugin.commands()[plugin_command]()
+                        else:
+                            print(f"Command {plugin_command} not found")
+                    else:
+                        print(f"Plugin {plugin_name} not found")
+                else: 
+                    print(f"Unknown command {plugin_command}")
+
+
+def load_plugins(path='plugins'):
+    plugins = {}
+
+    # Get the directory that contains the current script
+    base_path = os.path.dirname(os.path.abspath(__file__))
+
+    # Construct the full path to the plugins directory
+    full_path = os.path.join(base_path, path)
+
+    for plugin_file in os.listdir(full_path):
+        if plugin_file.endswith('.py') and plugin_file != 'base_plugin.py':
+            plugin_name = plugin_file[:-3]  # strip '.py' from the file name
+
+            abs_path = os.path.join(full_path, plugin_file)
+
+            spec = importlib.util.spec_from_file_location(
+                plugin_name, abs_path)
+            plugin_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(plugin_module)
+
+            plugin_class = getattr(plugin_module, f'{plugin_name.capitalize()}Plugin')
+            plugins[plugin_name] = plugin_class(os.path.join(full_path, 'config', f'{plugin_name}.json'))
+
+            print(f"Loaded plugin: {plugin_name}")
+    print()
+    return plugins
+
+
+
+
 
 # Main function
-
 
 def main():
     parser = argparse.ArgumentParser(
@@ -130,7 +187,10 @@ def main():
 
     print()
     print("RGB Keypad watchdog is running...")
-    app_observer = AppObserver.alloc().initWithSerial_args_(ser, args)
+
+    plugins = load_plugins()
+
+    app_observer = AppObserver.alloc().initWithSerial_args_plugins_(ser, args, plugins)
     notification_center = Cocoa.NSWorkspace.sharedWorkspace().notificationCenter()
     notification_center.addObserver_selector_name_object_(
         app_observer,
@@ -149,6 +209,8 @@ def main():
     print("Good bye!")
     print()
 
+
+print(sys.executable)
 
 # Entry point for the script
 if __name__ == "__main__":
