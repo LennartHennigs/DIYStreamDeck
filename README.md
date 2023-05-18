@@ -14,10 +14,10 @@ For the latest changes and the history of changes, please take a look at the [CH
 ## Features
 
 - Allows to assign keyboard shortcuts/key sequences to its keys
-- Dynamically detects the active app and updates the keypad with its shortcuts
-- Default keypad layout can be defined when no app specific layout is defined
-- Alternatively, apps can be launched via the keypad 🆕
+- The keypad can detect the active app and updates the keypad with its shortcuts
+- Apps can also be launched via keys 🆕
 - You can also define "folders" - a new keypad definition scheme that can be tied to a single key 🆕
+- A default keypad layout can be defined when no app specific layout is defined
 - Keypad definitions are stored and loaded in a JSON configuration file
 
 ## Hardware Requirements
