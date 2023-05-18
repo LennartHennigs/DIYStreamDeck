@@ -9,14 +9,17 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 
 For the latest changes and the history of changes, please take a look at the [CHANGELOG](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
 
-**Note:** This was (and is) a very successful experiment with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and maybe five lines in the CicuitPython code).
+**Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and less than ten lines in the CicuitPython code).
+
+This is also an ongoing project. I just added plugin capabilities to the code.
 
 ## Features
 
 - Assign keyboard shortcuts or key sequences to keys
 - Shortcuts can be defined for specific app or globally
 - Launch applications 🆕
-- Build and define your own plugins and its commands – a Spotify plugin is now included 🆕
+- Build and define your own plugins and its commands 🆕
+- Includes a Spotify plugin 🆕
 - You can also define "folders" - a new keypad definition scheme that can be tied to a single key 🆕
 - Keypad definitions are stored in a JSON configuration file
 
@@ -41,7 +44,7 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 
 ## Configuration
 
-In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with two entries: `key_definitions` and `folders`. In the `key_definitions` area the different keys for various apps are defined with the key numbers (0-15). In `folders` key sets can be definied that can be assigned to a key.
+In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with two entries: `key_definitions` and `folders`. In the `key_definitions` area the different keys for various apps are defined with the key numbers (0-15). In `folders` key sets can be defined that can be assigned to a key.
 
 These are the possible fields for a key entry:
 
@@ -146,11 +149,11 @@ For example, the configuration could look like this:
 
 In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file, you will find a special app key called `_otherwise`. This key is used to define shortcut keys that are not specific to any particular app. When the Python script is running, it constantly monitors the active application on your computer, and if the active application matches any of the keys in the JSON file, it will load the relevant shortcut keys onto the keypad. If the active application does not match any of the defined keys, the "_otherwise" key is used as a fallback, and the shortcut keys defined under this key are loaded onto the keypad. This means that you can define a set of general-purpose shortcut keys that are always available, regardless of which application is currently active.
 
-## Plugins
+## Plugins 🆕
 
 You can build your own plugins for the keypad. They are stored in the `plugins/` folder. A plugin defines set of commands that can be used in the `action` key in the JSON config. In the JSON above you can see three commands being called in the `_otherwise` section. If needed, the plugin can have a config file to load settings.
 
-### Spotify Plugon
+### Spotify Plugin 🆕
 
 As an example I included a Spotify plugin called [spotify.py](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins/spotify.py).
 The Spotify plugin has the following commands:
