@@ -101,39 +101,46 @@ class AppObserver(Cocoa.NSObject):
         run_pattern = r"^Run: (.+)$"
 
         # Check if there's any data in the buffer
-        if self.ser.in_waiting > 0:
-            try:
-                command = self.ser.readline().decode().strip()
-            except serial.SerialException as e:
-                print(f"Error reading from microcontroller: {e}")
-                return
+        if self.ser.in_waiting == 0:
+            return
+        
+        try:
+            command = self.ser.readline().decode().strip()
+        except serial.SerialException as e:
+            print(f"Error reading from microcontroller: {e}")
+            return
 
-            match = re.match(launch_pattern, command)
-            if match:
-                launch_app_name = match.group(1)
-                if self.args.verbose:
-                    print(f"Launching: {launch_app_name}")
-                try:
-                    subprocess.run(["open", "-a", launch_app_name], check=True)
-                except subprocess.CalledProcessError as e:
-                    pass
-            else:
-                match = re.match(run_pattern, command)
-                if match:
-                    plugin_command = match.group(1)
-                    plugin_name, command_name = plugin_command.split('.')
-                    if plugin_name in self.plugins:
-                        plugin = self.plugins[plugin_name]
-                        if plugin_command in plugin.commands():
-                            if self.args.verbose:
-                                print(f"Executing: {plugin_command}")  # Echo when a command is detected
-                            plugin.commands()[plugin_command]()
-                        else:
-                            print(f"Command {plugin_command} not found")
-                    else:
-                        print(f"Plugin {plugin_name} not found")
-                else: 
-                    print(f"Unknown command {plugin_command}")
+        match = re.match(launch_pattern, command)
+        if match:
+            launch_app_name = match.group(1)
+            if self.args.verbose:
+                print(f"Launching: {launch_app_name}")
+            try:
+                subprocess.run(["open", "-a", launch_app_name], check=True)
+            except subprocess.CalledProcessError as e:
+                pass
+            return
+
+        match = re.match(run_pattern, command)
+        if not match:
+            print(f"Unknown command: {command}")
+            return
+
+        plugin_command = match.group(1)
+        plugin_name, command_name = plugin_command.split('.')
+        plugin = self.plugins.get(plugin_name)
+        if not plugin:
+            print(f"Plugin {plugin_name} not found")
+            return
+
+        commands = plugin.commands()
+        if plugin_command not in commands:
+            print(f"Command {plugin_command} not found")
+            return
+            
+        if self.args.verbose:
+            print(f"Executing: {plugin_command}")  # Echo when a command is detected
+        commands[plugin_command]()
 
 
 def load_plugins(path='plugins', verbose=False):
@@ -202,7 +209,7 @@ def main():
                 notification_center.removeObserver_(app_observer)
 
     except TypeError:
-        print("Error: Lost serial connection.")
+        print("Error: No serial connection.")
 
 # Entry point for the script
 if __name__ == "__main__":
