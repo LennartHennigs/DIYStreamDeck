@@ -123,7 +123,29 @@
         "description": "Apps Folder"
       }
     },
-    "loginwindow": {
+    "Spotify": {
+      "4": {
+        "key_sequence": "GUI+LEFT_ARROW",
+        "color": "#00FF00",
+        "description": "Spotify - Previous Song"
+      },
+      "5": {
+        "key_sequence": "SPACE",
+        "color": "#00FF00",
+        "description": "Spotify - Play or Pause"
+      },
+      "6": {
+        "key_sequence": "GUI+RIGHT_ARROW",
+        "color": "#00FF00",
+        "description": "Spotify - Next Song"
+      },
+      "15": {
+        "key_sequence": "GUI+Q",
+        "color": "#FF0000",
+        "description": "Close Application"
+      },
+    },
+  "loginwindow": {
     },
     "_otherwise": {
       "0": {
@@ -211,15 +233,10 @@
         "color": "#0000FF",
         "description": "Launch VS Code"
       },
-      "10": {
-        "key_sequence": "GUI+F3",
-        "color": "#FFFF00",
-        "description": "Show Desktop"
-      },
-      "11": {
-        "key_sequence": "F3",
-        "color": "#FFFF00",
-        "description": "Show All Windows"
+      "8": {
+        "application": "Spotify",
+        "color": "#00FF00",
+        "description": "Launch Spotify"
       },
       "12": {
         "action": "close_folder",
@@ -234,4 +251,3 @@
     }
   }
 }
-
