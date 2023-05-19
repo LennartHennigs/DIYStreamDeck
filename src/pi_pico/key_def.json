@@ -2,74 +2,56 @@
   "key_definitions": {
     "zoom.us": {
       "0": {
-        "key_sequence": [
-          "GUI+SHIFT+A"
-        ],
+        "key_sequence": "GUI+SHIFT+A",
         "color": "#FFFF00",
         "description": "Mute/Unmute Audio"
       },
       "1": {
-        "key_sequence": [
-          "GUI+SHIFT+V"
-        ],
+        "key_sequence": "GUI+SHIFT+V",
         "color": "#FFFF00",
         "description": "Start/Stop Video"
       },
       "2": {
-        "key_sequence": [
-          "ESCAPE"
-        ],
+        "key_sequence": "ESCAPE",
         "color": "#000000",
-        "description": "Exit Full Screen"
+        "description": "Escape"
       },
       "3": {
-        "key_sequence": [
-          "ALT+Z"
-        ],
+        "key_sequence": "ALT+Z",
         "color": "#FFA500",
-        "description": "Toggle Zoom Controls"
+        "description": "Raise Hand"
       },
       "4": {
-        "key_sequence": [
-          "GUI+SHIFT+S"
-        ],
+        "key_sequence": "GUI+SHIFT+S",
         "color": "#00FF00",
         "description": "Share Screen"
       },
       "5": {
-        "key_sequence": [
-          "GUI+SHIFT+H"
-        ],
+        "key_sequence": "GUI+SHIFT+H",
         "color": "#FFFF00",
         "description": "Show/Hide Chat"
       },
       "6": {
-        "key_sequence": [
-          "GUI+U"
-        ],
+        "key_sequence": "GUI+U",
         "color": "#FFFF00",
         "description": "Show Participants Panel"
       },
       "7": {
         "key_sequence": [
           "GUI+I",
-          0.1,
+          0.175,
           "TAB"
         ],
         "color": "#00FF00",
         "description": "Invite Participants"
       },
       "10": {
-        "key_sequence": [
-          "GUI+SHIFT+C"
-        ],
+        "key_sequence": "GUI+SHIFT+C",
         "color": "#FF0000",
         "description": "Record Meeting"
       },
       "11": {
-        "key_sequence": [
-          "GUI+SHIFT+P"
-        ],
+        "key_sequence": "GUI+SHIFT+P",
         "color": "#FFFFFF",
         "description": "Pause/Resume Recording"
       },
@@ -79,9 +61,7 @@
         "description": "Apps Folder"
       },
       "14": {
-        "key_sequence": [
-          "GUI+SHIFT+F"
-        ],
+        "key_sequence": "GUI+SHIFT+F",
         "color": "#0000FF",
         "description": "Enter/Exit Full Screen"
       },
@@ -95,25 +75,56 @@
         "description": "End Meeting"
       }
     },
+    "Microsoft Teams": {
+      "0": {
+        "key_sequence": "GUI+SHIFT+M",
+        "color": "#FFFF00",
+        "description": "Mute/Unmute Audio"
+      },
+      "1": {
+        "key_sequence": "GUI+SHIFT+O",
+        "color": "#FFFF00",
+        "description": "Start/Stop Video"
+      },
+      "2": {
+        "key_sequence": "ESCAPE",
+        "color": "#000000",
+        "description": "Escape"
+      },
+      "3": {
+        "key_sequence": "GUI+SHIFT+K",
+        "color": "#FFA500",
+        "description": "Raise Hand"
+      },
+      "4": {
+        "key_sequence": "GUI+SHIFT+E",
+        "color": "#00FF00",
+        "description": "Share Screen"
+      },
+      "12": {
+        "folder": "apps",
+        "color": "#FFFFFF",
+        "description": "Apps Folder"
+      },
+      "15": {
+        "key_sequence": "GUI+SHIFT+H",
+        "color": "#FF0000",
+        "description": "End Meeting"
+      }
+  },
     "Microsoft Outlook": {
       "0": {
-        "key_sequence": [
-          "GUI+ONE"
-        ],
+        "key_sequence": "GUI+ONE",
         "color": "#FFFF00",
         "description": "Switch to Mail"
       },
       "1": {
-        "key_sequence": [
-          "GUI+TWO"
-        ],
+        "key_sequence": "GUI+TWO",
         "color": "#FFFF00",
         "description": "Switch to Calendar"
       },
       "3": {
-        "key_sequence": [
-          "GUI+ALT+N"
-        ],
+        "key_sequence": "GUI+ALT+N",
         "color": "#00FF00",
         "description": "New Email"
       },
@@ -148,29 +159,23 @@
         "key_sequence": "GUI+Q",
         "color": "#FF0000",
         "description": "Close Application"
-      },
+      }
     },
   "loginwindow": {
     },
     "_otherwise": {
       "0": {
-        "key_sequence": [
-          "GUI+SPACE"
-        ],
+        "key_sequence": "GUI+SPACE",
         "color": "#FFFFFF",
         "description": "Open Spotlight Search"
       },
       "2": {
-        "key_sequence": [
-          "ESCAPE"
-        ],
+        "key_sequence": "ESCAPE",
         "color": "#000000",
         "description": "Exit Full Screen"
       },
       "3": {
-        "key_sequence": [
-          "GUI+LEFT_CONTROL+Q"
-        ],
+        "key_sequence": "GUI+LEFT_CONTROL+Q",
         "color": "#FF0000",
         "description": "Close Application"
       },
