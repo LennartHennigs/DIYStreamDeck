@@ -19,7 +19,8 @@ This is also an ongoing project. I just added plugin capabilities to the code.
 - Shortcuts can be defined for specific app or globally
 - Launch applications 🆕
 - Build and define your own plugins and its commands 🆕
-- Includes a Spotify plugin 🆕
+  - Includes a Spotify plugin 🆕
+  - Includes a Philip Hue plugin 🆕
 - You can also define "folders" - a new keypad definition scheme that can be tied to a single key 🆕
 - Keypad definitions are stored in a JSON configuration file
 
@@ -168,6 +169,13 @@ The Spotify plugin has the following commands:
 
 To use it you need to have a Spotify premium account and need to add you API credentials to the [spotify.json](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins/config/spotify.json) config file.
 
+### Hue Plugin 🆕
+
+- hue.turn_off [Lamp ID | 'String']
+- hue.turn_on [Lamp ID | 'String']
+- hue.turn_toggle [Lamp ID | 'String']
+
+You need to define the IP address of your hue bridge in the config JSON and press its connect button on first run. Provide the ID of your lamp or its name enclosed in single quotes.
 ## Watchdog
 
 To enable the dynamic detection of the active app, you need to run a watchdog script on your computer that sends the active app's name to the Pi Pico via USB serial. This project includes a Python watchdog script specifically designed for macOS.
