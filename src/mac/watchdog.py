@@ -7,17 +7,17 @@ import sys
 import Cocoa
 import serial
 import objc
-import sys
 import termios
 import tty
 import argparse
 import re
 import subprocess
-from typing import Optional
+from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
 from urllib.parse import urlparse
 import importlib.util
 import os
+from plugins.base_plugin import BasePlugin
 
 
 plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
@@ -36,7 +36,7 @@ def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Seria
 # Function to run the main loop
 
 
-def run_loop(observer: 'AppObserver'):
+def run_loop(observer: 'AppObserver') -> None:
     run_loop = Cocoa.NSRunLoop.currentRunLoop()
     while True:
         run_loop.runMode_beforeDate_(
@@ -44,11 +44,12 @@ def run_loop(observer: 'AppObserver'):
 
         observer.handle_launch_command()
 
-# Main AppObserver class
-
-
 class AppObserver(Cocoa.NSObject):
-    def initWithSerial_args_plugins_(self, ser: serial.Serial, args, plugins):
+    ser: serial.Serial
+    args: argparse.Namespace
+    plugins: Dict[str, BasePlugin]
+
+    def initWithSerial_args_plugins_(self, ser: serial.Serial, args: argparse.Namespace, plugins: Dict[str, Any]) -> Optional['AppObserver']:
         self = objc.super(AppObserver, self).init()
         if self is None:
             return None
@@ -58,13 +59,13 @@ class AppObserver(Cocoa.NSObject):
         return self
 
     @objc.signature(b'v@:@')  # Encoded the signature string as bytes
-    def applicationActivated_(self, notification):
+    def applicationActivated_(self, notification: Cocoa.NSNotification) -> None:
         app_name = notification.userInfo(
         )['NSWorkspaceApplicationKey'].localizedName()
         self.send_app_name_to_microcontroller(app_name)
 
     @objc.signature(b'v@:@')
-    def send_app_name_to_microcontroller(self, app_name):
+    def send_app_name_to_microcontroller(self, app_name: str) -> None:
         command_dict = {
             "Google Chrome": 'get URL of active tab of first window',
             "Safari": 'get URL of current tab of front window'
@@ -96,20 +97,20 @@ class AppObserver(Cocoa.NSObject):
             print(f"Error sending app name to microcontroller: {e}")
 
     
-    def handle_launch_command(self):
+    def handle_launch_command(self) -> None:
         launch_pattern = r"^Launch: (.+)$"
         run_pattern = r"^Run: (.+)$"
 
         # Check if there's any data in the buffer
         if self.ser.in_waiting == 0:
             return
-        
         try:
             command = self.ser.readline().decode().strip()
         except serial.SerialException as e:
             print(f"Error reading from microcontroller: {e}")
             return
 
+        # launch an app?
         match = re.match(launch_pattern, command)
         if match:
             launch_app_name = match.group(1)
@@ -121,29 +122,42 @@ class AppObserver(Cocoa.NSObject):
                 pass
             return
 
+        # run a command?
         match = re.match(run_pattern, command)
         if not match:
             print(f"Unknown command: {command}")
             return
 
-        plugin_command = match.group(1)
-        plugin_name, command_name = plugin_command.split('.')
-        plugin = self.plugins.get(plugin_name)
+        command_parts = match.group(1).split(' ', 1)
+        plugin_command = command_parts[0].strip()
+        param = command_parts[1].strip() if len(command_parts) > 1 else None
+
+        # Parse parameter
+        if param is not None:
+            if param.startswith("'") and param.endswith("'"):  # String parameter
+                param = param[1:-1]  # Remove single quotes
+            else:  # Integer parameter
+                try:
+                    param = int(param)
+                except ValueError:
+                    print(f"Invalid parameter: {param}")
+                    return
+        
+        plugin = self.plugins.get(plugin_command.split('.')[0])
         if not plugin:
-            print(f"Plugin {plugin_name} not found")
+            print(f"Plugin {plugin_command.split('.')[0]} not found")
             return
 
         commands = plugin.commands()
         if plugin_command not in commands:
             print(f"Command {plugin_command} not found")
             return
-            
         if self.args.verbose:
             print(f"Executing: {plugin_command}")  # Echo when a command is detected
-        commands[plugin_command]()
+        commands[plugin_command](param) if param is not None else commands[plugin_command]()
 
 
-def load_plugins(path='plugins', verbose=False):
+def load_plugins(path: str='plugins', verbose: bool=False) -> Dict[str, BasePlugin]:
     plugins = {}
 
     # Get the directory that contains the current script
@@ -173,7 +187,7 @@ def load_plugins(path='plugins', verbose=False):
 
 # Main function
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser(
         description='Monitor active app and send data to microcontroller')
     parser.add_argument('--port', required=True,
