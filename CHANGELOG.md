@@ -3,8 +3,9 @@
 
 ## Unreleased
 
-- added Plugins to the Streamdeck
+- Included a Hue Plugin
 - Included a Spotify Plugin
+- added Plugin capabilities to the Streamdeck
 - Safari and Chrome now also return the URL of the active tab
 - stopping the code will turn off the keypad
 - removed unneeded `action: open_folder` in JSON and code
