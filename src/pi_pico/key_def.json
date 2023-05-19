@@ -194,6 +194,11 @@
         "color": "#FFFFFF",
         "description": "Apps Folder"
       },
+      "8": {
+        "action": "hue.toggle 'Schreibtisch Lampe'",
+        "color": "#FFFF00",
+        "description": "Let there be light!"
+      },
       "15": {
         "key_sequence": "GUI+Q",
         "color": "#FF0000",
