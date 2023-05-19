@@ -17,12 +17,12 @@ This is also an ongoing project. I just added plugin capabilities to the code.
 
 - Assign keyboard shortcuts or key sequences to keys
 - Shortcuts can be defined for specific app or globally
+- Define "folders" - a new keypad definition scheme that can be tied to a single key
 - Launch applications 🆕
 - Build and define your own plugins and its commands 🆕
   - Includes a Spotify plugin 🆕
   - Includes a Philip Hue plugin 🆕
-- You can also define "folders" - a new keypad definition scheme that can be tied to a single key 🆕
-- Keypad definitions are stored in a JSON configuration file
+- All definitions are stored in a JSON config file
 
 ## Hardware Requirements
 
