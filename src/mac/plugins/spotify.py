@@ -71,7 +71,8 @@ class SpotifyPlugin(BasePlugin):
             else:
                 self.play()
         except Exception as e:
-            self._log(f"An error occurred: {e}")
+            self._log("Error")
+            pass;
     
     def play(self) -> None:
         current_playback = self.sp.current_playback()
@@ -82,15 +83,27 @@ class SpotifyPlugin(BasePlugin):
             self._log("No song is currently playing.")
 
     def pause(self) -> None:
-        self.sp.pause_playback()
+        try:
+            self.sp.pause_playback()
+        except Exception as e:
+            self._log("Error")
+            pass
 
     def next(self) -> None:
-        self.sp.next_track()
-        self._log(self.get_current_song_info())
-
+        try:
+            self.sp.next_track()
+            self._log(self.get_current_song_info())
+        except Exception as e:
+            self._log("Error")
+            pass
+        
     def prev(self) -> None:
-        self.sp.previous_track()
-        self._log(self.get_current_song_info())
+        try:
+            self.sp.previous_track()
+            self._log(self.get_current_song_info())
+        except Exception as e:
+            self._log("Error")
+            pass
 
     def volume_up(self, volume_change: int = 10) -> None:
         self._adjust_volume(volume_change)
@@ -105,7 +118,7 @@ class SpotifyPlugin(BasePlugin):
             self.sp.volume(new_volume)
             self._log(f"Volume {'increased' if volume_change > 0 else 'decreased'} to {new_volume}%")
         except Exception as e:
-            self._log(f"Failed to {'increase' if volume_change > 0 else 'decrease'} volume: {e}")
+            self._log(f"Failed to {'increase' if volume_change > 0 else 'decrease'} volume")
 
     def get_current_song_info(self) -> Optional[str]:
         current_song = self.sp.current_user_playing_track()
