@@ -12,6 +12,7 @@ import tty
 import argparse
 import re
 import subprocess
+from inspect import signature
 from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
 from urllib.parse import urlparse
@@ -132,6 +133,23 @@ class AppObserver(Cocoa.NSObject):
         plugin_command = command_parts[0].strip()
         param = command_parts[1].strip() if len(command_parts) > 1 else None
 
+        # Check if the plugin command exists
+        plugin = self.plugins.get(plugin_command.split('.')[0])
+        if not plugin:
+            print(f"Plugin {plugin_command.split('.')[0]} not found")
+            return
+
+        commands = plugin.commands()
+        if plugin_command not in commands:
+            print(f"Command {plugin_command} not found")
+            return
+
+        # Check if the command requires a parameter
+        command_func = commands[plugin_command]
+        if len(signature(command_func).parameters) > 0 and param is None:
+            print(f"Parameter missing for command: {plugin_command}")
+            return
+
         # Parse parameter
         if param is not None:
             if param.startswith("'") and param.endswith("'"):  # String parameter
@@ -142,19 +160,10 @@ class AppObserver(Cocoa.NSObject):
                 except ValueError:
                     print(f"Invalid parameter: {param}")
                     return
-        
-        plugin = self.plugins.get(plugin_command.split('.')[0])
-        if not plugin:
-            print(f"Plugin {plugin_command.split('.')[0]} not found")
-            return
 
-        commands = plugin.commands()
-        if plugin_command not in commands:
-            print(f"Command {plugin_command} not found")
-            return
         if self.args.verbose:
             print(f"Executing: {plugin_command}")  # Echo when a command is detected
-        commands[plugin_command](param) if param is not None else commands[plugin_command]()
+        command_func(param) if param is not None else command_func()
 
 
 def load_plugins(path: str='plugins', verbose: bool=False) -> Dict[str, BasePlugin]:
