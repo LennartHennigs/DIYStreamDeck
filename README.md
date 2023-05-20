@@ -21,7 +21,7 @@ This is also an ongoing project. I just added plugin capabilities to the code.
 - Launch applications 🆕
 - Build and define your own plugins and its commands 🆕
   - Includes a Spotify plugin 🆕
-  - Includes a Philip Hue plugin 🆕
+  - Includes a Philips Hue plugin 🆕
 - All definitions are stored in a JSON config file
 
 ## Hardware Requirements
