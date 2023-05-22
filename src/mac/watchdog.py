@@ -158,8 +158,8 @@ class AppObserver(Cocoa.NSObject):
                     print(f"Invalid parameter: {param}")
                     return
 
-        if self.args.verbose:
-            print(f"Executing: {command}")  # Echo when a command is detected
+#        if self.args.verbose:
+#            print(f"Executing: {command}")  # Echo when a command is detected
         command_func(param) if param is not None else command_func()
 
 
