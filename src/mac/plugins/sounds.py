@@ -41,16 +41,16 @@ class SoundsPlugin(BasePlugin):
         raise Exception(message)
 
     def play(self, filename: str) -> None:
-        print("YES")
         try:
-            full_path = os.path.join(self.sound_path, filename)
+            
+            full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.sound_path, filename)
             if not os.path.exists(full_path):
-                self._log_and_raise(f"File {full_path} not found.")
+                self._log_and_raise(f"File {filename} not found.")
             self.executor.submit(playsound, full_path)
             if self.verbose:
-                print(f"Playing '{full_path}'")
+                print(f"Playing '{filename}'")
         except Exception as e:
-            self._log_and_raise(f"Failed to play '{full_path}': {e}")
+            self._log_and_raise(f"Failed to play '{filename}': {e}")
 
     def stop(self) -> None:
         try:
