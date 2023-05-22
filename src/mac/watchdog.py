@@ -24,6 +24,7 @@ from plugins.base_plugin import BasePlugin
 plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
 sys.path.append(plugins_directory)
 
+
 # Function to create a serial connection
 
 
@@ -42,13 +43,15 @@ def run_loop(observer: 'AppObserver') -> None:
     while True:
         run_loop.runMode_beforeDate_(
             Cocoa.NSDefaultRunLoopMode, Cocoa.NSDate.dateWithTimeIntervalSinceNow_(0.1))
-
-        observer.handle_launch_command()
+        observer.check_serial()
 
 class AppObserver(Cocoa.NSObject):
     ser: serial.Serial
     args: argparse.Namespace
     plugins: Dict[str, BasePlugin]
+    launch_pattern = r"^Launch: (.+)$"
+    run_pattern = r"^Run: (.+)$"
+
 
     def initWithSerial_args_plugins_(self, ser: serial.Serial, args: argparse.Namespace, plugins: Dict[str, Any]) -> Optional['AppObserver']:
         self = objc.super(AppObserver, self).init()
@@ -59,11 +62,13 @@ class AppObserver(Cocoa.NSObject):
         self.plugins = plugins
         return self
 
+
     @objc.signature(b'v@:@')  # Encoded the signature string as bytes
     def applicationActivated_(self, notification: Cocoa.NSNotification) -> None:
         app_name = notification.userInfo(
         )['NSWorkspaceApplicationKey'].localizedName()
         self.send_app_name_to_microcontroller(app_name)
+
 
     @objc.signature(b'v@:@')
     def send_app_name_to_microcontroller(self, app_name: str) -> None:
@@ -98,56 +103,47 @@ class AppObserver(Cocoa.NSObject):
             print(f"Error sending app name to microcontroller: {e}")
 
     
-    def handle_launch_command(self) -> None:
-        launch_pattern = r"^Launch: (.+)$"
-        run_pattern = r"^Run: (.+)$"
-
-        # Check if there's any data in the buffer
+    def read_serial_data(self) -> Optional[str]:
         if self.ser.in_waiting == 0:
             return
         try:
-            command = self.ser.readline().decode().strip()
+            return self.ser.readline().decode().strip()
         except serial.SerialException as e:
             print(f"Error reading from microcontroller: {e}")
             return
 
-        # launch an app?
-        match = re.match(launch_pattern, command)
-        if match:
-            launch_app_name = match.group(1)
-            if self.args.verbose:
-                print(f"Launching: {launch_app_name}")
-            try:
-                subprocess.run(["open", "-a", launch_app_name], check=True)
-            except subprocess.CalledProcessError as e:
-                pass
-            return
 
-        # run a command?
-        match = re.match(run_pattern, command)
-        if not match:
-            print(f"Unknown command: {command}")
-            return
+    def launch_app(self, match: re.Match) -> None:
+        launch_app_name = match.group(1)
+        if self.args.verbose:
+            print(f"Launching: {launch_app_name}")
+        try:
+            subprocess.run(["open", "-a", launch_app_name], check=True)
+        except subprocess.CalledProcessError as e:
+            pass
+        return
 
-        command_parts = match.group(1).split(' ', 1)
-        plugin_command = command_parts[0].strip()
-        param = command_parts[1].strip() if len(command_parts) > 1 else None
+
+    def run_plugin_command(self, match: re.Match) -> None:
+        parts = match.group(1).split(' ', 1)
+        command = parts[0].strip()
+        param = parts[1].strip() if len(parts) > 1 else None
+        plugin = self.plugins.get(command.split('.')[0])
+
+        # Check if the plugin exists
+        if not plugin:
+            print(f"Plugin {command.split('.')[0]} not found")
+            return
 
         # Check if the plugin command exists
-        plugin = self.plugins.get(plugin_command.split('.')[0])
-        if not plugin:
-            print(f"Plugin {plugin_command.split('.')[0]} not found")
-            return
-
-        commands = plugin.commands()
-        if plugin_command not in commands:
-            print(f"Command {plugin_command} not found")
+        if command not in plugin.commands():
+            print(f"Command {command} not found")
             return
 
         # Check if the command requires a parameter
-        command_func = commands[plugin_command]
+        command_func = plugin.commands()[command]
         if len(signature(command_func).parameters) > 0 and param is None:
-            print(f"Parameter missing for command: {plugin_command}")
+            print(f"Parameter missing for command: {command}")
             return
 
         # Parse parameter
@@ -162,8 +158,27 @@ class AppObserver(Cocoa.NSObject):
                     return
 
         if self.args.verbose:
-            print(f"Executing: {plugin_command}")  # Echo when a command is detected
+            print(f"Executing: {command}")  # Echo when a command is detected
         command_func(param) if param is not None else command_func()
+
+
+    def check_serial(self) -> None:
+        # Check if there's any data in the buffer
+        command = self.read_serial_data()
+        if not command:
+            return
+
+        match = re.match(self.launch_pattern, command)
+        if match:
+            print(f"App Launch")
+            self.launch_app(match)
+            return
+
+        match = re.match(self.run_pattern, command)
+        if match:
+            print(f"Plugin Command")
+            self.run_plugin_command(match)
+            return
 
 
 def load_plugins(path: str='plugins', verbose: bool=False) -> Dict[str, BasePlugin]:
