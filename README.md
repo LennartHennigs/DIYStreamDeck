@@ -9,7 +9,7 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 
 For the latest changes and the history of changes, please take a look at the [CHANGELOG](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
 
-**Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and less than ten lines in the CicuitPython code).
+**Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about ten lines in the CicuitPython code).
 
 This is also an ongoing project. I just added plugin capabilities to the code.
 
@@ -18,7 +18,7 @@ This is also an ongoing project. I just added plugin capabilities to the code.
 - Assign keyboard shortcuts or key sequences to keys
 - Shortcuts can be defined for specific app or globally
 - Define "folders" - a new keypad definition scheme that can be tied to a single key
-- Launch applications 🆕
+- Launch applications
 - Build and define your own plugins and its commands 🆕
   - Includes a Audio playback plugin 🆕
   - Includes a Spotify plugin 🆕
@@ -35,7 +35,7 @@ This is also an ongoing project. I just added plugin capabilities to the code.
 
 The [`code.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/code.py) script reads key definitions from a JSON file and maps them to specific key sequences and LED colors. It listens for the currently active application on the host computer and updates the keypad based on the key mappings for the active application.
 
-The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/watchdog.py) script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad.
+The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/watchdog.py) script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad. It also receives `action` commands for plugin events.
 
 ## Getting Started
 
@@ -52,7 +52,6 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 - Defining keyboard layout
   - Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
 
-
 ## Configuration
 
 In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with two entries: `key_definitions` and `folders`. In the `key_definitions` area the different keys for various apps are defined with the key numbers (0-15). In `folders` key sets can be defined that can be assigned to a key.
@@ -65,7 +64,6 @@ These are the possible fields for a key entry:
 - `description`: This field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
 - `folder`: This field allows you assign a "folder" to be opened. The entry also needs the `action` field
 - `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is needed inside a folder definition.
-
 
 With these fields you can define three types of keys, shortcut keys, application launch keys, and folder keys.
 
@@ -181,11 +179,17 @@ To use it you need to have a Spotify premium account and need to add you API cre
 
 ### Hue Plugin 🆕
 
-- hue.turn_off [Lamp ID | 'String']
-- hue.turn_on [Lamp ID | 'String']
-- hue.turn_toggle [Lamp ID | 'String']
+- hue.turn_off [Lamp ID | 'Lamp Name']
+- hue.turn_on [Lamp ID | 'Lamp Name']
+- hue.turn_toggle [Lamp ID | 'Lamp Name']
 
 You need to define the IP address of your hue bridge in the config JSON and press its connect button on first run. Provide the ID of your lamp or its name enclosed in single quotes.
+
+### Audio Playback Plugin 🆕
+
+- sounds.play ['File Name']
+- sounds.stop
+
 ## Watchdog
 
 To enable the dynamic detection of the active app, you need to run a watchdog script on your computer that sends the active app's name to the Pi Pico via USB serial. This project includes a Python watchdog script specifically designed for macOS.
