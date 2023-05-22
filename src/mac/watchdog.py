@@ -112,7 +112,7 @@ class AppObserver(Cocoa.NSObject):
             print(f"Error reading from microcontroller: {e}")
             return
 
-
+    @objc.signature(b'v@:@')
     def launch_app(self, match: re.Match) -> None:
         launch_app_name = match.group(1)
         if self.args.verbose:
@@ -124,6 +124,7 @@ class AppObserver(Cocoa.NSObject):
         return
 
 
+    @objc.signature(b'v@:@')
     def run_plugin_command(self, match: re.Match) -> None:
         parts = match.group(1).split(' ', 1)
         command = parts[0].strip()
