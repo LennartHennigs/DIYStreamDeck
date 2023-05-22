@@ -3,8 +3,9 @@
 
 ## Unreleased
 
-- Included a Hue Plugin
-- Included a Spotify Plugin
+- Included a Audio playback plugin
+- Included a Hue plugin
+- Included a Spotify plugin
 - added Plugin capabilities to the Streamdeck
 - Safari and Chrome now also return the URL of the active tab
 - stopping the code will turn off the keypad

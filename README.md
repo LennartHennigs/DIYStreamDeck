@@ -20,6 +20,7 @@ This is also an ongoing project. I just added plugin capabilities to the code.
 - Define "folders" - a new keypad definition scheme that can be tied to a single key
 - Launch applications 🆕
 - Build and define your own plugins and its commands 🆕
+  - Includes a Audio playback plugin 🆕
   - Includes a Spotify plugin 🆕
   - Includes a Philips Hue plugin 🆕
 - All definitions are stored in a JSON config file
@@ -38,10 +39,19 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 
 ## Getting Started
 
-- Install CircuitPython on your Raspberry Pi Pico following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython).
-- Install the required CircuitPython libraries by following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/circuitpython-libraries).
-- Clone this repository and copy the contents to your Raspberry Pi Pico.
-- Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
+- On the Pi Pico
+  - Install CircuitPython on your Raspberry Pi Pico following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython).
+  - Install the required CircuitPython libraries by following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/circuitpython-libraries).
+  - Clone this repository and copy the contents of the `src/pico` folder to your Raspberry Pi Pico.
+  
+- On the Mac
+  - Copy the content of `src/mac` and its sub folders to your Mac
+  - Install [Python3 on your Mac](https://www.freecodecamp.org/news/python-version-on-mac-update/), e.g. [via `brew`](https://brew.sh/)
+  - If you want to use the plugins, edit the config files in the `config` directory
+
+- Defining keyboard layout
+  - Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
+
 
 ## Configuration
 
