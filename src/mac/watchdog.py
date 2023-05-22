@@ -27,7 +27,6 @@ sys.path.append(plugins_directory)
 
 # Function to create a serial connection
 
-
 def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Serial]:
     try:
         return serial.Serial(port, baud_rate, timeout=1)
@@ -37,7 +36,6 @@ def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Seria
 
 # Function to run the main loop
 
-
 def run_loop(observer: 'AppObserver') -> None:
     run_loop = Cocoa.NSRunLoop.currentRunLoop()
     while True:
@@ -45,13 +43,13 @@ def run_loop(observer: 'AppObserver') -> None:
             Cocoa.NSDefaultRunLoopMode, Cocoa.NSDate.dateWithTimeIntervalSinceNow_(0.1))
         observer.check_serial()
 
+
 class AppObserver(Cocoa.NSObject):
     ser: serial.Serial
     args: argparse.Namespace
     plugins: Dict[str, BasePlugin]
     launch_pattern = r"^Launch: (.+)$"
     run_pattern = r"^Run: (.+)$"
-
 
     def initWithSerial_args_plugins_(self, ser: serial.Serial, args: argparse.Namespace, plugins: Dict[str, Any]) -> Optional['AppObserver']:
         self = objc.super(AppObserver, self).init()
@@ -62,13 +60,11 @@ class AppObserver(Cocoa.NSObject):
         self.plugins = plugins
         return self
 
-
     @objc.signature(b'v@:@')  # Encoded the signature string as bytes
     def applicationActivated_(self, notification: Cocoa.NSNotification) -> None:
         app_name = notification.userInfo(
         )['NSWorkspaceApplicationKey'].localizedName()
         self.send_app_name_to_microcontroller(app_name)
-
 
     @objc.signature(b'v@:@')
     def send_app_name_to_microcontroller(self, app_name: str) -> None:
@@ -102,7 +98,6 @@ class AppObserver(Cocoa.NSObject):
         except (serial.SerialException, UnicodeEncodeError) as e:
             print(f"Error sending app name to microcontroller: {e}")
 
-    
     def read_serial_data(self) -> Optional[str]:
         if self.ser.in_waiting == 0:
             return
@@ -111,6 +106,7 @@ class AppObserver(Cocoa.NSObject):
         except serial.SerialException as e:
             print(f"Error reading from microcontroller: {e}")
             return
+
 
     @objc.signature(b'v@:@')
     def launch_app(self, match: re.Match) -> None:
@@ -122,7 +118,6 @@ class AppObserver(Cocoa.NSObject):
         except subprocess.CalledProcessError as e:
             pass
         return
-
 
     @objc.signature(b'v@:@')
     def run_plugin_command(self, match: re.Match) -> None:
@@ -157,11 +152,9 @@ class AppObserver(Cocoa.NSObject):
                 except ValueError:
                     print(f"Invalid parameter: {param}")
                     return
-
 #        if self.args.verbose:
 #            print(f"Executing: {command}")  # Echo when a command is detected
         command_func(param) if param is not None else command_func()
-
 
     def check_serial(self) -> None:
         # Check if there's any data in the buffer
@@ -182,7 +175,7 @@ class AppObserver(Cocoa.NSObject):
             return
 
 
-def load_plugins(path: str='plugins', verbose: bool=False) -> Dict[str, BasePlugin]:
+def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, BasePlugin]:
     plugins = {}
 
     # Get the directory that contains the current script
@@ -191,7 +184,8 @@ def load_plugins(path: str='plugins', verbose: bool=False) -> Dict[str, BasePlug
     # Construct the full path to the plugins directory
     full_path = os.path.join(base_path, path)
 
-    plugin_files = [f for f in os.scandir(full_path) if f.is_file() and f.name.endswith('.py') and f.name != 'base_plugin.py']
+    plugin_files = [f for f in os.scandir(full_path) if f.is_file(
+    ) and f.name.endswith('.py') and f.name != 'base_plugin.py']
     for plugin_file in plugin_files:
         plugin_name = os.path.splitext(plugin_file.name)[0]
 
@@ -201,8 +195,10 @@ def load_plugins(path: str='plugins', verbose: bool=False) -> Dict[str, BasePlug
         plugin_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(plugin_module)
 
-        plugin_class = getattr(plugin_module, f'{plugin_name.capitalize()}Plugin')
-        plugins[plugin_name] = plugin_class(os.path.join(full_path, 'config', f'{plugin_name}.json'), verbose)
+        plugin_class = getattr(
+            plugin_module, f'{plugin_name.capitalize()}Plugin')
+        plugins[plugin_name] = plugin_class(os.path.join(
+            full_path, 'config', f'{plugin_name}.json'), verbose)
 
         print(f"Loaded plugin: {plugin_name}")
 
@@ -233,7 +229,8 @@ def main() -> None:
             notification_center = Cocoa.NSWorkspace.sharedWorkspace().notificationCenter()
             notification_center.addObserver_selector_name_object_(
                 app_observer,
-                objc.selector(app_observer.applicationActivated_, signature=b'v@:@'),
+                objc.selector(app_observer.applicationActivated_,
+                              signature=b'v@:@'),
                 Cocoa.NSWorkspaceDidActivateApplicationNotification,
                 None,
             )
@@ -249,6 +246,7 @@ def main() -> None:
 
     except TypeError:
         print("Error: No serial connection.")
+
 
 # Entry point for the script
 if __name__ == "__main__":
