@@ -190,6 +190,8 @@ You need to define the IP address of your hue bridge in the config JSON and pres
 - sounds.play ['File Name']
 - sounds.stop
 
+The plugin can playback `.wav` and `.mp3` files.
+
 ## Watchdog
 
 To enable the dynamic detection of the active app, you need to run a watchdog script on your computer that sends the active app's name to the Pi Pico via USB serial. This project includes a Python watchdog script specifically designed for macOS.
