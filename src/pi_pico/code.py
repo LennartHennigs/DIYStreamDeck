@@ -210,8 +210,23 @@ class KeyController:
         return key_sequences, color_array, description, application, action, folder
 
 
+    def process_global(self, json_data):
+        global_config = {}
+        if "global" in json_data:
+            for key, config in json_data["global"].items():
+                key_sequences, color_array, description, application, action, folder = self.get_config_items(config)
+                if folder and folder not in json_data["folders"]:
+                    print(
+                        f"Error: Folder '{folder}' not found. Disabling key binding.")
+                    key_sequences, color_array, description, application, action, folder = (
+                        (), (0, 0, 0), '', '', '', '')
+                global_config[int(key)] = (key_sequences, color_array, description, application, action, folder)
+        return global_config
+
+
     def process_key_definitions(self, json_data):
         key_configs = {}
+        global_key_config = self.process_global(json_data)
         for app, configs in json_data["key_definitions"].items():
             key_configs[app] = {}
             for key, config in configs.items():
@@ -221,26 +236,31 @@ class KeyController:
                         f"Error: Folder '{folder}' not found. Disabling key binding.")
                     key_sequences, color_array, description, application, action, folder = (
                         (), (0, 0, 0), '', '', '', '')
-                key_configs[app][int(key)] = (
-                    key_sequences, color_array, description, application, action, folder)
+                key_configs[app][int(key)] = (key_sequences, color_array, description, application, action, folder)
+            for key, config in global_key_config.items():
+                if key not in key_configs[app]:
+                    key_configs[app][key] = config
         return key_configs
 
 
     def process_folders(self, json_data):
-            folders = {}
-            for folder_name, folder_configs in json_data["folders"].items():
-                folders[folder_name] = {}
-                close_folder_found = False
-                for key, config in folder_configs.items():
-                    key_sequences, color_array, description, application, action, folder = self.get_config_items(config)
-                    if action == "close_folder":
-                        close_folder_found = True
-                    folders[folder_name][int(key)] = (
-                        key_sequences, color_array, description, application, action, folder)
-                if not close_folder_found and folder_name not in json_data["folders"]:
-                    raise ValueError(
-                        f"Error: Folder '{folder_name}' does not have a 'close_folder' action defined.")
-            return folders
+        folders = {}
+        global_key_config = self.process_global(json_data)
+        for folder_name, folder_configs in json_data["folders"].items():
+            folders[folder_name] = {}
+            close_folder_found = False
+            for key, config in folder_configs.items():
+                key_sequences, color_array, description, application, action, folder = self.get_config_items(config)
+                if action == "close_folder":
+                    close_folder_found = True
+                folders[folder_name][int(key)] = (key_sequences, color_array, description, application, action, folder)
+            if not close_folder_found:
+                raise ValueError(
+                    f"Error: Folder '{folder_name}' does not have a 'close_folder' action defined.")
+            for key, config in global_key_config.items():
+                if key not in folders[folder_name]:
+                    folders[folder_name][key] = config
+        return folders
 
 
     def read_key_configs(self, json_filename):
