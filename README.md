@@ -60,7 +60,7 @@ In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/mai
 
 - In the `applications` area the different keys for various apps are defined with the key numbers (0-15).
 - The `folders` section defines key sets that can be assigned to a single key.
-- In the `global` section are key definitions that are being all apps and folders. They can be "overwritten" via specific folder or app definition.
+- In the `global` section are key definitions that are being all apps and folders. They can be "overwritten" via specific folder or app definition. You can set `"ignore_globals": "true"` for folders and apps where they should not be used.
 - The `urls` section contains keyboard definitions for Safari and Chrome URls.
 
 These are the possible fields for a key entry:
