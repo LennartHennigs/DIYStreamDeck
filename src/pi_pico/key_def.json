@@ -28,7 +28,7 @@
       },
       "5": {
         "key_sequence": "GUI+SHIFT+H",
-        "color": "#FFFF00",
+        "color": "#FFA500",
         "description": "Show/Hide Chat"
       },
       "6": {
@@ -59,6 +59,11 @@
         "folder": "apps",
         "color": "#FFFFFF",
         "description": "Apps Folder"
+      },
+    "13": {
+        "key_sequence": "LEFT_CONTROL+UP_ARROW",
+        "color": "#FFFFFF",
+        "description": "Show all apps"
       },
       "14": {
         "key_sequence": "GUI+SHIFT+F",
@@ -161,7 +166,9 @@
         "description": "Close Application"
       }
     },
-  "loginwindow": {
+    "loginwindow": {
+    },
+    "Bildschirmschoner": {
     },
     "_otherwise": {
       "0": {
@@ -203,6 +210,16 @@
         "action": "hue.toggle 'Schreibtisch Lampe'",
         "color": "#FFFF00",
         "description": "Let there be light!"
+      },
+    "13": {
+        "key_sequence": "LEFT_CONTROL+UP_ARROW",
+        "color": "#FFFFFF",
+        "description": "Show all apps"
+      },
+  "14": {
+        "action": "sounds.play 'grillen.mp3'",
+        "color": "#FFFFFF",
+        "description": "play"
       },
       "15": {
         "key_sequence": "GUI+Q",
@@ -258,6 +275,17 @@
         "color": "#FFFFFF",
         "description": "Close"
       },
+    "13": {
+        "key_sequence": "LEFT_CONTROL+UP_ARROW",
+        "color": "#FFFFFF",
+        "description": "Show all apps"
+      },
+  "14": {
+        "action": "sounds.play 'grillen.mp3'",
+        "color": "#FFFFFF",
+        "description": "play"
+      },
+
       "15": {
         "key_sequence": "GUI+Q",
         "color": "#FF0000",
@@ -266,3 +294,4 @@
     }
   }
 }
+
