@@ -26,6 +26,7 @@ class KeyController:
         self.keypad = RgbKeypad()
         self.keys = self.keypad.keys
         self.urls = {}
+        self.global_config = {}
         self.keyboard = Keyboard(usb_hid.devices)
         self.layout = KeyboardLayoutUS(self.keyboard)
         self.key_configs, self.folders, self.global_config, self.urls = self.read_key_configs(self.JSON_FILE)
@@ -239,12 +240,14 @@ class KeyController:
         return global_config
 
 
-    def process_key_definitions(self, json_data):
+    def process_key_definitions(self, json_data, global_config):
         key_configs = {}
-        global_key_config = self.process_globals(json_data)
         for app, configs in json_data["applications"].items():
             key_configs[app] = {}
+            ignore_globals = configs.get("ignore_globals", "false").lower() == "true"
             for key, config in configs.items():
+                if key == "ignore_globals":
+                    continue
                 key_sequences, color_array, description, application, action, folder = self.get_config_items(config)
                 if folder and folder not in json_data["folders"]:
                     print(
@@ -252,19 +255,21 @@ class KeyController:
                     key_sequences, color_array, description, application, action, folder = (
                         (), (0, 0, 0), '', '', '', '')
                 key_configs[app][int(key)] = (key_sequences, color_array, description, application, action, folder)
-            for key, config in global_key_config.items():
-                if key not in key_configs[app]:
-                    key_configs[app][key] = config
+            if not ignore_globals:
+                for key, config in global_config.items():
+                    if key not in key_configs[app]:
+                        key_configs[app][key] = config
         return key_configs
 
-
-    def process_folders(self, json_data):
+    def process_folders(self, json_data, global_config):
         folders = {}
-        global_key_config = self.process_globals(json_data)
         for folder_name, folder_configs in json_data["folders"].items():
             folders[folder_name] = {}
             close_folder_found = False
+            ignore_globals = folder_configs.get("ignore_globals", "false").lower() == "true"
             for key, config in folder_configs.items():
+                if key == "ignore_globals":
+                    continue
                 key_sequences, color_array, description, application, action, folder = self.get_config_items(config)
                 if action == "close_folder":
                     close_folder_found = True
@@ -272,18 +277,19 @@ class KeyController:
             if not close_folder_found:
                 raise ValueError(
                     f"Error: Folder '{folder_name}' does not have a 'close_folder' action defined.")
-            for key, config in global_key_config.items():
-                if key not in folders[folder_name]:
-                    folders[folder_name][key] = config
+            if not ignore_globals:
+                for key, config in global_config.items():
+                    if key not in folders[folder_name]:
+                        folders[folder_name][key] = config
         return folders
 
     
     def read_key_configs(self, json_filename):
         with open(json_filename, 'r') as json_file:
             json_data = json.load(json_file)
-        key_configs = self.process_key_definitions(json_data)
-        folders = self.process_folders(json_data)
         global_config = self.process_globals(json_data)
+        key_configs = self.process_key_definitions(json_data, global_config)
+        folders = self.process_folders(json_data, global_config)
         urls = self.process_urls(json_data)
         return key_configs, folders, global_config, urls
     
