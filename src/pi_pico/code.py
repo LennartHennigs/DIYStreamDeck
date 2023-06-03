@@ -25,9 +25,9 @@ class KeyController:
         self.verbose=verbose
         self.keypad = RgbKeypad()
         self.keys = self.keypad.keys
+        self.urls = {}
         self.keyboard = Keyboard(usb_hid.devices)
         self.layout = KeyboardLayoutUS(self.keyboard)
-        self.urls = {}
         self.key_configs, self.folders, self.global_config, self.urls = self.read_key_configs(self.JSON_FILE)
         self.key_config = self.key_configs.get("_otherwise", {})
         self.usb_serial = usb_cdc.console
@@ -47,10 +47,10 @@ class KeyController:
 
 
     def close_folder(self):
-        if not self.folder_stack:
+        if not self.folder_stack:  # if the stack is empty, no folder to close
             return
-        last_folder = self.folder_stack.pop()
-        self.folder_open = bool(self.folder_stack)
+        last_folder = self.folder_stack.pop()  # pop the last item from the stack
+        self.folder_open = bool(self.folder_stack)  # if the stack is not empty, some folder is still open
         self.key_config = last_folder['last_key_config']
         self.update_keys()
 
@@ -137,7 +137,9 @@ class KeyController:
     def send_application_name(self, app_name):
         try:
             usb_cdc.console.write(f"Launch: {app_name}\n".encode('utf-8'))
+            # print(f"Sent to Mac: Launch: {app_name}")
         except Exception as e:
+            # print(f"Could not launch {app_name}: {e}\n")
             pass
 
 
@@ -161,12 +163,14 @@ class KeyController:
                 if len(split_app_name) > 1:
                     # Remove the trailing ")" from the details
                     url = split_app_name[1].rstrip(')')
+
                 # Check if there is a keyboard definition for the URL
                 if url in self.urls:
                     self.key_config = self.urls[url]
                 else:
                     self.key_config = self.key_configs.get(app_name, self.key_configs.get("_otherwise", {}))
                 self.update_keys()
+
             else:
                 time.sleep(0.1)
                 self.keypad.update()
@@ -273,7 +277,7 @@ class KeyController:
                     folders[folder_name][key] = config
         return folders
 
-
+    
     def read_key_configs(self, json_filename):
         with open(json_filename, 'r') as json_file:
             json_data = json.load(json_file)
@@ -282,7 +286,7 @@ class KeyController:
         global_config = self.process_globals(json_data)
         urls = self.process_urls(json_data)
         return key_configs, folders, global_config, urls
-
+    
 
 if __name__ == "__main__":
     controller = KeyController()
@@ -292,3 +296,4 @@ if __name__ == "__main__":
         # turn off all the LEDs when the program is interrupted
         for key in controller.keys:
             key.led_off()
+
