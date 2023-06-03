@@ -32,7 +32,7 @@
     }
   },
   
-  "key_definitions": {
+  "applications": {
 
     "zoom.us": {
       "0": {
