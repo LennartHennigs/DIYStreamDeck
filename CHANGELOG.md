@@ -3,6 +3,7 @@
 
 ## 06-03-2023
 
+- You can now define keys for Safari and Chrome URLs via the  `urls` section in the JSON
 - there is now a `global` section for default key definitions
 - you can now nest folders
 

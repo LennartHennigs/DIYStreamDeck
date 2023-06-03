@@ -56,11 +56,12 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 
 ## Configuration
 
-In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with three entries: `key_definitions`, `folders`, and `global`.
+In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with three entries: `applications`, `folders`, and `global`.
 
-- In the `key_definitions` area the different keys for various apps are defined with the key numbers (0-15).
-- In `folders` key sets can be defined that can be assigned to a key.
-- The `global` section contains default key definitions for all apps and folders. They can be "overwritten" via specific folder or app definition.
+- In the `applications` area the different keys for various apps are defined with the key numbers (0-15).
+- The `folders` section defines key sets that can be assigned to a single key.
+- In the `global` section are key definitions that are being all apps and folders. They can be "overwritten" via specific folder or app definition.
+- The `urls` section contains keyboard definitions for Safari and Chrome URls.
 
 These are the possible fields for a key entry:
 
@@ -91,7 +92,7 @@ For example, the configuration could look like this:
     }
   },
 
-  "key_definitions": {
+  "applications": {
     "zoom.us": {
       "0": {
         "key_sequence": [
