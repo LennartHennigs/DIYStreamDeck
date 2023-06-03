@@ -5,6 +5,7 @@
 
 - You can now define keys for Safari and Chrome URLs via the  `urls` section in the JSON
 - there is now a `global` section for default key definitions
+- You can define `"ignore_globals": "true"` for folders and apps where they should not be used
 - you can now nest folders
 
 ## 05-22-2023
