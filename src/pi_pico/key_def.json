@@ -1,10 +1,44 @@
 {
+  "global": {
+    "0": {
+      "key_sequence": "LEFT_CONTROL+DOWN_ARROW",
+      "color": "#FFFF00",
+      "description": "Show all apps"
+    },
+    "1": {
+      "key_sequence": "LEFT_CONTROL+UP_ARROW",
+      "color": "#FFFF00",
+      "description": "Show all apps"
+    },
+    "12": {
+      "folder": "apps",
+      "color": "#FFFFFF",
+      "description": "Apps Folder"
+    },
+    "13": {
+      "folder": "controls",
+      "color": "#FFFFFF",
+      "description": "Controls Folder"
+    },
+    "14": {
+      "key_sequence": "GUI+TAB",
+      "color": "#FFFF00",
+      "description": "Previous Appp"
+    },
+    "15": {
+      "key_sequence": "GUI+Q",
+      "color": "#FF0000",
+      "description": "Close App"
+    }
+  },
+  
   "key_definitions": {
+
     "zoom.us": {
       "0": {
         "key_sequence": "GUI+SHIFT+A",
         "color": "#FFFF00",
-        "description": "Mute/Unmute Audio"
+        "description": "Mute/Unmute"
       },
       "1": {
         "key_sequence": "GUI+SHIFT+V",
@@ -45,6 +79,11 @@
         "color": "#00FF00",
         "description": "Invite Participants"
       },
+      "8": {
+        "key_sequence": "GUI+SHIFT+F",
+        "color": "#0000FF",
+        "description": "Enter/Exit Full Screen"
+      },
       "10": {
         "key_sequence": "GUI+SHIFT+C",
         "color": "#FF0000",
@@ -54,21 +93,6 @@
         "key_sequence": "GUI+SHIFT+P",
         "color": "#FFFFFF",
         "description": "Pause/Resume Recording"
-      },
-      "12": {
-        "folder": "apps",
-        "color": "#FFFFFF",
-        "description": "Apps Folder"
-      },
-    "13": {
-        "key_sequence": "LEFT_CONTROL+UP_ARROW",
-        "color": "#FFFFFF",
-        "description": "Show all apps"
-      },
-      "14": {
-        "key_sequence": "GUI+SHIFT+F",
-        "color": "#0000FF",
-        "description": "Enter/Exit Full Screen"
       },
       "15": {
         "key_sequence": [
@@ -80,11 +104,12 @@
         "description": "End Meeting"
       }
     },
+
     "Microsoft Teams": {
       "0": {
         "key_sequence": "GUI+SHIFT+M",
         "color": "#FFFF00",
-        "description": "Mute/Unmute Audio"
+        "description": "Mute/Unmute"
       },
       "1": {
         "key_sequence": "GUI+SHIFT+O",
@@ -106,17 +131,13 @@
         "color": "#00FF00",
         "description": "Share Screen"
       },
-      "12": {
-        "folder": "apps",
-        "color": "#FFFFFF",
-        "description": "Apps Folder"
-      },
       "15": {
         "key_sequence": "GUI+SHIFT+H",
         "color": "#FF0000",
         "description": "End Meeting"
       }
-  },
+    },
+
     "Microsoft Outlook": {
       "0": {
         "key_sequence": "GUI+ONE",
@@ -132,103 +153,39 @@
         "key_sequence": "GUI+ALT+N",
         "color": "#00FF00",
         "description": "New Email"
-      },
-      "12": {
-        "folder": "apps",
-        "color": "#FFFFFF",
-        "description": "Apps Folder"
       }
     },
+
     "Spotify": {
-      "4": {
+      "0": {
         "key_sequence": "GUI+LEFT_ARROW",
         "color": "#00FF00",
         "description": "Spotify - Previous Song"
       },
-      "5": {
+      "1": {
         "key_sequence": "SPACE",
         "color": "#00FF00",
         "description": "Spotify - Play or Pause"
       },
-      "6": {
+      "2": {
         "key_sequence": "GUI+RIGHT_ARROW",
         "color": "#00FF00",
         "description": "Spotify - Next Song"
-      },
-      "12": {
-        "folder": "apps",
-        "color": "#FFFFFF",
-        "description": "Apps Folder"
-      },
-      "15": {
-        "key_sequence": "GUI+Q",
-        "color": "#FF0000",
-        "description": "Close Application"
       }
     },
+
     "loginwindow": {
     },
+
     "Bildschirmschoner": {
     },
+
     "_otherwise": {
-      "0": {
-        "key_sequence": "GUI+SPACE",
-        "color": "#FFFFFF",
-        "description": "Open Spotlight Search"
-      },
-      "2": {
-        "key_sequence": "ESCAPE",
-        "color": "#000000",
-        "description": "Exit Full Screen"
-      },
-      "3": {
-        "key_sequence": "GUI+LEFT_CONTROL+Q",
-        "color": "#FF0000",
-        "description": "Close Application"
-      },
-      "4": {
-        "action": "spotify.prev",
-        "color": "#00FF00",
-        "description": "Spotify - Previous Song"
-      },
-      "5": {
-        "action": "spotify.playpause",
-        "color": "#00FF00",
-        "description": "Spotify - Play or Pause"
-      },
-      "6": {
-        "action": "spotify.next",
-        "color": "#00FF00",
-        "description": "Spotify - Next Song"
-      },
-      "12": {
-        "folder": "apps",
-        "color": "#FFFFFF",
-        "description": "Apps Folder"
-      },
-      "8": {
-        "action": "hue.toggle 'Schreibtisch Lampe'",
-        "color": "#FFFF00",
-        "description": "Let there be light!"
-      },
-    "13": {
-        "key_sequence": "LEFT_CONTROL+UP_ARROW",
-        "color": "#FFFFFF",
-        "description": "Show all apps"
-      },
-  "14": {
-        "action": "sounds.play 'grillen.mp3'",
-        "color": "#FFFFFF",
-        "description": "play"
-      },
-      "15": {
-        "key_sequence": "GUI+Q",
-        "color": "#FF0000",
-        "description": "Close Application"
-      }
     }
   },
+
   "folders": {
+
     "apps": {
       "0": {
         "application": "zoom.us",
@@ -236,14 +193,14 @@
         "description": "Launch Zoom"
       },
       "1": {
-        "application": "Slack",
-        "color": "#FF0000",
-        "description": "Launch Slack"
-      },
-      "2": {
         "application": "Microsoft Outlook",
         "color": "#A2BAF5",
         "description": "Launch Outlook"
+      },
+      "2": {
+        "application": "Slack",
+        "color": "#FF0000",
+        "description": "Launch Slack"
       },
       "3": {
         "application": "Notes",
@@ -272,26 +229,57 @@
       },
       "12": {
         "action": "close_folder",
-        "color": "#FFFFFF",
+        "color": "#FF0000",
         "description": "Close"
       },
-    "13": {
-        "key_sequence": "LEFT_CONTROL+UP_ARROW",
-        "color": "#FFFFFF",
-        "description": "Show all apps"
+      "13": {
       },
-  "14": {
-        "action": "sounds.play 'grillen.mp3'",
-        "color": "#FFFFFF",
-        "description": "play"
-      },
-
       "15": {
         "key_sequence": "GUI+Q",
         "color": "#FF0000",
         "description": "Close Application"
       }
+
+    }, 
+
+    "controls": {
+      "3": {
+        "key_sequence": "GUI+LEFT_CONTROL+Q",
+        "color": "#FF0000",
+        "description": "Lock Screen"
+      },
+      "4": {
+        "action": "spotify.prev",
+        "color": "#00FF00",
+        "description": "Spotify - Previous Song"
+      },
+      "5": {
+        "action": "spotify.playpause",
+        "color": "#00FF00",
+        "description": "Spotify - Play or Pause"
+      },
+      "6": {
+        "action": "spotify.next",
+        "color": "#00FF00",
+        "description": "Spotify - Next Song"
+      },
+      "8": {
+        "action": "hue.toggle 'Schreibtisch Lampe'",
+        "color": "#FFFF00",
+        "description": "Let there be light!"
+      },
+      "13": {
+        "action": "close_folder",
+        "color": "#FF0000",
+        "description": "Close Folder"
+      },
+      "11": {
+        "action": "sounds.play 'grillen.mp3'",
+        "color": "#FFFFFF",
+        "description": "play"
+      },
+      "12": {
+      }
     }
   }
 }
-
