@@ -34,21 +34,24 @@ class KeyController:
         self.folder_open = False
         self.active_app = None
         self.last_key_config = None
+        self.folder_stack = [] 
 
 
     def open_folder(self, folder_name):
         if folder_name in self.folders:
-            self.last_key_config = self.key_config
+            self.folder_stack.append({'folder_name': folder_name, 'last_key_config': self.key_config})
             self.folder_open = True
-            self.folder_name = folder_name
+#            self.folder_name = folder_name
             self.key_config = self.folders[folder_name]
             self.update_keys()
 
 
     def close_folder(self):
-        self.folder_open = False
-        self.key_config = self.last_key_config
-        self.last_key_config = None
+        if not self.folder_stack:  # if the stack is empty, no folder to close
+            return
+        last_folder = self.folder_stack.pop()  # pop the last item from the stack
+        self.folder_open = bool(self.folder_stack)  # if the stack is not empty, some folder is still open
+        self.key_config = last_folder['last_key_config']
         self.update_keys()
 
 
@@ -224,20 +227,20 @@ class KeyController:
 
 
     def process_folders(self, json_data):
-        folders = {}
-        for folder_name, folder_configs in json_data["folders"].items():
-            folders[folder_name] = {}
-            close_folder_found = False
-            for key, config in folder_configs.items():
-                key_sequences, color_array, description, application, action, folder = self.get_config_items(config)
-                if action == "close_folder":
-                    close_folder_found = True
-                folders[folder_name][int(key)] = (
-                    key_sequences, color_array, description, application, action, folder)
-            if not close_folder_found:
-                raise ValueError(
-                    f"Error: Folder '{folder_name}' does not have a 'close_folder' action defined.")
-        return folders
+            folders = {}
+            for folder_name, folder_configs in json_data["folders"].items():
+                folders[folder_name] = {}
+                close_folder_found = False
+                for key, config in folder_configs.items():
+                    key_sequences, color_array, description, application, action, folder = self.get_config_items(config)
+                    if action == "close_folder":
+                        close_folder_found = True
+                    folders[folder_name][int(key)] = (
+                        key_sequences, color_array, description, application, action, folder)
+                if not close_folder_found and folder_name not in json_data["folders"]:
+                    raise ValueError(
+                        f"Error: Folder '{folder_name}' does not have a 'close_folder' action defined.")
+            return folders
 
 
     def read_key_configs(self, json_filename):
