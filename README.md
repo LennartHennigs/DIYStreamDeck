@@ -7,23 +7,25 @@ This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keyp
 
 If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
 
-For the latest changes and the history of changes, please take a look at the [CHANGELOG](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
-
-**Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about ten lines in the CicuitPython code).
+**Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about ten lines in the CircuitPython code).
 
 This is also an ongoing project. I just added plugin capabilities to the code.
 
 ## Features
 
+For the latest changes and the history of changes, please take a look at the [CHANGELOG](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
+
 - Assign keyboard shortcuts or key sequences to keys
-- Shortcuts can be defined for specific app or globally
+- Define shortcuts can or specific apps
+- Use the  `_otherwise` section to assign shortcuts for all other apps
 - Define "folders" - a new keypad definition scheme that can be tied to a single key
+- Define global shortcuts in a `global` section for both, folders and apps 🆕
 - Launch applications
-- Build and define your own plugins and its commands 🆕
-  - Includes a Audio playback plugin 🆕
-  - Includes a Spotify plugin 🆕
-  - Includes a Philips Hue plugin 🆕
-- All definitions are stored in a JSON config file
+- Build your own plugins and its commands. The source includes ...
+  - Audio playback plugin
+  - Spotify playback plugin
+  - Philips Hue plugin
+- All key definitions can be defined in a JSON config file stored on the Pi Pico
 
 ## Hardware Requirements
 
@@ -54,7 +56,11 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 
 ## Configuration
 
-In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with two entries: `key_definitions` and `folders`. In the `key_definitions` area the different keys for various apps are defined with the key numbers (0-15). In `folders` key sets can be defined that can be assigned to a key.
+In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with three entries: `key_definitions`, `folders`, and `global`.
+
+- In the `key_definitions` area the different keys for various apps are defined with the key numbers (0-15).
+- In `folders` key sets can be defined that can be assigned to a key.
+- The `global` section contains default key definitions for all apps and folders. They can be "overwritten" via specific folder or app definition.
 
 These are the possible fields for a key entry:
 
@@ -63,7 +69,7 @@ These are the possible fields for a key entry:
 - `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue).
 - `description`: This field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
 - `folder`: This field allows you assign a "folder" to be opened. The entry also needs the `action` field
-- `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is needed inside a folder definition.
+- `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is mandatory inside a folder definition.
 
 With these fields you can define three types of keys, shortcut keys, application launch keys, and folder keys.
 
@@ -77,6 +83,14 @@ For example, the configuration could look like this:
 
 ``` json
 {
+  "global": {
+    "15": {
+      "key_sequence": "GUI+Q",
+      "color": "#FF0000",
+      "description": "Close App"
+    }
+  },
+
   "key_definitions": {
     "zoom.us": {
       "0": {
@@ -103,6 +117,7 @@ For example, the configuration could look like this:
         "description": "End Meeting"
       }
     },
+
     "_otherwise": {
       "0": {
         "key_sequence": [
@@ -127,13 +142,13 @@ For example, the configuration could look like this:
         "description": "Spotify - Next Song"
       },
       "13": {
-        "action": "open_folder",
         "folder": "apps",
         "color": "#FFFFFF",
         "description": "Apps Folder"
       }
     }
   },
+
   "folders": {
     "apps": {
       "0": {
