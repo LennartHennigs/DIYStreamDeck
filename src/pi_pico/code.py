@@ -27,7 +27,8 @@ class KeyController:
         self.keys = self.keypad.keys
         self.keyboard = Keyboard(usb_hid.devices)
         self.layout = KeyboardLayoutUS(self.keyboard)
-        self.key_configs, self.folders = self.read_key_configs(self.JSON_FILE)
+        self.urls = {}
+        self.key_configs, self.folders, self.global_config, self.urls = self.read_key_configs(self.JSON_FILE)
         self.key_config = self.key_configs.get("_otherwise", {})
         self.usb_serial = usb_cdc.console
         self.update_keys()
@@ -41,16 +42,15 @@ class KeyController:
         if folder_name in self.folders:
             self.folder_stack.append({'folder_name': folder_name, 'last_key_config': self.key_config})
             self.folder_open = True
-#            self.folder_name = folder_name
             self.key_config = self.folders[folder_name]
             self.update_keys()
 
 
     def close_folder(self):
-        if not self.folder_stack:  # if the stack is empty, no folder to close
+        if not self.folder_stack:
             return
-        last_folder = self.folder_stack.pop()  # pop the last item from the stack
-        self.folder_open = bool(self.folder_stack)  # if the stack is not empty, some folder is still open
+        last_folder = self.folder_stack.pop()
+        self.folder_open = bool(self.folder_stack)
         self.key_config = last_folder['last_key_config']
         self.update_keys()
 
@@ -136,11 +136,8 @@ class KeyController:
 
     def send_application_name(self, app_name):
         try:
-            usb_cdc.console.write(f"Launch: {app_name}\n".encode(
-                'utf-8'))  # Encode the string to bytes
-            # print(f"Sent to Mac: Launch: {app_name}")
+            usb_cdc.console.write(f"Launch: {app_name}\n".encode('utf-8'))
         except Exception as e:
-            # print(f"Could not launch {app_name}: {e}\n")
             pass
 
 
@@ -164,9 +161,11 @@ class KeyController:
                 if len(split_app_name) > 1:
                     # Remove the trailing ")" from the details
                     url = split_app_name[1].rstrip(')')
-                # print(f"Active App: {app_name}, URL: {url}")
-                self.key_config = self.key_configs.get(
-                    app_name, self.key_configs.get("_otherwise", {}))   
+                # Check if there is a keyboard definition for the URL
+                if url in self.urls:
+                    self.key_config = self.urls[url]
+                else:
+                    self.key_config = self.key_configs.get(app_name, self.key_configs.get("_otherwise", {}))
                 self.update_keys()
             else:
                 time.sleep(0.1)
@@ -210,7 +209,19 @@ class KeyController:
         return key_sequences, color_array, description, application, action, folder
 
 
-    def process_global(self, json_data):
+    def process_urls(self, json_data):
+        urls = {}
+        if "urls" in json_data:
+            for url, configs in json_data["urls"].items():
+                print(url);
+                urls[url] = {}
+                for key, config in configs.items():
+                    key_sequences, color_array, description, application, action, folder = self.get_config_items(config)
+                    urls[url][int(key)] = (key_sequences, color_array, description, application, action, folder)
+        return urls
+    
+
+    def process_globals(self, json_data):
         global_config = {}
         if "global" in json_data:
             for key, config in json_data["global"].items():
@@ -226,8 +237,8 @@ class KeyController:
 
     def process_key_definitions(self, json_data):
         key_configs = {}
-        global_key_config = self.process_global(json_data)
-        for app, configs in json_data["key_definitions"].items():
+        global_key_config = self.process_globals(json_data)
+        for app, configs in json_data["applications"].items():
             key_configs[app] = {}
             for key, config in configs.items():
                 key_sequences, color_array, description, application, action, folder = self.get_config_items(config)
@@ -245,7 +256,7 @@ class KeyController:
 
     def process_folders(self, json_data):
         folders = {}
-        global_key_config = self.process_global(json_data)
+        global_key_config = self.process_globals(json_data)
         for folder_name, folder_configs in json_data["folders"].items():
             folders[folder_name] = {}
             close_folder_found = False
@@ -268,8 +279,10 @@ class KeyController:
             json_data = json.load(json_file)
         key_configs = self.process_key_definitions(json_data)
         folders = self.process_folders(json_data)
-        return key_configs, folders
- 
+        global_config = self.process_globals(json_data)
+        urls = self.process_urls(json_data)
+        return key_configs, folders, global_config, urls
+
 
 if __name__ == "__main__":
     controller = KeyController()
