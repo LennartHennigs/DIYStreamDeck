@@ -175,9 +175,11 @@
     },
 
     "loginwindow": {
+       "ignore_globals": "true"
     },
 
     "Bildschirmschoner": {
+       "ignore_globals": "true"
     },
 
     "_otherwise": {
@@ -268,17 +270,17 @@
         "color": "#FFFF00",
         "description": "Let there be light!"
       },
-      "13": {
-        "action": "close_folder",
-        "color": "#FF0000",
-        "description": "Close Folder"
-      },
       "11": {
         "action": "sounds.play 'grillen.mp3'",
         "color": "#FFFFFF",
         "description": "play"
       },
       "12": {
+      },
+      "13": {
+        "action": "close_folder",
+        "color": "#FF0000",
+        "description": "Close Folder"
       }
     }
   }
