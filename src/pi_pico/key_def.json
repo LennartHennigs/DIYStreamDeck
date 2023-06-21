@@ -1,15 +1,5 @@
 {
   "global": {
-    "0": {
-      "key_sequence": "LEFT_CONTROL+DOWN_ARROW",
-      "color": "#FFFF00",
-      "description": "Show all apps"
-    },
-    "1": {
-      "key_sequence": "LEFT_CONTROL+UP_ARROW",
-      "color": "#FFFF00",
-      "description": "Show all apps"
-    },
     "12": {
       "folder": "apps",
       "color": "#FFFFFF",
@@ -157,20 +147,76 @@
     },
 
     "Spotify": {
-      "0": {
+      "4": {
         "key_sequence": "GUI+LEFT_ARROW",
         "color": "#00FF00",
         "description": "Spotify - Previous Song"
       },
-      "1": {
+      "5": {
         "key_sequence": "SPACE",
         "color": "#00FF00",
         "description": "Spotify - Play or Pause"
       },
-      "2": {
+      "6": {
         "key_sequence": "GUI+RIGHT_ARROW",
         "color": "#00FF00",
         "description": "Spotify - Next Song"
+      }
+    },
+
+    "Code": {
+      "0": {
+        "key_sequence": "GUI+SHIFT+E",
+        "color": "#FFFF00",
+        "description": "Explorer"
+      },
+      "1": {
+        "key_sequence": "GUI+SHIFT+F",
+        "color": "#FFFF00",
+        "description": "Explorer"
+      },
+      "2": {
+        "key_sequence": "CONTROL+SHIFT+G",
+        "color": "#FFFF00",
+        "description": "Explorer"
+      },
+      "3": {
+        "key_sequence": "GUI+SHIFT+D",
+        "color": "#FFFF00",
+        "description": "Run & Debug"
+      },
+      "4": {
+        "key_sequence": "GUI+B",
+        "color": "#0000FF",
+        "description": "Toggle Sidebar"
+      },
+      "5": {
+        "key_sequence": "GUI+SHIFT+P",
+        "color": "#00FF00",
+        "description": "Command Palette"
+      },
+      "8": {
+        "key_sequence": "GUI+SHIFT+V",
+        "color": "#00FF00",
+        "description": "Preview Markldown"
+      },
+      "6": {
+        "key_sequence": "ESCAPE",
+        "color": "#000000",
+        "description": "Escape"
+      },
+      "7": {
+        "key_sequence": "GUI+SHIFT+B",
+        "color": "#FFA500",
+        "description": "Run Build Command"
+      }
+    },
+
+    "iTerm2": {
+      "3": {
+        "key_sequence": "GUI+T",
+        "color": "#00FF00",
+        "description": "New Tab"
       }
     },
 
@@ -219,32 +265,50 @@
         "color": "#FF4D04",
         "description": "Launch Zeplin"
       },
-      "6": {
-        "application": "Visual Studio Code",
-        "color": "#0000FF",
-        "description": "Launch VS Code"
-      },
       "8": {
         "application": "Spotify",
         "color": "#00FF00",
         "description": "Launch Spotify"
       },
+      "9": {
+        "application": "Visual Studio Code",
+        "color": "#0000FF",
+        "description": "Launch VS Code"
+      },
+      "10": {
+        "application": "iTerm",
+        "color": "#808080",
+        "description": "Launch iTerm"
+      },
       "12": {
         "action": "close_folder",
-        "color": "#FF0000",
+        "color": "#FFFFFF",
         "description": "Close"
       },
-      "13": {
-      },
+      "13": {},
       "15": {
         "key_sequence": "GUI+Q",
         "color": "#FF0000",
         "description": "Close Application"
       }
-
     }, 
 
     "controls": {
+      "0": {
+        "key_sequence": "F11",
+        "color": "#FFFF00",
+        "description": "Show Desktop"
+      },
+      "1": {
+        "key_sequence": "LEFT_CONTROL+UP_ARROW",
+        "color": "#FFFF00",
+        "description": "Show all apps"
+      },
+      "2": {
+        "key_sequence": "LEFT_CONTROL+DOWN_ARROW",
+        "color": "#FFFF00",
+        "description": "Show all apps windows"
+      },  
       "3": {
         "key_sequence": "GUI+LEFT_CONTROL+Q",
         "color": "#FF0000",
@@ -275,11 +339,10 @@
         "color": "#FFFFFF",
         "description": "play"
       },
-      "12": {
-      },
+      "12": {},
       "13": {
         "action": "close_folder",
-        "color": "#FF0000",
+        "color": "#FFFFFF",
         "description": "Close Folder"
       }
     }
