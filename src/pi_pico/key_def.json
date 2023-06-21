@@ -23,7 +23,6 @@
   },
   
   "applications": {
-
     "zoom.us": {
       "0": {
         "key_sequence": "GUI+SHIFT+A",
@@ -195,11 +194,6 @@
         "color": "#00FF00",
         "description": "Command Palette"
       },
-      "8": {
-        "key_sequence": "GUI+SHIFT+V",
-        "color": "#00FF00",
-        "description": "Preview Markldown"
-      },
       "6": {
         "key_sequence": "ESCAPE",
         "color": "#000000",
@@ -209,6 +203,11 @@
         "key_sequence": "GUI+SHIFT+B",
         "color": "#FFA500",
         "description": "Run Build Command"
+      },
+      "8": {
+        "key_sequence": "GUI+SHIFT+V",
+        "color": "#00FF00",
+        "description": "Preview Markldown"
       }
     },
 
@@ -233,7 +232,6 @@
   },
 
   "folders": {
-
     "apps": {
       "0": {
         "application": "zoom.us",
