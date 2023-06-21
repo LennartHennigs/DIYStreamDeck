@@ -4,22 +4,22 @@
 ## 06-03-2023
 
 - You can now define keys for Safari and Chrome URLs via the  `urls` section in the JSON
-- there is now a `global` section for default key definitions
-- You can define `"ignore_globals": "true"` for folders and apps where they should not be used
-- you can now nest folders
+- There is now a `global` section for default key definitions
+- You can define `"ignore_globals": "true"` for folders and apps where `global` keys should not be used
+- You can now nest folders
 
 ## 05-22-2023
 
-- Included a Audio playback plugin
+- Added a Audio playback plugin
 
 ## 05-20-2023
 
-- Included a Hue plugin
+- Added a Hue plugin
 
 ## 05-18-2023
 
-- Included a Spotify plugin
-- added Plugin capabilities to the Streamdeck
+- Added a Spotify plugin
+- Added Plugin capabilities to the Streamdeck
 
 ## 05-12-2023
 
@@ -27,14 +27,15 @@
 
 ## 05-11-2023
 
-- stopping the code will turn off the keypad
-- fixed a bug -  the active app is now "remembered"
-- removed unneeded `action: open_folder` in JSON and code
+- Stopping the code will turn off the keypad
+- Fixed a bug -  the active app is now "remembered"
+- Removed unneeded `action: open_folder` in JSON and code
+
 ## 05-06-2023
 
-- added folder definitions in JSON and code
-- buttons can now launch applications, introduced `application` key to JSON
+- Added folder definitions in JSON and code
+- Buttons can now launch applications, introduced `application` key to JSON
 
 ## 04-23-2023
 
-- initial version
+- Initial version
