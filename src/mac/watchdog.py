@@ -69,8 +69,20 @@ class AppObserver(Cocoa.NSObject):
     @objc.signature(b'v@:@')
     def send_app_name_to_microcontroller(self, app_name: str) -> None:
         command_dict = {
-            "Google Chrome": 'get URL of active tab of first window',
-            "Safari": 'get URL of current tab of front window'
+            "Google Chrome": '''
+                if (count of windows) > 0 then
+                    get URL of active tab of first window
+                else
+                    return ""
+                end if
+            ''',
+            "Safari": '''
+                if (count of windows) > 0 then
+                    get URL of current tab of front window
+                else
+                    return ""
+                end if
+            '''
         }
 
         script = None
@@ -87,9 +99,13 @@ class AppObserver(Cocoa.NSObject):
             output, error = osa.communicate(script.encode())
             full_url = output.decode().strip()
 
-            parsed_url = urlparse(full_url)
-            base_url = parsed_url.netloc
-            app_name = app_name + " (" + base_url + ")"
+            if full_url != "":
+                parsed_url = urlparse(full_url)
+                base_url = parsed_url.netloc
+
+                # If base_url is 'newtab' for Google Chrome or empty for Safari, don't add it in brackets
+                if not (app_name == "Google Chrome" and base_url == "newtab") and base_url != "":
+                    app_name = app_name + " (" + base_url + ")"
 
         if self.args.verbose:
             print(f'Active app: {app_name}')
@@ -97,6 +113,7 @@ class AppObserver(Cocoa.NSObject):
             self.ser.write((app_name + '\n').encode('ascii', 'replace'))
         except (serial.SerialException, UnicodeEncodeError) as e:
             print(f"Error sending app name to microcontroller: {e}")
+
 
     def read_serial_data(self) -> Optional[str]:
         if self.ser.in_waiting == 0:
