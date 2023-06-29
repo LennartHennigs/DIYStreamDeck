@@ -1,6 +1,11 @@
 
 # CHANGELOG
 
+## 06-29-2023
+
+- Fixed a bug that Safari and Chrome reported an error when there are no open windows an thus no URLS
+- "Empty" tabs are also no longer reported as url
+
 ## 06-03-2023
 
 - You can now define keys for Safari and Chrome URLs via the  `urls` section in the JSON
