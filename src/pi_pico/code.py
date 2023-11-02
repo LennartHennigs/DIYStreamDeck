@@ -48,7 +48,7 @@ class KeyController:
             self.autoclose_current_folder = self.key_config.get('autoclose', 'true').lower() == 'true'
             self.update_keys()
 
-
+    # closes the current folder
     def close_folder(self):
         # If the folder stack is empty, there is no folder to close
         if not self.folder_stack:
@@ -61,87 +61,83 @@ class KeyController:
         # update the keys
         self.update_keys()
 
-
+    # handles key presses
     def key_action(self, key, press=True):
         # check if the key is in the current key config
         if key.number not in self.key_config:
             return
         # get the key config for the key
-        key_config_dict = dict(zip(['key_sequences', 'color', 'description',
-                            'application', 'action', 'folder'], self.key_config[key.number]))
-        # get the key sequences, color, and action from the key config
-        key_sequences = key_config_dict['key_sequences']
-        color = key_config_dict['color']
-        action = key_config_dict.get('action')
-        folder = key_config_dict.get('folder')
-        # update the key LED
-        self.update_key_led(key, color, press)
+        key_def = dict(zip(['key_sequences', 'color', 'description', 'application', 'action', 'folder'],
+                           self.key_config[key.number]))
+        # get the key sequences, color, and action from the key config        
+        key_sequences = key_def.get('key_sequences')
+        color = key_def['color']
+        action = key_def.get('action')
+        folder = key_def.get('folder')
+        app = key_def.get('application')
 
-        someAction = False;
-        # check if the key is pressed
+        # key is pressed
         if press:
+            key.led_off()
+        # key is released
+        else:        
+            someAction = False
             #  open a folder?
             if folder:
                 self.open_folder(folder)
-            # close the current folder?
-            elif action == 'close_folder':
-                self.close_folder()
-            else:
             # is the action is a plugin command
-                if isinstance(action, tuple):
-                    self.send_plugin_command(*action)
+            elif isinstance(action, tuple):
+                self.send_plugin_command(*action)
+                someAction = True
             # open an application?
-                app_name = key_config_dict.get('application')
-                if app_name:
-                    self.send_application_name(app_name)
-                # is autoclose enabled?
-                if self.autoclose_current_folder:
-                    self.close_folder()        
-        # handle the key sequences
-        if key_sequences:
-            self.handle_key_sequences(key_sequences, press)
+            elif app:
+                self.send_application_name(app)
+                someAction = True
+            # handle the key sequences
+            elif key_sequences:
+                self.handle_key_sequences(key_sequences)
+                someAction = True
+            # close the folder
+            if (someAction and self.autoclose_current_folder) or action == 'close_folder':
+                self.close_folder()        
+            key.set_led(*color)
+
             
 
-    def update_key_led(self, key, color, press):
-        if key.number in self.key_config:
-            key_config_dict = dict(zip(['key_sequences', 'color', 'description',
-                                   'application', 'action', 'folder'], self.key_config[key.number]))
-
-            color = key_config_dict['color']
-            key.set_led(*color) if not press else key.led_off()
-            if press:  # Only print the description when the key is pressed
-                description = key_config_dict.get('description', '')
-                # print(f"Key {key.number} pressed: {description}")
-
-
-    def handle_key_sequences(self, key_sequences, press):
+    def handle_key_sequences(self, key_sequences):
         for item in key_sequences:
+            # is it a delay?
             if isinstance(item, float):
                 self.keyboard.release_all()
                 time.sleep(item)
+            # is it a key sequence?
             elif isinstance(item, tuple):
-                self.keyboard.press(
-                    *item) if press else self.keyboard.release(*item)
+                self.keyboard.press(*item)
+            # is it a single key?
             else:
-                self.keyboard.press(
-                    item) if press else self.keyboard.release(item)
+                self.keyboard.press(item)
+        # release all keys
+        time.sleep(0.05);
+        self.keyboard.release_all()
 
 
     def update_keys(self):
         for key in self.keys:
+            # Turn off the key LED by default
+            key.led_off()
+            # Set default no-op handlers
+            self.keypad.on_press(key, lambda _, key=key: None)
+            self.keypad.on_release(key, lambda _, key=key: None)
+            # If there's a specific configuration for this key, update the LED and set event handlers
             if key.number in self.key_config:
-                key_config_dict = dict(zip(['key_sequences', 'color', 'description',
-                                       'application', 'action', 'folder'], self.key_config[key.number]))
-
-                color = key_config_dict['color']
-                key.set_led(*color)
+                # Assuming 'color' is the second item in the tuple
+                color = self.key_config[key.number][1]  # Index of 'color' in the tuple
+                # Update the key LED to the configured color, unless pressed
+                key.set_led(*color);
+                # Set the actual key event handlers
                 self.keypad.on_press(key, self.key_action)
-                self.keypad.on_release(
-                    key, lambda key=key: self.key_action(key, press=False))
-            else:
-                key.led_off()
-                self.keypad.on_press(key, lambda _, key=key: None)
-                self.keypad.on_release(key, lambda _, key=key: None)
+                self.keypad.on_release(key, lambda key=key: self.key_action(key, press=False))
+
 
 
     def read_serial_line(self):
@@ -196,7 +192,7 @@ class KeyController:
                 self.keypad.update()
 
 
-    def convert_keycode_string(self, keycode_string):
+    def keycode_string_to_tupel(self, keycode_string):
         keycode_list = keycode_string.split('+')
         keycodes = []
         for key in keycode_list:
@@ -210,19 +206,21 @@ class KeyController:
     def convert_color_string(self, color_string):
         if color_string.startswith("#"):
             return tuple(int(color_string[i:i+2], 16) for i in (1, 3, 5))
-        return (0, 0, 0)
+        else:
+            return (0, 0, 0)
 
 
     def convert_value(self, value):
         if isinstance(value, str):
-            return self.convert_keycode_string(value)
-        return value
+            return self.keycode_string_to_tupel(value)
+        else:
+            return value
 
 
     def get_config_items(self, config):
         key_sequence = config.get('key_sequence', [])
         key_sequences = tuple(self.convert_value(v) for v in key_sequence) if isinstance(
-            key_sequence, list) else self.convert_keycode_string(key_sequence)
+            key_sequence, list) else self.keycode_string_to_tupel(key_sequence)
         color_array = self.convert_color_string(config.get('color', ''))
         description = config.get('description', '')
         application = config.get('application', '')
@@ -245,7 +243,7 @@ class KeyController:
         return urls
     
 
-    def process_globals(self, json_data):
+    def process_global_section(self, json_data):
         global_config = {}
         if "global" in json_data:
             for key, config in json_data["global"].items():
@@ -259,7 +257,7 @@ class KeyController:
         return global_config
 
 
-    def process_key_definitions(self, json_data, global_config):
+    def process_app_section(self, json_data, global_config):
         key_configs = {}
         for app, configs in json_data["applications"].items():
             # print(f"Application {app} loaded.")
@@ -282,7 +280,7 @@ class KeyController:
         return key_configs
 
 
-    def process_folders(self, json_data, global_config):
+    def process_folder_section(self, json_data, global_config):
         folders = {}
         for folder_name, folder_config in json_data["folders"].items():
             folders[folder_name] = {}
@@ -322,9 +320,9 @@ class KeyController:
     def read_key_configs(self, json_filename):
         with open(json_filename, 'r') as json_file:
             json_data = json.load(json_file)
-        global_config = self.process_globals(json_data)
-        key_configs = self.process_key_definitions(json_data, global_config)
-        folders = self.process_folders(json_data, global_config)
+        global_config = self.process_global_section(json_data)
+        key_configs = self.process_app_section(json_data, global_config)
+        folders = self.process_folder_section(json_data, global_config)
         urls = self.process_urls(json_data)
         return key_configs, folders, global_config, urls
     
@@ -337,5 +335,7 @@ if __name__ == "__main__":
         # turn off all the LEDs when the program is interrupted
         for key in controller.keys:
             key.led_off()
+
+
 
 
