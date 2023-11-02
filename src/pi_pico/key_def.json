@@ -1,28 +1,30 @@
 {
   "global": {
     "12": {
-      "folder": "apps",
+      "folder": "apps_folder",
       "color": "#FFFFFF",
       "description": "Apps Folder"
     },
     "13": {
-      "folder": "controls",
+      "folder": "controls_folder",
       "color": "#FFFFFF",
       "description": "Controls Folder"
     },
     "14": {
       "key_sequence": "GUI+TAB",
       "color": "#FFFF00",
-      "description": "Previous Appp"
+      "description": "Previous App"
     },
     "15": {
-      "key_sequence": "GUI+Q",
+      "folder": "close_app_folder",
       "color": "#FF0000",
-      "description": "Close App"
+      "description": "Close App Folder"
     }
   },
-  
   "applications": {
+
+    "Baldur's Gate 3": {},
+
     "zoom.us": {
       "0": {
         "key_sequence": "GUI+SHIFT+A",
@@ -93,7 +95,6 @@
         "description": "End Meeting"
       }
     },
-
     "Microsoft Teams": {
       "0": {
         "key_sequence": "GUI+SHIFT+M",
@@ -126,7 +127,6 @@
         "description": "End Meeting"
       }
     },
-
     "Microsoft Outlook": {
       "0": {
         "key_sequence": "GUI+ONE",
@@ -144,7 +144,6 @@
         "description": "New Email"
       }
     },
-
     "Spotify": {
       "4": {
         "key_sequence": "GUI+LEFT_ARROW",
@@ -162,7 +161,6 @@
         "description": "Spotify - Next Song"
       }
     },
-
     "Code": {
       "0": {
         "key_sequence": "GUI+SHIFT+E",
@@ -210,7 +208,6 @@
         "description": "Preview Markldown"
       }
     },
-
     "iTerm2": {
       "3": {
         "key_sequence": "GUI+T",
@@ -218,21 +215,17 @@
         "description": "New Tab"
       }
     },
-
     "loginwindow": {
-       "ignore_globals": "true"
+      "ignore_globals": "true"
     },
-
     "Bildschirmschoner": {
-       "ignore_globals": "true"
+      "ignore_globals": "true"
     },
-
-    "_otherwise": {
-    }
+    "_otherwise": {}
   },
-
   "folders": {
-    "apps": {
+    "apps_folder": {
+      "ignore_globals": "true",
       "0": {
         "application": "zoom.us",
         "color": "#0000FF",
@@ -281,17 +274,11 @@
       "12": {
         "action": "close_folder",
         "color": "#FFFFFF",
-        "description": "Close"
-      },
-      "13": {},
-      "15": {
-        "key_sequence": "GUI+Q",
-        "color": "#FF0000",
-        "description": "Close Application"
+        "description": "Close Folder"
       }
-    }, 
-
-    "controls": {
+    },
+    "controls_folder": {
+      "ignore_globals": "true",
       "0": {
         "key_sequence": "F11",
         "color": "#FFFF00",
@@ -306,7 +293,7 @@
         "key_sequence": "LEFT_CONTROL+DOWN_ARROW",
         "color": "#FFFF00",
         "description": "Show all apps windows"
-      },  
+      },
       "3": {
         "key_sequence": "GUI+LEFT_CONTROL+Q",
         "color": "#FF0000",
@@ -337,12 +324,23 @@
         "color": "#FFFFFF",
         "description": "play"
       },
-      "12": {},
       "13": {
         "action": "close_folder",
         "color": "#FFFFFF",
         "description": "Close Folder"
       }
+    },
+    "close_app_folder": {
+      "ignore_globals": "true",
+      "14": {
+        "action": "close_folder",
+        "color": "#FFFFFF",
+        "description": "Close Folder"
+      },
+      "15": {
+        "key_sequence": "GUI+Q",
+        "color": "#FF0000",
+        "description": "Close App"
+      }
     }
   }
-}
