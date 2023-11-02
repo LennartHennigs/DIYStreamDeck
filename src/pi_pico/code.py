@@ -25,6 +25,7 @@ class KeyController:
         self.verbose=verbose
         self.keypad = RgbKeypad()
         self.keys = self.keypad.keys
+        self.autoclose_current_folder = False
         self.urls = {}
         self.global_config = {}
         self.keyboard = Keyboard(usb_hid.devices)
@@ -38,50 +39,68 @@ class KeyController:
         self.last_key_config = None
         self.folder_stack = [] 
 
-
+    
     def open_folder(self, folder_name):
         if folder_name in self.folders:
             self.folder_stack.append({'folder_name': folder_name, 'last_key_config': self.key_config})
             self.folder_open = True
             self.key_config = self.folders[folder_name]
+            self.autoclose_current_folder = self.key_config.get('autoclose', 'true').lower() == 'true'
             self.update_keys()
 
 
     def close_folder(self):
-        if not self.folder_stack:  # if the stack is empty, no folder to close
+        # If the folder stack is empty, there is no folder to close
+        if not self.folder_stack:
             return
-        last_folder = self.folder_stack.pop()  # pop the last item from the stack
-        self.folder_open = bool(self.folder_stack)  # if the stack is not empty, some folder is still open
+        # get the last folder from the stack
+        last_folder = self.folder_stack.pop()
+        # set the key config to the last key config
+        self.folder_open = bool(self.folder_stack)
         self.key_config = last_folder['last_key_config']
+        # update the keys
         self.update_keys()
 
 
     def key_action(self, key, press=True):
-        if key.number in self.key_config:
-            key_config_dict = dict(zip(['key_sequences', 'color', 'description',
-                                'application', 'action', 'folder'], self.key_config[key.number]))
+        # check if the key is in the current key config
+        if key.number not in self.key_config:
+            return
+        # get the key config for the key
+        key_config_dict = dict(zip(['key_sequences', 'color', 'description',
+                            'application', 'action', 'folder'], self.key_config[key.number]))
+        # get the key sequences, color, and action from the key config
+        key_sequences = key_config_dict['key_sequences']
+        color = key_config_dict['color']
+        action = key_config_dict.get('action')
+        folder = key_config_dict.get('folder')
+        # update the key LED
+        self.update_key_led(key, color, press)
 
-            key_sequences = key_config_dict['key_sequences']
-            color = key_config_dict['color']
-            action = key_config_dict.get('action')
-            folder = key_config_dict.get('folder')
-
-            self.update_key_led(key, color, press)
-
-            if press:
-                if folder:
-                    self.open_folder(folder)
-                elif action == 'close_folder':
-                    self.close_folder()
-                else:
-                    if isinstance(action, tuple):
-                        self.send_plugin_command(*action)
-                    app_name = key_config_dict.get('application')
-                    if app_name:
-                        self.send_application_name(app_name)
-                        
+        someAction = False;
+        # check if the key is pressed
+        if press:
+            #  open a folder?
+            if folder:
+                self.open_folder(folder)
+            # close the current folder?
+            elif action == 'close_folder':
+                self.close_folder()
+            else:
+            # is the action is a plugin command
+                if isinstance(action, tuple):
+                    self.send_plugin_command(*action)
+            # open an application?
+                app_name = key_config_dict.get('application')
+                if app_name:
+                    self.send_application_name(app_name)
+                # is autoclose enabled?
+                if self.autoclose_current_folder:
+                    self.close_folder()        
+        # handle the key sequences
+        if key_sequences:
             self.handle_key_sequences(key_sequences, press)
-
+            
 
     def update_key_led(self, key, color, press):
         if key.number in self.key_config:
@@ -243,6 +262,7 @@ class KeyController:
     def process_key_definitions(self, json_data, global_config):
         key_configs = {}
         for app, configs in json_data["applications"].items():
+            # print(f"Application {app} loaded.")
             key_configs[app] = {}
             ignore_globals = configs.get("ignore_globals", "false").lower() == "true"
             for key, config in configs.items():
@@ -261,15 +281,27 @@ class KeyController:
                         key_configs[app][key] = config
         return key_configs
 
+
     def process_folders(self, json_data, global_config):
         folders = {}
-        for folder_name, folder_configs in json_data["folders"].items():
+        for folder_name, folder_config in json_data["folders"].items():
             folders[folder_name] = {}
-            close_folder_found = False
-            ignore_globals = folder_configs.get("ignore_globals", "false").lower() == "true"
-            for key, config in folder_configs.items():
-                if key == "ignore_globals":
+            # Check if the folder has an autoclose setting
+            if not "autoclose" in folder_config:
+                folder_config["autoclose"] = "true"
+            # ignore close_folder action in folder if autoclose is true
+            if folder_config["autoclose"].lower() == "true":
+                close_folder_found = True
+            else:
+                close_folder_found = False
+            # Check if the folder has an ignore_globals setting
+            ignore_globals = folder_config.get("ignore_globals", "false").lower() == "true"
+            # Process the keys in the folder
+            for key, config in folder_config.items():
+                # Skip the ignore_globals setting and autoclose setting
+                if key == "ignore_globals" or key == "autoclose":
                     continue
+                # Process the key config
                 key_sequences, color_array, description, application, action, folder = self.get_config_items(config)
                 if action == "close_folder":
                     close_folder_found = True
@@ -277,10 +309,13 @@ class KeyController:
             if not close_folder_found:
                 raise ValueError(
                     f"Error: Folder '{folder_name}' does not have a 'close_folder' action defined.")
+            # Add the global key configs to the folder definition if needed
             if not ignore_globals:
                 for key, config in global_config.items():
                     if key not in folders[folder_name]:
                         folders[folder_name][key] = config
+            # Add the autoclose setting to the folder definition
+            folders[folder_name]['autoclose'] = folder_config["autoclose"].lower();
         return folders
 
     
@@ -288,7 +323,7 @@ class KeyController:
         with open(json_filename, 'r') as json_file:
             json_data = json.load(json_file)
         global_config = self.process_globals(json_data)
-        key_configs = self.process_key_definitions(json_data, global_config)
+        key_confipgs = self.process_key_definitions(json_data, global_config)
         folders = self.process_folders(json_data, global_config)
         urls = self.process_urls(json_data)
         return key_configs, folders, global_config, urls
@@ -302,4 +337,5 @@ if __name__ == "__main__":
         # turn off all the LEDs when the program is interrupted
         for key in controller.keys:
             key.led_off()
+
 
