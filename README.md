@@ -19,6 +19,7 @@ For the latest changes and the history of changes, please take a look at the [CH
 - Define shortcuts can or specific apps
 - Use the  `_otherwise` section to assign shortcuts for all other apps
 - Define "folders" - a new keypad definition scheme that can be tied to a single key
+  -  🆕 Folders can `autoclose` after an action
 - Define global shortcuts in a `global` section for both, folders and apps 🆕
 - Launch applications
 - Build your own plugins and its commands. The source includes ...
@@ -76,7 +77,8 @@ With these fields you can define three types of keys, shortcut keys, application
 
 - *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
 - *Application keys* have an `application` field which launches the specified application when the key is pressed.
-- *Folder keys*  have an `folder` key and an `action: open_folder` field, when the key is pressed it will load the key definitions.
+- *Folder keys*  have an `folder` key and an `action: open_folder` field, when the key is pressed it will load the key definitions.  
+  - 🆕 They can also have and `autoclose` key. If set to `false` a folder remains active after an action was triggered. (Default behavior is to close the folder after an action).
 
 In addition to the regular shortcut keys for an app, there is a special app key called `_otherwise`, which is used as a fallback when no app definition is found in the JSON file. The `_otherwise` key can include its own set of general-purpose shortcut keys, similar to those defined for "App1". When the Python script is running, it constantly monitors the active application on the computer, and if the active application matches any of the keys in the JSON file, the relevant shortcut keys are loaded onto the keypad. If not, the shortcut keys defined under the "_otherwise" key are loaded onto the keypad.
 
@@ -174,11 +176,11 @@ For example, the configuration could look like this:
 
 In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file, you will find a special app key called `_otherwise`. This key is used to define shortcut keys that are not specific to any particular app. When the Python script is running, it constantly monitors the active application on your computer, and if the active application matches any of the keys in the JSON file, it will load the relevant shortcut keys onto the keypad. If the active application does not match any of the defined keys, the "_otherwise" key is used as a fallback, and the shortcut keys defined under this key are loaded onto the keypad. This means that you can define a set of general-purpose shortcut keys that are always available, regardless of which application is currently active.
 
-## Plugins 🆕
+## Plugins
 
 You can build your own plugins for the keypad. They are stored in the `plugins/` folder. A plugin defines set of commands that can be used in the `action` key in the JSON config. In the JSON above you can see three commands being called in the `_otherwise` section. If needed, the plugin can have a config file to load settings.
 
-### Spotify Plugin 🆕
+### Spotify Plugin
 
 As an example I included a Spotify plugin called [spotify.py](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins/spotify.py).
 The Spotify plugin has the following commands:
@@ -193,7 +195,7 @@ The Spotify plugin has the following commands:
 
 To use it you need to have a Spotify premium account and need to add you API credentials to the [spotify.json](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins/config/spotify.json) config file.
 
-### Hue Plugin 🆕
+### Hue Plugin
 
 - hue.turn_off [Lamp ID | 'Lamp Name']
 - hue.turn_on [Lamp ID | 'Lamp Name']
@@ -201,7 +203,7 @@ To use it you need to have a Spotify premium account and need to add you API cre
 
 You need to define the IP address of your hue bridge in the config JSON and press its connect button on first run. Provide the ID of your lamp or its name enclosed in single quotes.
 
-### Audio Playback Plugin 🆕
+### Audio Playback Plugin
 
 - sounds.play ['File Name']
 - sounds.stop
