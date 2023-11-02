@@ -1,6 +1,10 @@
 
 # CHANGELOG
 
+## 11-02-2023
+
+- Added "autoclose" key for folders (default = true). Allows to specify whether a folder should be closed after an action.
+
 ## 06-29-2023
 
 - Fixed a bug that Safari and Chrome reported an error when there are no open windows an thus no URLS
