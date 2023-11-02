@@ -323,7 +323,7 @@ class KeyController:
         with open(json_filename, 'r') as json_file:
             json_data = json.load(json_file)
         global_config = self.process_globals(json_data)
-        key_confipgs = self.process_key_definitions(json_data, global_config)
+        key_configs = self.process_key_definitions(json_data, global_config)
         folders = self.process_folders(json_data, global_config)
         urls = self.process_urls(json_data)
         return key_configs, folders, global_config, urls
