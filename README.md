@@ -7,10 +7,9 @@ This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keyp
 
 If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
 
-**Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about ten lines in the CircuitPython code).
-
 **Note:** This is an ongoing project. For the latest changes please take a look at the [CHANGELOG](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
 
+**Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about ten lines in the CircuitPython code).
 
 ## Features
 
