@@ -5,39 +5,39 @@ This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keyp
 
 ![Keypad with Zoom Shortcuts](images/keypad.png)
 
+This is an ongoing project. To see the latest changes please take a look at the [Changelog](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
+
 If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
 
-**Note:** This is an ongoing project. For the latest changes please take a look at the [CHANGELOG](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
 
-**Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about ten lines in the CircuitPython code).
+**Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about ten lines in the CircuitPython code). Update: I recently started to refactor some code myself now.
 
 ## Features
 
-
 - Assign keyboard shortcuts or key sequences to the keypad keys
-- The keypad determins (on a Mac) the active application - you can load app-specific shortcuts
-- Launch applications
-- Define "folders" - a new keypad definition scheme that can be tied to a single key
-  -  🆕 Folders `autoclose` after an action but this can be customized
 - Define global shortcuts in a `global` section for both, folders and apps
 - Use the  `_otherwise` section to assign shortcuts for all other apps
+- The keypad can determine the active application - you can load app-specific shortcuts (with `watchdog.py` on a Mac)
+- Launch applications (with `watchdog.py` on a Mac)
+- Define "folders" - a new keypad definition scheme that can be tied to a single key
 - Build your own plugins and its commands. Plugins are included for ...
-  - Audio playback plugin
-  - Spotify playback plugin
-  - Philips Hue plugin
-- All key definitions can be defined in a JSON file stored on the Pi Pico
+  - Audio playback
+  - Spotify 
+  - Philips Hue
+- All key definitions are defined in a JSON file stored on the Pi Pico
 
 ## Hardware Requirements
 
 - Raspberry Pi Pico
 - Pimoroni RGB Keypad for Raspberry Pi Pico
 - Micro-USB cable to connect the Pi Pico to your computer
+- (optional: a Mac for the Watchdog script)
 
 ## How it Works
 
 The [`code.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/code.py) script reads key definitions from a JSON file and maps them to specific key sequences and LED colors. It listens for the currently active application on the host computer and updates the keypad based on the key mappings for the active application.
 
-The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/watchdog.py) script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad. It also receives `action` commands for plugin events. You can use it without, but then you lose the application-specific launch feature.
+The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/watchdog.py) script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad. It also receives `action` commands for plugin events. You can use the pad it without, but then you lose the application-specific launch feature.
 
 ## Getting Started
 
@@ -54,23 +54,25 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 - Defining keyboard layout
   - Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
 
+ 
+
 ## Configuration
 
-In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with three entries: `applications`, `folders`, and `global`.
+In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with four possible entries: `applications`, `folders`, `global`, and `urls`.
 
-- In the `applications` area the different keys for various apps are defined with the key numbers (0-15).
+- In the `applications` area the different keys for various apps are defined with the key numbers (`0`-`15`).
 - The `folders` section defines key sets that can be assigned to a single key.
 - In the `global` section are key definitions that are being all apps and folders. They can be "overwritten" via specific folder or app definition. You can set `"ignore_globals": "true"` for folders and apps where they should not be used.
 - The `urls` section contains keyboard definitions for Safari and Chrome URls.
 
 These are the possible fields for a key entry:
 
-- `key_sequence`: This field specifies the key combination to be executed when the key is pressed. You can use either a string or an array [to specify the key sequence](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html). If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T"). If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]). You can also add delays between key presses within a shortcut by including a floating-point number in the list of keys for a specific shortcut in the key_def.json file. This number represents the delay in seconds between key presses. You can find a list of possible keycodes here.
+- `key_sequence`: This field specifies the key combination to be executed when the key is pressed. You can use either a string or an array [to specify the key sequence](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html). If a string is provided, it should contain the keycodes separated by '+' (e.g., `CTRL+ALT+T`). If an array is provided, it should contain the keycodes as separate elements (e.g., `["CTRL", "ALT", "T"]`). You can also add delays between key presses within a shortcut by including a floating-point number in the list of keys for a specific shortcut in the `key_def.json` file. This number represents the delay in seconds between key presses. You can find a list of possible keycodes here.
 - `application`: This field is used to specify the application to be launched when an application key is pressed.
 - `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is mandatory inside a folder definition without an `autoclose` setting.
 - `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., `#FF0000` for red, `#00FF00` for green, `#0000FF` for blue).
 - `description`: This optional field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
-- `folder`: This field allows you assign a "folder" to be opened.
+- `folder`: This field allows you assign a folder (a set of key definitions) to be opened. A folder will auto-close per defaut, ahter actions has been triggered inside. Foders can also be nested.
 
 With these fields you can define four types of keys, shortcut keys, application launch keys, and folder keys.
 
@@ -78,12 +80,11 @@ With these fields you can define four types of keys, shortcut keys, application 
 - *Application keys* have an `application` field which opens or brings the specified application to front when the key is pressed.
 - *Action Keys* have an `action` key. They are used to trigger event of plugins or are needed to provide a `close_folder` action for folders
 - *Folder keys*  have an `folder` key. When the key is pressed it will "open" the folder and display its key definitions.  
-  - 🆕 Folder can also have and `autoclose` key. If set to `false` a folder remains active after an action was triggered. (Default behavior is to close the folder after an action).
-
+  
 In addition, two more keys are relevant for folders and applications:
 
 -  `ignore_globals": "true"` will don't ignore the global definitions and don't add them to a folder or an application.
--  `"autoclose": "false"` will keep a folder active after a key has been pressed.
+-  🆕 `"autoclose": "false"` will keep a folder active after a key has been pressed.
 
 Here is an example configuration file:
 
