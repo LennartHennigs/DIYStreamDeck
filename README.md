@@ -15,16 +15,18 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 ## Features
 
 - Assign keyboard shortcuts or key sequences to the keypad keys
+- All key definitions are defined in a JSON file stored on the Pi Pico
+- Define "folders" - a new keypad definition scheme that can be tied to a single key
 - Define global shortcuts in a `global` section for both, folders and apps
 - The keypad can determine the active application - you can load app-specific shortcuts (with `watchdog.py` on a Mac)
 - Use the  `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` on a Mac)
 - Launch applications (with `watchdog.py` on a Mac)
-- Define "folders" - a new keypad definition scheme that can be tied to a single key
-- Build your own plugins and its commands. Plugins are included for ...
+- Plugins included for ...
   - Audio playback
   - Spotify 
   - Philips Hue
-- All key definitions are defined in a JSON file stored on the Pi Pico
+- A simple plugins system to create your own.
+
 
 ## Hardware Requirements
 
@@ -37,7 +39,7 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 
 The [`code.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/code.py) script reads key definitions from a JSON file and maps them to specific key sequences and LED colors. It listens for the currently active application on the host computer and updates the keypad based on the key mappings for the active application.
 
-The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/watchdog.py) script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad. It also receives `action` commands for plugin events. You can use the pad it without, but then you lose the application-specific launch feature.
+The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/watchdog.py) script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad. It also receives `action` commands for plugin events. You can use the pad it without, but then you lose the application-specific launch feature. It is currently only available for a Mac.
 
 ## Getting Started
 
