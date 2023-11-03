@@ -16,8 +16,8 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 
 - Assign keyboard shortcuts or key sequences to the keypad keys
 - Define global shortcuts in a `global` section for both, folders and apps
-- Use the  `_otherwise` section to assign shortcuts for all other apps
 - The keypad can determine the active application - you can load app-specific shortcuts (with `watchdog.py` on a Mac)
+- Use the  `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` on a Mac)
 - Launch applications (with `watchdog.py` on a Mac)
 - Define "folders" - a new keypad definition scheme that can be tied to a single key
 - Build your own plugins and its commands. Plugins are included for ...
