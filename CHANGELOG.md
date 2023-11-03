@@ -3,9 +3,9 @@
 
 ## 11-02-2023
 
-- Added "autoclose" key for folders (default = true). Allows to specify whether a folder should be closed after an action.
 - Simplified the `key_action` and `handle_key_sequences` functions
-- Keys are now only triggered on release – on more double events released
+- Keys are now only triggered on release – on more multiple shortcuts triggered
+- Added `autoclose` key for folders (default = `true``). Allows to specify whether a folder should be kept open after an action.
 
 ## 06-29-2023
 

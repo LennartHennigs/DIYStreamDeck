@@ -9,24 +9,24 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 
 **Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about ten lines in the CircuitPython code).
 
-This is also an ongoing project. I just added plugin capabilities to the code.
+**Note:** This is an ongoing project. For the latest changes please take a look at the [CHANGELOG](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
+
 
 ## Features
 
-For the latest changes and the history of changes, please take a look at the [CHANGELOG](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
 
-- Assign keyboard shortcuts or key sequences to keys
-- Define shortcuts can or specific apps
-- Use the  `_otherwise` section to assign shortcuts for all other apps
-- Define "folders" - a new keypad definition scheme that can be tied to a single key
-  -  🆕 Folders can `autoclose` after an action
-- Define global shortcuts in a `global` section for both, folders and apps 🆕
+- Assign keyboard shortcuts or key sequences to the keypad keys
+- The keypad determins (on a Mac) the active application - you can load app-specific shortcuts
 - Launch applications
-- Build your own plugins and its commands. The source includes ...
+- Define "folders" - a new keypad definition scheme that can be tied to a single key
+  -  🆕 Folders `autoclose` after an action but this can be customized
+- Define global shortcuts in a `global` section for both, folders and apps
+- Use the  `_otherwise` section to assign shortcuts for all other apps
+- Build your own plugins and its commands. Plugins are included for ...
   - Audio playback plugin
   - Spotify playback plugin
   - Philips Hue plugin
-- All key definitions can be defined in a JSON config file stored on the Pi Pico
+- All key definitions can be defined in a JSON file stored on the Pi Pico
 
 ## Hardware Requirements
 
@@ -38,7 +38,7 @@ For the latest changes and the history of changes, please take a look at the [CH
 
 The [`code.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/code.py) script reads key definitions from a JSON file and maps them to specific key sequences and LED colors. It listens for the currently active application on the host computer and updates the keypad based on the key mappings for the active application.
 
-The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/watchdog.py) script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad. It also receives `action` commands for plugin events.
+The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/watchdog.py) script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad. It also receives `action` commands for plugin events. You can use it without, but then you lose the application-specific launch feature.
 
 ## Getting Started
 
@@ -68,21 +68,25 @@ These are the possible fields for a key entry:
 
 - `key_sequence`: This field specifies the key combination to be executed when the key is pressed. You can use either a string or an array [to specify the key sequence](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html). If a string is provided, it should contain the keycodes separated by '+' (e.g., "CTRL+ALT+T"). If an array is provided, it should contain the keycodes as separate elements (e.g., ["CTRL", "ALT", "T"]). You can also add delays between key presses within a shortcut by including a floating-point number in the list of keys for a specific shortcut in the key_def.json file. This number represents the delay in seconds between key presses. You can find a list of possible keycodes here.
 - `application`: This field is used to specify the application to be launched when an application key is pressed.
-- `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., "#FF0000" for red, "#00FF00" for green, "#0000FF" for blue).
-- `description`: This field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
-- `folder`: This field allows you assign a "folder" to be opened. The entry also needs the `action` field
-- `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is mandatory inside a folder definition.
+- `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is mandatory inside a folder definition without an `autoclose` setting.
+- `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., `#FF0000` for red, `#00FF00` for green, `#0000FF` for blue).
+- `description`: This optional field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
+- `folder`: This field allows you assign a "folder" to be opened.
 
-With these fields you can define three types of keys, shortcut keys, application launch keys, and folder keys.
+With these fields you can define four types of keys, shortcut keys, application launch keys, and folder keys.
 
 - *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
-- *Application keys* have an `application` field which launches the specified application when the key is pressed.
-- *Folder keys*  have an `folder` key and an `action: open_folder` field, when the key is pressed it will load the key definitions.  
-  - 🆕 They can also have and `autoclose` key. If set to `false` a folder remains active after an action was triggered. (Default behavior is to close the folder after an action).
+- *Application keys* have an `application` field which opens or brings the specified application to front when the key is pressed.
+- *Action Keys* have an `action` key. They are used to trigger event of plugins or are needed to provide a `close_folder` action for folders
+- *Folder keys*  have an `folder` key. When the key is pressed it will "open" the folder and display its key definitions.  
+  - 🆕 Folder can also have and `autoclose` key. If set to `false` a folder remains active after an action was triggered. (Default behavior is to close the folder after an action).
 
-In addition to the regular shortcut keys for an app, there is a special app key called `_otherwise`, which is used as a fallback when no app definition is found in the JSON file. The `_otherwise` key can include its own set of general-purpose shortcut keys, similar to those defined for "App1". When the Python script is running, it constantly monitors the active application on the computer, and if the active application matches any of the keys in the JSON file, the relevant shortcut keys are loaded onto the keypad. If not, the shortcut keys defined under the "_otherwise" key are loaded onto the keypad.
+In addition, two more keys are relevant for folders and applications:
 
-For example, the configuration could look like this:
+-  `ignore_globals": "true"` will don't ignore the global definitions and don't add them to a folder or an application.
+-  `"autoclose": "false"` will keep a folder active after a key has been pressed.
+
+Here is an example configuration file:
 
 ``` json
 {
@@ -174,7 +178,7 @@ For example, the configuration could look like this:
 }
 ```
 
-In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file, you will find a special app key called `_otherwise`. This key is used to define shortcut keys that are not specific to any particular app. When the Python script is running, it constantly monitors the active application on your computer, and if the active application matches any of the keys in the JSON file, it will load the relevant shortcut keys onto the keypad. If the active application does not match any of the defined keys, the "_otherwise" key is used as a fallback, and the shortcut keys defined under this key are loaded onto the keypad. This means that you can define a set of general-purpose shortcut keys that are always available, regardless of which application is currently active.
+In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file, you will find a special app key called `_otherwise`. This key is used to define shortcut keys that are not specific to any particular app. When the Python script is running, it constantly monitors the active application on your computer, and if the active application matches any of the keys in the JSON file, it will load the relevant shortcut keys onto the keypad. If the active application does not match any of the defined keys, the `_otherwise` key is used as a fallback, and the shortcut keys defined under this key are loaded onto the keypad. This means that you can define a set of general-purpose shortcut keys that are always available, regardless of which application is currently active.
 
 ## Plugins
 
@@ -185,36 +189,36 @@ You can build your own plugins for the keypad. They are stored in the `plugins/`
 As an example I included a Spotify plugin called [spotify.py](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins/spotify.py).
 The Spotify plugin has the following commands:
 
-- spotify.play
-- spotify.pause
-- spotify.playpause
-- spotify.next
-- spotify.prev
-- spotify.volume_up
-- spotify.volume_down
+- `spotify.play`
+- `spotify.pause`
+- `spotify.playpause`
+- `spotify.next`
+- `spotify.prev`
+- `spotify.volume_up`
+- `spotify.volume_down`
 
 To use it you need to have a Spotify premium account and need to add you API credentials to the [spotify.json](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins/config/spotify.json) config file.
 
 ### Hue Plugin
 
-- hue.turn_off [Lamp ID | 'Lamp Name']
-- hue.turn_on [Lamp ID | 'Lamp Name']
-- hue.turn_toggle [Lamp ID | 'Lamp Name']
+- `hue.turn_off [Lamp ID | 'Lamp Name']`
+- `hue.turn_on [Lamp ID | 'Lamp Name']`
+- `hue.turn_toggle [Lamp ID | 'Lamp Name']`
 
 You need to define the IP address of your hue bridge in the config JSON and press its connect button on first run. Provide the ID of your lamp or its name enclosed in single quotes.
 
 ### Audio Playback Plugin
 
-- sounds.play ['File Name']
-- sounds.stop
+- `sounds.play ['File Name']`
+- `sounds.stop`
 
 The plugin can playback `.wav` and `.mp3` files.
 
 ## Watchdog
 
-To enable the dynamic detection of the active app, you need to run a watchdog script on your computer that sends the active app's name to the Pi Pico via USB serial. This project includes a Python watchdog script specifically designed for macOS.
+To enable the dynamic detection of the active app, you need to run the watchdog script on your computer that sends the active app's name to the Pi Pico via USB serial. This project includes a Python watchdog script **for Mac OS**.
 
-To run the watchdog script, navigate to the directory containing the watchdog.py file and execute the following command, e.g.:
+To run the watchdog script, navigate to the directory containing the `watchdog.py` file and execute the following command, e.g.:
 
 ``` bash
 python3 watchdog.py --port /dev/cu.usbmodem2101 --speed 9600 --verbose
