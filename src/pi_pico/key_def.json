@@ -209,7 +209,7 @@
       }
     },
     "iTerm2": {
-      "3": {
+      "0": {
         "key_sequence": "GUI+T",
         "color": "#00FF00",
         "description": "New Tab"
@@ -344,3 +344,4 @@
       }
     }
   }
+}
