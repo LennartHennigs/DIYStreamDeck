@@ -31,19 +31,19 @@ class KeyController:
 
         self.json = self.parse_json(self.JSON_FILE)
         self.global_config = self.process_global_section(self.json)
-        self.key_configs = self.process_app_section(self.json)
+        self.apps = self.process_app_section(self.json)
         self.folders = self.process_folder_section(self.json)
-        self.urls = self.process_folder_section(self.json)
+        self.urls = self.process_url_section(self.json)
 
-        self.current_config = self.key_configs.get("_otherwise", {})
+        self.current_config = self.apps.get("_otherwise", {})
         self.folder_stack = [] 
         self.update_keys()
 
     
-    def open_folder(self, folder_name):        
-        if folder_name in self.folders:
+    def open_folder(self, folder):        
+        if folder in self.folders:
             self.folder_stack.append(self.current_config)
-            self.current_config= self.folders[folder_name]
+            self.current_config= self.folders[folder]
             self.autoclose_current_folder = self.current_config.get('autoclose', True)
             self.update_keys()
 
@@ -55,7 +55,7 @@ class KeyController:
         self.update_keys()
 
 
-    def key_action(self, key, press=True):
+    def key_action(self, key):
         if key.number not in self.current_config:
             return
         key_def = self.current_config[key.number]
@@ -96,8 +96,9 @@ class KeyController:
             else:
                 self.keyboard.press(item)
         # release all keys
-        time.sleep(0.05);
+        time.sleep(0.025);
         self.keyboard.release_all()
+        self.update_keys()
 
 
     def update_keys(self):
@@ -128,9 +129,7 @@ class KeyController:
     def send_application_name(self, app_name):
         try:
             usb_cdc.console.write(f"Launch: {app_name}\n".encode('utf-8'))
-            # print(f"Sent to Mac: Launch: {app_name}")
         except Exception as e:
-            # print(f"Could not launch {app_name}: {e}\n")
             pass
 
 
@@ -143,10 +142,10 @@ class KeyController:
 
     def run(self):
         while True:
-            raw_app_name = self.read_serial_line()
-            if raw_app_name is not None:
+            serial_str = self.read_serial_line()
+            if serial_str is not None:
                 # Split the app_name string on the first occurrence of " ("
-                split_app_name = raw_app_name.split(" (", 1)
+                split_app_name = serial_str.split(" (", 1)
                 # The first part is always the app name
                 app_name = split_app_name[0]
                 # The second part is the details, if they exist
@@ -158,7 +157,7 @@ class KeyController:
                 if url in self.urls:
                     self.current_config = self.urls[url]
                 else:
-                    self.current_config = self.key_configs.get(app_name, self.key_configs.get("_otherwise", {}))
+                    self.current_config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
                 self.update_keys()
             else:
                 time.sleep(0.1)
@@ -169,6 +168,8 @@ class KeyController:
         keycode_list = keycode_string.split('+')
         keycodes = []
         for key in keycode_list:
+            if key.upper() == "CMD":
+                key = "GUI"
             if key not in self.KEYCODE_MAPPING:
                 raise ValueError(
                     f"Unknown keycode constant: {key} in '{keycode_string}'")
@@ -211,11 +212,10 @@ class KeyController:
         }
 
 
-    def process_urls(self, json_data):
+    def process_url_section(self, json_data):
         urls = {}
         if "urls" in json_data:
             for url, configs in json_data["urls"].items():
-                print(url)
                 urls[url] = {}
                 for key, config in configs.items():
                     config_items = self.get_config_items(config)
@@ -236,57 +236,49 @@ class KeyController:
 
 
     def process_app_section(self, json_data):
-        key_configs = {}
-        for app, configs in json_data["applications"].items():
-            # print(f"Application {app} loaded.")
-            key_configs[app] = {}
-            ignore_globals = configs.get("ignore_globals", "false").lower() == "true"
-            for key, config in configs.items():
+        app_config = {}
+        for app, config in json_data["applications"].items():
+            app_config[app] = {}
+            for key, value in config.items():
                 if key == "ignore_globals":
                     continue
-                config_items = self.get_config_items(config)
+                config_items = self.get_config_items(value)
                 if config_items['folder'] and config_items['folder'] not in json_data["folders"]:
                     print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
                     config_items['key_sequences'] = ()
                 else:                     
-                    key_configs[app][int(key)] = config_items
+                    app_config[app][int(key)] = config_items
+            ignore_globals = config.get("ignore_globals", "false").lower() == "true"
             if not ignore_globals:
-                for key, config in self.global_config.items():
-                    if int(key) not in key_configs[app]:
-                        key_configs[app][int(key)] = config
-        return key_configs
+                self.add_global_config(app_config[app]);
+        return app_config
 
 
     def process_folder_section(self, json_data):
-        folders = {}
-        for folder_name, folder_config in json_data["folders"].items():
-            folders[folder_name] = {}
-            # Check if the folder has an autoclose setting
-            autoclose = folder_config.get("autoclose", "true").lower() == "true"
-            folders[folder_name]['autoclose'] = autoclose
-            # Check if the folder has an ignore_globals setting
-            ignore_globals = folder_config.get("ignore_globals", "false").lower() == "true"
+        folder_config = {}
+        for folder, config in json_data["folders"].items():
+            folder_config[folder] = {}
+            folder_config[folder]['autoclose'] = config.get("autoclose", "true").lower() == "true"
             close_folder_found = False
-            # Process the keys in the folder
-
-            for key, config in folder_config.items():
-                # Skip the special settings
+            for key, value in config.items():
                 if key in ["ignore_globals", "autoclose"]:
                     continue
-                # Process the key config
-                config_items = self.get_config_items(config)
+                config_items = self.get_config_items(value)
+                folder_config[folder][int(key)] = config_items
                 if config_items['action'] == "close_folder":
                     close_folder_found = True
-                folders[folder_name][int(key)] = config_items
-            if not close_folder_found:
-                raise ValueError(f"Error: Folder '{folder_name}' does not have a 'close_folder' action defined.")
-            # Add the global key configs to the folder definition if they are not ignored
+            if not close_folder_found and not folder_config[folder]['autoclose']:
+                raise ValueError(f"Error: Folder '{folder}' does not have a 'close_folder' action defined.")
+            ignore_globals = config.get("ignore_globals", "false").lower() == "true"
             if not ignore_globals:
-                for key, config in global_config.items():
-                    if key not in folders[folder_name]:
-                        folders[folder_name][key] = config
+                self.add_global_config(folder_config[folder]);
+        return folder_config
 
-        return folders
+
+    def add_global_config(self, config):
+        for key, value in self.global_config.items():
+            if key not in config:
+                config[key] = value
 
 
     def parse_json(self, json_filename): 
