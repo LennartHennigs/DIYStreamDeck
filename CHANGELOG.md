@@ -4,7 +4,7 @@
 ## 11-02-2023 - 11-05-23
 
 - It is now possible to use `CMD` instead of `GUI` in the JSON key defnition (to make my life easier).
-- Added `autoclose` key for folders (default = `true``). Allows to specify whether a folder should be kept open after an action.
+- Added `autoclose` key for folders (default = `true`). Allows to specify whether a folder should be kept open after an action.
 - Keys are now only triggered on release – no more multiple shortcuts are being triggered
 - Refactored functions that deal with loading and parsing of the JSON
 - Simplified the `key_action` and `handle_key_sequences` functions
