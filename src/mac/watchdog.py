@@ -1,6 +1,6 @@
 # DIY Streamdeck watchdog code for a Mac
 # L. Hennigs and ChatGPT 4.0
-# last changed: 23-05-18
+# last changed: 12-12-23
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import sys
@@ -13,19 +13,22 @@ import argparse
 import re
 import subprocess
 from inspect import signature
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Tuple
 from contextlib import contextmanager
 from urllib.parse import urlparse
 import importlib.util
 import os
 from plugins.base_plugin import BasePlugin
+import threading
+import time
 
+
+VERSION = "1.1.0"
+HEARTBEAT_INTERVAL = 2
 
 plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
 sys.path.append(plugins_directory)
 
-
-# Function to create a serial connection
 
 def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Serial]:
     try:
@@ -34,25 +37,23 @@ def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Seria
         return None
 
 
-# Function to run the main loop
-
-def run_loop(observer: 'AppObserver') -> None:
+def run_loop(observer: 'WatchDog') -> None:
     run_loop = Cocoa.NSRunLoop.currentRunLoop()
     while True:
         run_loop.runMode_beforeDate_(
             Cocoa.NSDefaultRunLoopMode, Cocoa.NSDate.dateWithTimeIntervalSinceNow_(0.1))
         observer.check_serial()
 
-
-class AppObserver(Cocoa.NSObject):
+class WatchDog(Cocoa.NSObject):
     ser: serial.Serial
     args: argparse.Namespace
     plugins: Dict[str, BasePlugin]
     launch_pattern = r"^Launch: (.+)$"
     run_pattern = r"^Run: (.+)$"
+    running: bool = True
 
-    def initWithSerial_args_plugins_(self, ser: serial.Serial, args: argparse.Namespace, plugins: Dict[str, Any]) -> Optional['AppObserver']:
-        self = objc.super(AppObserver, self).init()
+    def initWithSerial_args_plugins_(self, ser: serial.Serial, args: argparse.Namespace, plugins: Dict[str, Any]) -> Optional['WatchDog']:
+        self = objc.super(WatchDog, self).init()
         if self is None:
             return None
         self.ser = ser
@@ -60,14 +61,26 @@ class AppObserver(Cocoa.NSObject):
         self.plugins = plugins
         return self
 
+
+    @objc.signature(b'v@:')  # Encoded the signature string as bytes
+    def send_heartbeat(self) -> None:
+        while self.running:
+            try:
+                self.ser.write('.\n'.encode('ascii', 'replace'))
+            except (serial.SerialException, UnicodeEncodeError) as e:
+                print(f"Error sending heartbeat to microcontroller: {e}")
+            time.sleep(HEARTBEAT_INTERVAL)
+
+
     @objc.signature(b'v@:@')  # Encoded the signature string as bytes
     def applicationActivated_(self, notification: Cocoa.NSNotification) -> None:
         app_name = notification.userInfo(
         )['NSWorkspaceApplicationKey'].localizedName()
         self.send_app_name_to_microcontroller(app_name)
 
-    @objc.signature(b'v@:@')
-    def send_app_name_to_microcontroller(self, app_name: str) -> None:
+
+    @objc.signature(b'v@:@')  # Encoded the signature string as bytes
+    def get_url(self, app_name) -> str:
         command_dict = {
             "Google Chrome": '''
                 if (count of windows) > 0 then
@@ -84,33 +97,35 @@ class AppObserver(Cocoa.NSObject):
                 end if
             '''
         }
+        script = f'''
+            tell application "{app_name}"
+                {command_dict[app_name]}
+            end tell
+        '''
+        osa = subprocess.Popen(
+            ['osascript', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+        output, error = osa.communicate(script.encode())
+        full_url = output.decode().strip()
 
-        script = None
-        if app_name in command_dict:
-            script = f'''
-                tell application "{app_name}"
-                    {command_dict[app_name]}
-                end tell
-            '''
+        if full_url:
+            parsed_url = urlparse(full_url)
+            base_url = parsed_url.netloc
 
-        if script is not None:
-            osa = subprocess.Popen(
-                ['osascript', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-            output, error = osa.communicate(script.encode())
-            full_url = output.decode().strip()
+            # If base_url is 'newtab' for Google Chrome or empty for Safari, don't add it in brackets
+            if not (app_name == "Google Chrome" and base_url == "newtab") and base_url != "":
+                return " (" + base_url + ")"
+        
+        return ""
 
-            if full_url != "":
-                parsed_url = urlparse(full_url)
-                base_url = parsed_url.netloc
-
-                # If base_url is 'newtab' for Google Chrome or empty for Safari, don't add it in brackets
-                if not (app_name == "Google Chrome" and base_url == "newtab") and base_url != "":
-                    app_name = app_name + " (" + base_url + ")"
+    @objc.signature(b'v@:@')
+    def send_app_name_to_microcontroller(self, app_name: str) -> str:
+        if app_name in ["Safari", "Google Chrome"]:
+            app_name = app_name + self.get_url(app_name)
 
         if self.args.verbose:
             print(f'Active app: {app_name}')
         try:
-            self.ser.write((app_name + '\n').encode('ascii', 'replace'))
+            self.ser.write(("App: " + app_name + '\n').encode('ascii', 'replace'))
         except (serial.SerialException, UnicodeEncodeError) as e:
             print(f"Error sending app name to microcontroller: {e}")
 
@@ -136,6 +151,7 @@ class AppObserver(Cocoa.NSObject):
             pass
         return
 
+
     @objc.signature(b'v@:@')
     def run_plugin_command(self, match: re.Match) -> None:
         parts = match.group(1).split(' ', 1)
@@ -147,18 +163,15 @@ class AppObserver(Cocoa.NSObject):
         if not plugin:
             print(f"Plugin {command.split('.')[0]} not found")
             return
-
         # Check if the plugin command exists
         if command not in plugin.commands():
             print(f"Command {command} not found")
             return
-
         # Check if the command requires a parameter
         command_func = plugin.commands()[command]
         if len(signature(command_func).parameters) > 0 and param is None:
             print(f"Parameter missing for command: {command}")
             return
-
         # Parse parameter
         if param is not None:
             if param.startswith("'") and param.endswith("'"):  # String parameter
@@ -169,9 +182,10 @@ class AppObserver(Cocoa.NSObject):
                 except ValueError:
                     print(f"Invalid parameter: {param}")
                     return
-#        if self.args.verbose:
-#            print(f"Executing: {command}")  # Echo when a command is detected
+        if self.args.verbose:
+            print(f"Executing: {command}")  # Echo when a command is detected
         command_func(param) if param is not None else command_func()
+
 
     def check_serial(self) -> None:
         # Check if there's any data in the buffer
@@ -181,50 +195,51 @@ class AppObserver(Cocoa.NSObject):
 
         match = re.match(self.launch_pattern, command)
         if match:
-            print(f"App Launch")
             self.launch_app(match)
             return
 
         match = re.match(self.run_pattern, command)
         if match:
-            print(f"Plugin Command")
             self.run_plugin_command(match)
             return
 
 
 def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, BasePlugin]:
     plugins = {}
-
-    # Get the directory that contains the current script
     base_path = os.path.dirname(os.path.abspath(__file__))
-
-    # Construct the full path to the plugins directory
     full_path = os.path.join(base_path, path)
 
-    plugin_files = [f for f in os.scandir(full_path) if f.is_file(
-    ) and f.name.endswith('.py') and f.name != 'base_plugin.py']
+    plugin_files = [f for f in os.scandir(full_path) if f.is_file() and f.name.endswith('.py') and f.name != 'base_plugin.py']
     for plugin_file in plugin_files:
-        plugin_name = os.path.splitext(plugin_file.name)[0]
+        plugin_name, plugin_module = load_plugin_module(plugin_file, full_path)
+        if plugin_module is None:
+            continue
 
-        abs_path = os.path.join(full_path, plugin_file.name)
-
-        spec = importlib.util.spec_from_file_location(plugin_name, abs_path)
-        plugin_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(plugin_module)
-
-        plugin_class = getattr(
-            plugin_module, f'{plugin_name.capitalize()}Plugin')
-        plugins[plugin_name] = plugin_class(os.path.join(
-            full_path, 'config', f'{plugin_name}.json'), verbose)
-
-        print(f"Loaded plugin: {plugin_name}")
-
+        try:
+            plugin_class = getattr(plugin_module, f'{plugin_name.capitalize()}Plugin')
+            plugins[plugin_name] = plugin_class(os.path.join(full_path, 'config', f'{plugin_name}.json'), verbose)
+            print(f"Loaded plugin: {plugin_name}")
+        except Exception as e:
+            print(f"Error initializing plugin {plugin_name}: {e}")
     print()
     return plugins
 
 
-# Main function
+def load_plugin_module(plugin_file: str, full_path: str) -> Tuple[str, Any]:
+    plugin_name = os.path.splitext(plugin_file.name)[0]
+    abs_path = os.path.join(full_path, plugin_file.name)
+    try:
+        spec = importlib.util.spec_from_file_location(plugin_name, abs_path)
+        plugin_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(plugin_module)
+    except Exception as e:
+        print(f"Error loading plugin module {plugin_name}: {e}")
+        return None, None
 
+    return plugin_name, plugin_module
+
+
+# Main function
 def main() -> None:
     parser = argparse.ArgumentParser(
         description='Monitor active app and send data to microcontroller')
@@ -234,32 +249,41 @@ def main() -> None:
                         help='Baud rate for the serial connection (default: 9600)')
     parser.add_argument('--verbose', action='store_true', default=False,
                         help='Print the name of the current active window (default: False)')
+    parser.add_argument('--rotate', choices=['CW', 'CCW'],
+                        help='Rotation direction for the keypad (default: CW)')
     args = parser.parse_args()
 
     try:
         with create_serial_connection(args.port, args.speed) as ser:
-            print("RGB Keypad watchdog is running...")
+            print('Keypad watchdog {VERSION} is running...'.format(VERSION=VERSION))
 
             plugins = load_plugins(verbose=args.verbose)
-
-            app_observer = AppObserver.alloc().initWithSerial_args_plugins_(ser, args, plugins)
+            watchdog = WatchDog.alloc().initWithSerial_args_plugins_(ser, args, plugins)
             notification_center = Cocoa.NSWorkspace.sharedWorkspace().notificationCenter()
             notification_center.addObserver_selector_name_object_(
-                app_observer,
-                objc.selector(app_observer.applicationActivated_,
+                watchdog,
+                objc.selector(watchdog.applicationActivated_,
                               signature=b'v@:@'),
                 Cocoa.NSWorkspaceDidActivateApplicationNotification,
                 None,
             )
+            running = [True]
+            heartbeat_thread = threading.Thread(target=watchdog.send_heartbeat)
+            heartbeat_thread.start()
+
+            if args.rotate :
+                ser.write(f'Rotate: {args.rotate}\n'.encode('ascii', 'replace'))
 
             try:
-                run_loop(app_observer)
+                run_loop(watchdog)
             except KeyboardInterrupt:
                 pass  # User pressed CTRL-C to exit
             except Exception as e:
                 print(f"An error occurred during the execution: {e}")
             finally:
-                notification_center.removeObserver_(app_observer)
+                notification_center.removeObserver_(watchdog)
+                watchdog.running = False
+                heartbeat_thread.join() 
 
     except TypeError:
         print("Error: No serial connection.")
