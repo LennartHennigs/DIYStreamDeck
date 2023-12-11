@@ -14,19 +14,19 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 
 ## Features
 
-- Assign keyboard shortcuts or key sequences to the keypad keys
-- All key definitions are defined in a JSON file stored on the Pi Pico
-- Define "folders" - a new keypad definition scheme that can be tied to a single key
+- Assign keyboard shortcuts,key sequences and a color to the keypad keys
+- All key definitions are defined in a JSON file, stored on the Pi Pico
+- Define "folders" - a keypad definition scheme that can be tied to a single key
 - Define global shortcuts in a `global` section for both, folders and apps
-- The keypad can determine the active application - you can load app-specific shortcuts (with `watchdog.py` on a Mac)
+- Rotate the keyboard layout clockwise or counter-clockwise 🆕
+- The keypad can determine the active application - you can load app-specific shortcuts (running `watchdog.py` on a Mac)
 - Use the  `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` on a Mac)
 - Launch applications (with `watchdog.py` on a Mac)
-- Plugins included for ...
+- Plugins are included for ...
   - Audio playback
-  - Spotify 
-  - Philips Hue
-- A simple plugins system to create your own.
-
+  - Spotify playback
+  - Philips Hue control
+- A simple plugins system to create your own plugins.
 
 ## Hardware Requirements
 
@@ -56,8 +56,6 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 - Defining keyboard layout
   - Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
 
- 
-
 ## Configuration
 
 In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with four possible entries: `applications`, `folders`, `global`, and `urls`.
@@ -85,8 +83,8 @@ With these fields you can define four types of keys, shortcut keys, application 
   
 In addition, two more keys are relevant for folders and applications:
 
--  `ignore_globals": "true"` will don't ignore the global definitions and don't add them to a folder or an application.
--  🆕 `"autoclose": "false"` will keep a folder active after a key has been pressed.
+- `ignore_globals": "true"` will don't ignore the global definitions and don't add them to a folder or an application.
+- `"autoclose": "false"` will keep a folder active after a key has been pressed. 🆕
 
 Here is an example configuration file:
 
@@ -229,5 +227,6 @@ python3 watchdog.py --port /dev/cu.usbmodem2101 --speed 9600 --verbose
 - The `--port` parameter needs to be set to the USB serial port corresponding to your Raspberry Pi Pico (e.g., `/dev/cu.usbmodem2101`).
 - The optional `--speed` parameter should be set to the desired baud rate for the serial communication (default: `9600`).
 - If the optional `--verbose` parameter is set, the current app will be printed to the console.
+- With the optional `--rotate` parameter you can rotate the keypad layout clockwise (`CW`) or counter-clockwise (`CCW`) 🆕 
 
 When the watchdog script detects a change in the active app, it sends the app's name as a single line over the USB serial connection. The Pi Pico then reads this information, loads the corresponding shortcuts from the `key_def.json` file, and updates the keypad accordingly.
