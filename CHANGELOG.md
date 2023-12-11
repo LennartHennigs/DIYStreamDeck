@@ -1,9 +1,19 @@
 
 # CHANGELOG
 
+## 12-12-23
+
+- added `--rotate` parameter (`CW` or `CCW`) to `watchdog.py`
+- added heartbeat to `watchdog.py` (code for it still missing on client)
+- refactored the code of `watchdog.py`
+- added error handling to `load_plugins()`
+- added version number display to `watchdog.py`
+- fixed verbose output for commands and apps
+- added `App: ` prefix to serial command from `watchdog.py` to the keypad
+
 ## 11-02-2023 - 11-05-23
 
-- It is now possible to use `CMD` instead of `GUI` in the JSON key defnition (to make my life easier).
+- It is now possible to use `CMD` instead of `GUI` in the JSON key definition (to make my life easier).
 - Added `autoclose` key for folders (default = `true``). Allows to specify whether a folder should be kept open after an action.
 - Keys are now only triggered on release – no more multiple shortcuts are being triggered
 - Refactored functions that deal with loading and parsing of the JSON
