@@ -21,8 +21,71 @@
       "description": "Close App Folder"
     }
   },
+
   "applications": {
 
+    "Notizen": {
+      "0": {
+        "key_sequence": "GUI+N",
+        "color": "#00FF00",
+        "description": "New Note"        
+      }
+    },
+    
+    "Notes": {
+      "0": {
+        "key_sequence": "GUI+N",
+        "color": "#00FF00",
+        "description": "New Note"        
+      }
+    },
+
+"Google Chrome": {
+      "0": {
+        "key_sequence": "GUI+T",
+        "color": "#00FF00",
+        "description": "New Tab"
+      },
+      "1": {
+        "key_sequence": "CONTROL+SHIFT+TAB",
+        "color": "#FFFF00",
+        "description": "Prev Tab"
+      },
+      "2": {
+        "key_sequence": "CONTROL+TAB",
+        "color": "#FFFF00",
+        "description": "Next Tab"
+      },
+      "3": {
+        "key_sequence": "GUI+W",
+        "color": "#FF0000",
+        "description": "Close Tab"
+      },
+      "5": {
+        "key_sequence": "GUI+LEFT_ARROW",
+        "color": "#FFFFFF",
+        "description": "Back"
+      },
+      "6": {
+        "key_sequence": "GUI+RIGHT_ARROW",
+        "color": "#FFFFFF",
+        "description": "Forward"
+      }
+    },
+
+    "Thonny": {
+      "2": {
+        "key_sequence": "F5",
+        "color": "#00FF00",
+        "description": "RUN"
+      },
+      "3": {
+        "key_sequence": "CONTROL+F2",
+        "color": "#FF0000",
+        "description": "STOP"
+      }
+    },
+    
     "Baldur's Gate 3": {},
 
     "zoom.us": {
@@ -47,19 +110,19 @@
         "description": "Raise Hand"
       },
       "4": {
-        "key_sequence": "GUI+SHIFT+S",
-        "color": "#00FF00",
-        "description": "Share Screen"
+        "key_sequence": "GUI+U",
+        "color": "#FFA500",
+        "description": "Show Participants Panel"
       },
       "5": {
         "key_sequence": "GUI+SHIFT+H",
-        "color": "#FFA500",
+        "color": "#FFFF00",
         "description": "Show/Hide Chat"
       },
       "6": {
-        "key_sequence": "GUI+U",
-        "color": "#FFFF00",
-        "description": "Show Participants Panel"
+        "key_sequence": "GUI+SHIFT+S",
+        "color": "#00FF00",
+        "description": "Share Screen"
       },
       "7": {
         "key_sequence": [
@@ -67,7 +130,7 @@
           0.175,
           "TAB"
         ],
-        "color": "#00FF00",
+        "color": "#FFA500",
         "description": "Invite Participants"
       },
       "8": {
@@ -85,16 +148,8 @@
         "color": "#FFFFFF",
         "description": "Pause/Resume Recording"
       },
-      "15": {
-        "key_sequence": [
-          "GUI+W",
-          0.1,
-          "RETURN"
-        ],
-        "color": "#FF0000",
-        "description": "End Meeting"
-      }
     },
+
     "Microsoft Teams": {
       "0": {
         "key_sequence": "GUI+SHIFT+M",
@@ -121,12 +176,8 @@
         "color": "#00FF00",
         "description": "Share Screen"
       },
-      "15": {
-        "key_sequence": "GUI+SHIFT+H",
-        "color": "#FF0000",
-        "description": "End Meeting"
-      }
     },
+
     "Microsoft Outlook": {
       "0": {
         "key_sequence": "GUI+ONE",
@@ -144,6 +195,7 @@
         "description": "New Email"
       }
     },
+
     "Spotify": {
       "4": {
         "key_sequence": "GUI+LEFT_ARROW",
@@ -161,6 +213,7 @@
         "description": "Spotify - Next Song"
       }
     },
+    
     "Code": {
       "0": {
         "key_sequence": "GUI+SHIFT+E",
@@ -170,12 +223,12 @@
       "1": {
         "key_sequence": "GUI+SHIFT+F",
         "color": "#FFFF00",
-        "description": "Explorer"
+        "description": "Find"
       },
       "2": {
         "key_sequence": "CONTROL+SHIFT+G",
         "color": "#FFFF00",
-        "description": "Explorer"
+        "description": "Source Control"
       },
       "3": {
         "key_sequence": "GUI+SHIFT+D",
@@ -208,6 +261,7 @@
         "description": "Preview Markldown"
       }
     },
+
     "iTerm2": {
       "0": {
         "key_sequence": "GUI+T",
@@ -215,15 +269,20 @@
         "description": "New Tab"
       }
     },
+
     "loginwindow": {
       "ignore_globals": "true"
     },
+
     "Bildschirmschoner": {
       "ignore_globals": "true"
     },
+
     "_otherwise": {}
   },
+
   "folders": {
+
     "apps_folder": {
       "ignore_globals": "true",
       "0": {
@@ -277,6 +336,7 @@
         "description": "Close Folder"
       }
     },
+
     "controls_folder": {
       "ignore_globals": "true",
       "0": {
@@ -314,7 +374,7 @@
         "color": "#00FF00",
         "description": "Spotify - Next Song"
       },
-      "8": {
+      "9": {
         "action": "hue.toggle 'Schreibtisch Lampe'",
         "color": "#FFFF00",
         "description": "Let there be light!"
@@ -330,6 +390,7 @@
         "description": "Close Folder"
       }
     },
+
     "close_app_folder": {
       "ignore_globals": "true",
       "14": {
