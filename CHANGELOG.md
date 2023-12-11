@@ -10,6 +10,7 @@
 - added version number display to `watchdog.py`
 - fixed verbose output for commands and apps
 - added `App: ` prefix to serial command from `watchdog.py` to the keypad
+- fixed: button color is now properly reset after a key sequence
 
 ## 11-02-2023 - 11-05-23
 
