@@ -83,6 +83,7 @@ class KeyController:
         # handle the key sequences
         elif keys:
             self.handle_key_sequences(keys)
+            key.set_led(*self.current_config[key.number]['color']);
         # close the folder
         if (someAction and self.autoclose_current_folder) or action == 'close_folder':
             self.close_folder()      
@@ -103,7 +104,6 @@ class KeyController:
         # release all keys
         time.sleep(0.025);
         self.keyboard.release_all()
-        self.update_keys()
 
 
     def update_keys(self):
@@ -115,7 +115,6 @@ class KeyController:
                 self.keypad.on_release(key, lambda key=key: self.key_action(key))
             else:            
                 key.led_off()
-                # Set default no-op handlers
                 self.keypad.on_press(key, lambda _, key=key: None)
                 self.keypad.on_release(key, lambda _, key=key: None)
 
