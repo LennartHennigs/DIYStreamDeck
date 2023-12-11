@@ -1,6 +1,6 @@
 # DIY Streamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0
-# last changed: 23-11-04
+# last changed: 12-11-23
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import time
@@ -21,6 +21,9 @@ class KeyController:
     KEYCODE_MAPPING = {name: getattr(Keycode, name) for name in dir(
         Keycode) if not name.startswith("__")}
 
+    CW = [12, 8, 4, 0, 13, 9, 5, 1, 14, 10, 6, 2, 15, 11, 7, 3]
+    CCW = [3, 7, 11, 15, 2, 6, 10, 14, 1, 5, 9, 13, 0, 4, 8, 12]
+
     def __init__(self, verbose=False):
         self.verbose = verbose
         self.keypad = RgbKeypad()
@@ -28,6 +31,7 @@ class KeyController:
         self.layout = KeyboardLayoutUS(self.keyboard)
         self.keys = self.keypad.keys
         self.autoclose_current_folder = False
+        self.rotate = ""
 
         self.json = self.parse_json(self.JSON_FILE)
         self.global_config = self.process_global_section(self.json)
@@ -43,7 +47,8 @@ class KeyController:
     def open_folder(self, folder):        
         if folder in self.folders:
             self.folder_stack.append(self.current_config)
-            self.current_config= self.folders[folder]
+            self.current_config = self.folders[folder]
+            self.current_config = self.rotate_keys_if_needed()                    
             self.autoclose_current_folder = self.current_config.get('autoclose', True)
             self.update_keys()
 
@@ -103,17 +108,16 @@ class KeyController:
 
     def update_keys(self):
         for key in self.keys:
-            # Turn off the key LED by default
-            key.led_off()
-            # Set default no-op handlers
-            self.keypad.on_press(key, lambda _, key=key: None)
-            self.keypad.on_release(key, lambda _, key=key: None)
-            # If there's a specific configuration for this key, update the LED and set event handlers
             if key.number in self.current_config:
                 key.set_led(*self.current_config[key.number]['color']);
                 # Set the actual key event handlers
                 self.keypad.on_press(key, lambda key=key: key.led_off())
                 self.keypad.on_release(key, lambda key=key: self.key_action(key))
+            else:            
+                key.led_off()
+                # Set default no-op handlers
+                self.keypad.on_press(key, lambda _, key=key: None)
+                self.keypad.on_release(key, lambda _, key=key: None)
 
 
     def read_serial_line(self):
@@ -144,25 +148,43 @@ class KeyController:
         while True:
             serial_str = self.read_serial_line()
             if serial_str is not None:
-                # Split the app_name string on the first occurrence of " ("
-                split_app_name = serial_str.split(" (", 1)
-                # The first part is always the app name
-                app_name = split_app_name[0]
-                # The second part is the details, if they exist
-                url = None
-                if len(split_app_name) > 1:
-                    # Remove the trailing ")" from the details
-                    url = split_app_name[1].rstrip(')')
-                # Check if there is a keyboard definition for the URL
-                if url in self.urls:
-                    self.current_config = self.urls[url]
-                else:
-                    self.current_config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
-                self.update_keys()
+                if serial_str is ".":
+                    continue
+                if serial_str.startswith("Rotate: "):
+                    self.rotate = serial_str[8:]
+                elif serial_str.startswith("App: "):
+                    serial_str = serial_str[5:]
+                    # Split the app_name string on the first occurrence of " ("
+                    split_app_name = serial_str.split(" (", 1)
+                    # The first part is always the app name
+                    app_name = split_app_name[0]
+                    # The second part is the details, if they exist
+                    url = None
+                    if len(split_app_name) > 1:
+                        # Remove the trailing ")" from the details
+                        url = split_app_name[1].rstrip(')')
+                    # Check if there is a keyboard definition for the URL
+                    if url in self.urls:
+                        self.current_config = self.urls[url]
+                    else:
+                        self.current_config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
+
+                    self.current_config = self.rotate_keys_if_needed()                    
+                    self.update_keys()
+                
             else:
                 time.sleep(0.1)
                 self.keypad.update()
 
+
+    def rotate_keys_if_needed (self):
+        if self.rotate == "CW":
+            return {i: self.current_config[cw] for i, cw in enumerate(self.CW) if cw in self.current_config}
+        elif self.rotate == "CCW":
+            return {i: self.current_config[ccw] for i, ccw in enumerate(self.CCW) if ccw in self.current_config}
+        
+        return self.current_config
+        
 
     def keycode_string_to_tuple (self, keycode_string):
         keycode_list = keycode_string.split('+')
