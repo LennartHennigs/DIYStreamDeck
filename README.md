@@ -91,6 +91,9 @@ Here is an example configuration file:
 
 ``` json
 {
+  "settings": {
+    "rotate": "CCW"
+  },
   "global": {
     "15": {
       "key_sequence": "GUI+Q",
@@ -181,6 +184,10 @@ Here is an example configuration file:
 
 In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file, you will find a special app key called `_otherwise`. This key is used to define shortcut keys that are not specific to any particular app. When the Python script is running, it constantly monitors the active application on your computer, and if the active application matches any of the keys in the JSON file, it will load the relevant shortcut keys onto the keypad. If the active application does not match any of the defined keys, the `_otherwise` key is used as a fallback, and the shortcut keys defined under this key are loaded onto the keypad. This means that you can define a set of general-purpose shortcut keys that are always available, regardless of which application is currently active.
 
+## Settings
+
+The `key_def.json` File can  also contain a `settings` section. There you can define the `rotate` parameter (`CW` or `CCW`). This will rotate the keybaord. This is useful when using the keypad in some 3D printed cases. 🆕
+
 ## Plugins
 
 You can build your own plugins for the keypad. They are stored in the `plugins/` folder. A plugin defines set of commands that can be used in the `action` key in the JSON config. In the JSON above you can see three commands being called in the `_otherwise` section. If needed, the plugin can have a config file to load settings.
@@ -228,6 +235,6 @@ python3 watchdog.py --port /dev/cu.usbmodem2101 --speed 9600 --verbose
 - The `--port` parameter needs to be set to the USB serial port corresponding to your Raspberry Pi Pico (e.g., `/dev/cu.usbmodem2101`).
 - The optional `--speed` parameter should be set to the desired baud rate for the serial communication (default: `9600`).
 - If the optional `--verbose` parameter is set, the current app will be printed to the console.
-- With the optional `--rotate` parameter you can rotate the keypad layout clockwise (`CW`) or counter-clockwise (`CCW`) 🆕 
+- With the optional `--rotate` parameter you can rotate the keypad layout clockwise (`CW`) or counter-clockwise (`CCW`). 🆕
 
 When the watchdog script detects a change in the active app, it sends the app's name as a single line over the USB serial connection. The Pi Pico then reads this information, loads the corresponding shortcuts from the `key_def.json` file, and updates the keypad accordingly.
