@@ -151,6 +151,9 @@ class KeyController:
                     continue
                 if serial_str.startswith("Rotate: "):
                     self.rotate = serial_str[8:]
+                    self.current_config = self.rotate_keys_if_needed()                    
+                    self.update_keys()
+
                 elif serial_str.startswith("App: "):
                     serial_str = serial_str[5:]
                     # Split the app_name string on the first occurrence of " ("
@@ -315,4 +318,5 @@ if __name__ == "__main__":
         # turn off all the LEDs when the program is interrupted
         for key in controller.keys:
             key.led_off()
+
 
