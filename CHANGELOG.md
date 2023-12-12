@@ -3,13 +3,14 @@
 
 ## 12-12-23
 
+- added `settings` section to JSON file. You can now define the `rotate`` parameter there, too.
 - added `--rotate` parameter (`CW` or `CCW`) to `watchdog.py`
 - added heartbeat to `watchdog.py` (code for it still missing on client)
 - refactored the code of `watchdog.py`
 - added error handling to `load_plugins()`
 - added version number display to `watchdog.py`
 - fixed verbose output for commands and apps
-- added `App: ` prefix to serial command from `watchdog.py` to the keypad
+- added `App:` prefix to serial command from `watchdog.py` to the keypad
 - fixed: button color is now properly reset after a key sequence
 
 ## 11-02-2023 - 11-05-23
@@ -27,7 +28,7 @@
 
 ## 06-03-2023
 
-- You can now define keys for Safari and Chrome URLs via the  `urls` section in the JSON
+- You can now define keys for Safari and Chrome URLs via the `urls` section in the JSON
 - There is now a `global` section for default key definitions
 - You can define `"ignore_globals": "true"` for folders and apps where `global` keys should not be used
 - You can now nest folders
@@ -52,7 +53,7 @@
 ## 05-11-2023
 
 - Stopping the code will turn off the keypad
-- Fixed a bug -  the active app is now "remembered"
+- Fixed a bug - the active app is now "remembered"
 - Removed unneeded `action: open_folder` in JSON and code
 
 ## 05-06-2023
