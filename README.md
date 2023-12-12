@@ -46,6 +46,7 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 - On the Pi Pico
   - Install CircuitPython on your Raspberry Pi Pico following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython).
   - Install the required CircuitPython libraries by following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/circuitpython-libraries).
+  - Add the [rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython) library to your `lib` folder
   - Clone this repository and copy the contents of the `src/pico` folder to your Raspberry Pi Pico.
   
 - On the Mac
