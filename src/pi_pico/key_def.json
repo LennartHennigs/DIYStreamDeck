@@ -1,4 +1,7 @@
 {
+  "settings": {
+    "rotate": "CCW"
+  },
   "global": {
     "12": {
       "folder": "apps_folder",
@@ -406,3 +409,5 @@
     }
   }
 }
+
+

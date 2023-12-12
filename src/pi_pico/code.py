@@ -31,7 +31,6 @@ class KeyController:
         self.layout = KeyboardLayoutUS(self.keyboard)
         self.keys = self.keypad.keys
         self.autoclose_current_folder = False
-        self.rotate = ""
 
         self.json = self.parse_json(self.JSON_FILE)
         self.global_config = self.process_global_section(self.json)
@@ -40,6 +39,9 @@ class KeyController:
         self.urls = self.process_url_section(self.json)
 
         self.current_config = self.apps.get("_otherwise", {})
+        self.rotate = self.json["settings"]["rotate"].upper() if "rotate" in self.json.get("settings", {}) else ''
+        self.current_config = self.rotate_keys_if_needed()                    
+
         self.folder_stack = [] 
         self.update_keys()
 
