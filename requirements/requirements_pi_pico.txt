@@ -1,4 +1,3 @@
-adafruit-circuitpython-rgbkeypad==2.1.2
-adafruit-circuitpython-bundle==6.3.0
-adafruit-blinka==7.0.0
-adafruit-hid==6.1.7
+circuitpython
+adafruit-circuitpython-hid
+git+https://github.com/AngainorDev/rgbkeypad-circuitpython.git
