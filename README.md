@@ -5,10 +5,6 @@ This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keyp
 
 ![Keypad with Zoom Shortcuts](images/keypad.png)
 
-This is an ongoing project. To see the latest changes please take a look at the [Changelog](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
-
-If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
-
 ## Features
 
 - Assign actions and a color to the keypad keys
@@ -28,6 +24,11 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 - Use the  `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` running on a Mac)
 - Rotate the keyboard layout clockwise or counter-clockwise (for 3d printed cases) 🆕
 - Create your own plugin with the simple plugins system
+
+If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
+
+This is an ongoing project. To see the latest changes please take a look at the [Changelog](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
+
 
 **Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about ten lines in the CircuitPython code). Update: I recently started to refactor some code myself now.
 
