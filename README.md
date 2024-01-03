@@ -17,12 +17,12 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 - Actions can be...
   - keyboard shortcuts
   - open a folder (= a new page of key definitions)
-- There is a Mac script called `watchdog.py` to enable more functionalities..
+- There is a Mac script called `watchdog.py` to enable more functionalities...
   - Determine the active application, to load and show app-specific shortcuts
   - Launch a Mac application
   - Launch a plugin command
-- Plugins are included for ...
-  - Audio playback
+- Plugins are included for...
+  - Audio playback (to act as a sound board)
   - Spotify playback
   - Philips Hue control
 - All key definitions are defined in a JSON file, stored on the Pi Pico
@@ -227,7 +227,7 @@ You need to define the IP address of your hue bridge in the config JSON and pres
 
 The plugin can playback `.wav` and `.mp3` files.
 
-## Watchdog
+## Mac Watchdog Script
 
 To enable the dynamic detection of the active app, you need to run the watchdog script on your computer that sends the active app's name to the Pi Pico via USB serial. This project includes a Python watchdog script **for Mac OS**.
 
@@ -243,3 +243,8 @@ python3 watchdog.py --port /dev/cu.usbmodem2101 --speed 9600 --verbose
 - With the optional `--rotate` parameter you can rotate the keypad layout clockwise (`CW`) or counter-clockwise (`CCW`). 🆕
 
 When the watchdog script detects a change in the active app, it sends the app's name as a single line over the USB serial connection. The Pi Pico then reads this information, loads the corresponding shortcuts from the `key_def.json` file, and updates the keypad accordingly.
+
+## 3D Printed Case
+
+- As you can see in the picture above I use [a 3d printed case](https://www.printables.com/model/80088-pimoroni-keypad-case/). You can get it [here](https://www.printables.com/model/80088-pimoroni-keypad-case/).
+- Since the case rotates the keypad, I added a `settings` section and a `rotate` option for the keyboard layout.
