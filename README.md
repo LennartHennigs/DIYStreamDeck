@@ -14,14 +14,17 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 
 ## Features
 
-- Assign keyboard shortcuts,key sequences and a color to the keypad keys
-- All key definitions are defined in a JSON file, stored on the Pi Pico
-- Define "folders" - a keypad definition scheme that can be tied to a single key
-- Define global shortcuts in a `_default` section for both, folders and apps
-- Rotate the keyboard layout clockwise or counter-clockwise 🆕
+- Assign actions and a color to the keypad keys
+- Actions can be...
+  - keyboard shortcuts
+  - open a folder (= a new page of key definitions)
+  - Launch a Mac application (with running `watchdog.py` on a Mac)
+  - Launch a plugins command (with running `watchdog.py` on a Mac)
 - The keypad can determine the active application - you can load app-specific shortcuts (running `watchdog.py` on a Mac)
+- All key definitions are defined in a JSON file, stored on the Pi Pico
+- Define global shortcuts in a `_default` section for both, folders and apps
 - Use the  `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` on a Mac)
-- Launch applications (with `watchdog.py` on a Mac)
+- Rotate the keyboard layout clockwise or counter-clockwise 🆕
 - Plugins are included for ...
   - Audio playback
   - Spotify playback
