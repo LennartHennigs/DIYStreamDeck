@@ -9,7 +9,6 @@ This is an ongoing project. To see the latest changes please take a look at the 
 
 If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
 
-
 **Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about ten lines in the CircuitPython code). Update: I recently started to refactor some code myself now.
 
 ## Features
@@ -18,13 +17,14 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 - Actions can be...
   - keyboard shortcuts
   - open a folder (= a new page of key definitions)
-  - Launch a Mac application (with running `watchdog.py` on a Mac)
-  - Launch a plugins command (with running `watchdog.py` on a Mac)
-- The keypad can determine the active application - you can load app-specific shortcuts (running `watchdog.py` on a Mac)
+- There is a Mac script called `watchdog.py` that enables advanced functionality
+  - Launch a Mac application
+  - Launch a plugin command
+  - Determine the active application - you load app-specific shortcuts
 - All key definitions are defined in a JSON file, stored on the Pi Pico
 - Define global shortcuts in a `_default` section for both, folders and apps
-- Use the  `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` on a Mac)
-- Rotate the keyboard layout clockwise or counter-clockwise 🆕
+- Use the  `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` running on a Mac)
+- Rotate the keyboard layout clockwise or counter-clockwise (for 3d printed cases) 🆕
 - Plugins are included for ...
   - Audio playback
   - Spotify playback
@@ -75,7 +75,7 @@ These are the possible fields for a key entry:
 - `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is mandatory inside a folder definition without an `autoclose` setting.
 - `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., `#FF0000` for red, `#00FF00` for green, `#0000FF` for blue).
 - `description`: This optional field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
-- `folder`: This field allows you assign a folder (a set of key definitions) to be opened. A folder will auto-close per defaut, ahter actions has been triggered inside. Foders can also be nested.
+- `folder`: This field allows you assign a folder (a set of key definitions) to be opened. A folder will auto-close per default, ohter actions has been triggered inside. Folders can also be nested.
 - `alias_off`: This field will tell the keypad to use another applications key definition. All other keys will be ignored. 🆕
 With these fields you can define four types of keys, shortcut keys, application launch keys, and folder keys.
 
@@ -189,10 +189,9 @@ In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/mai
 
 In addition you can define a `_default` application. These key definitions will be added to all apps and folders. They can be "overwritten" via specific folder or app definition. You can set `"ignore_default": "true"` for folders and apps where they should not be used.
 
-
 ## Settings
 
-The `key_def.json` File can  also contain a `settings` section. There you can define the `rotate` parameter (`CW` or `CCW`). This will rotate the keybaord. This is useful when using the keypad in some 3D printed cases. 🆕
+The `key_def.json` File can  also contain a `settings` section. There you can define the `rotate` parameter (`CW` or `CCW` – clockwise or counter-clockwise). This will rotate the keyboard layout. This is useful when using the keypad in some 3D printed cases. 🆕
 
 ## Plugins
 
