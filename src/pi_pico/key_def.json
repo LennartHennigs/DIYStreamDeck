@@ -221,6 +221,10 @@
       }
     },
 
+    "Microsoft Teams": {
+      "alias_off": "Microsoft Teams classic"
+    },
+    
     "Microsoft Outlook": {
       "0": {
         "key_sequence": "GUI+ONE",
