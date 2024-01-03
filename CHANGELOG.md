@@ -1,7 +1,13 @@
 
 # CHANGELOG
 
-## 12-12-23
+# 01-03-2024
+
+- added `alias_off` key for applications, to reuse key definitions
+- moved the `global` section inside the `applications` section and renamed it to `_default`
+- renamed `ignore_globals` to `ignore_default`
+
+## 12-12-2023
 
 - added `settings` section to JSON file. You can now define the `rotate`` parameter there, too.
 - added `--rotate` parameter (`CW` or `CCW`) to `watchdog.py`
@@ -13,7 +19,7 @@
 - added `App:` prefix to serial command from `watchdog.py` to the keypad
 - fixed: button color is now properly reset after a key sequence
 
-## 11-02-2023 - 11-05-23
+## 11-02-2023 - 11-05-2023
 
 - It is now possible to use `CMD` instead of `GUI` in the JSON key definition (to make my life easier).
 - Added `autoclose` key for folders (default = `true``). Allows to specify whether a folder should be kept open after an action.
