@@ -1,17 +1,17 @@
 
 # DIY Streamdeck with the Pimoroni RGB Keypad
 
-This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keypad](https://shop.pimoroni.com/products/pico-rgb-keypad-base) to provide dynamic app-specific shortcut keys. By monitoring the currently active app on your computer, it automatically loads and displays relevant shortcuts to streamline your workflow and increase productivity.
+This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keypad](https://shop.pimoroni.com/products/pico-rgb-keypad-base) to provide dynamic app-specific shortcut keys. This will streamline your workflow and increase productivity.
 
 ![Keypad with Zoom Shortcuts](images/keypad.png)
 
 ## Features
 
-- Assign actions and a color to the keypad keys
+- Assign actions and colors to the keypad keys
 - Actions can be...
   - keyboard shortcuts
   - open a folder (= a new page of key definitions)
-- There is a Mac script called `watchdog.py` to enable more functionalities...
+- There is a Mac script called `watchdog.py` to enable more capabilities...
   - Determine the active application, to load and show app-specific shortcuts
   - Launch a Mac application
   - Launch a plugin command
@@ -27,10 +27,13 @@ This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keyp
 
 If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
 
+### Notes
+
 This is an ongoing project. To see the latest changes please take a look at the [Changelog](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
 
+It is (still)) a very successful experiment in programming with ChatGPT-4 and Copilot. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result so far. GPT wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about twenty lines in the CircuitPython code).
 
-**Note:** This was (and is) a very successful experiment in programming with ChatGPT-4. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result. It wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about ten lines in the CircuitPython code). Update: I recently started to refactor some code myself now.
+**Update**: I recently started to refactor some code myself now but still use GPT for new features
 
 ## Hardware Requirements
 
