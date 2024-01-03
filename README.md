@@ -17,19 +17,19 @@ If you find this project helpful please consider giving it a ⭐️ at [GitHub](
 - Actions can be...
   - keyboard shortcuts
   - open a folder (= a new page of key definitions)
-- There is a Mac script called `watchdog.py` that enables advanced functionality
+- There is a Mac script called `watchdog.py` to enable more functionalities..
+  - Determine the active application, to load and show app-specific shortcuts
   - Launch a Mac application
   - Launch a plugin command
-  - Determine the active application - you load app-specific shortcuts
-- All key definitions are defined in a JSON file, stored on the Pi Pico
-- Define global shortcuts in a `_default` section for both, folders and apps
-- Use the  `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` running on a Mac)
-- Rotate the keyboard layout clockwise or counter-clockwise (for 3d printed cases) 🆕
 - Plugins are included for ...
   - Audio playback
   - Spotify playback
   - Philips Hue control
-- A simple plugins system to create your own plugins.
+- All key definitions are defined in a JSON file, stored on the Pi Pico
+- Define global shortcuts in a `_default` section for both, folders and apps
+- Use the  `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` running on a Mac)
+- Rotate the keyboard layout clockwise or counter-clockwise (for 3d printed cases) 🆕
+- Create your own plugin with the simple plugins system
 
 ## Hardware Requirements
 
