@@ -2,36 +2,72 @@
   "settings": {
     "rotate": "CCW"
   },
-  "global": {
-    "12": {
-      "folder": "apps_folder",
-      "color": "#FFFFFF",
-      "description": "Apps Folder"
-    },
-    "13": {
-      "folder": "controls_folder",
-      "color": "#FFFFFF",
-      "description": "Controls Folder"
-    },
-    "14": {
-      "key_sequence": "GUI+TAB",
-      "color": "#FFFF00",
-      "description": "Previous App"
-    },
-    "15": {
-      "folder": "close_app_folder",
-      "color": "#FF0000",
-      "description": "Close App Folder"
-    }
-  },
 
   "applications": {
 
-    "Notizen": {
+    "_default": {
+      "12": {
+        "folder": "apps_folder",
+        "color": "#FFFFFF",
+        "description": "Apps Folder"
+      },
+      "13": {
+        "folder": "controls_folder",
+        "color": "#FFFFFF",
+        "description": "Controls Folder"
+      },
+      "14": {
+        "key_sequence": "GUI+TAB",
+        "color": "#FFFF00",
+        "description": "Previous App"
+      },
+      "15": {
+        "folder": "close_app_folder",
+        "color": "#FF0000",
+        "description": "Close App Folder"
+      }
+    },
+  
+    "Slack": {
       "0": {
+        "key_sequence": "CONTROL+ONE",
+        "color": "#FFFF00",
+        "description": "Home"
+      },
+      "1": {
+        "key_sequence": "CONTROL+TWO",
+        "color": "#FFFF00",
+        "description": "DMs"
+      },
+      "2": {
+        "key_sequence": "CONTROL+THREE",
+        "color": "#FFFF00",
+        "description": "Activity"
+      },
+      "3": {
+        "key_sequence": "CONTROL+FOUR",
+        "color": "#FFFF00",
+        "description": "Later"
+      },
+      "4": {
         "key_sequence": "GUI+N",
         "color": "#00FF00",
-        "description": "New Note"        
+        "description": "New Conversations"
+      },
+      "5": {
+        "key_sequence": "GUI+F",
+        "color": "#FFA500",
+        "description": "Find Conversation"
+      },
+      "6": {
+        "key_sequence": "ESCAPE",
+        "color": "#000000",
+        "description": "Cancel"
+      },
+      "8": {
+        "key_sequence": "GUI+SHIFT+D",
+        "color": "#0000FF",
+        "description": "Toggle Sidebar"
       }
     },
     
@@ -42,8 +78,12 @@
         "description": "New Note"        
       }
     },
+    
+    "Notizen": {
+      "alias_of": "Notes"
+    },
 
-"Google Chrome": {
+    "Google Chrome": {
       "0": {
         "key_sequence": "GUI+T",
         "color": "#00FF00",
@@ -150,10 +190,10 @@
         "key_sequence": "GUI+SHIFT+P",
         "color": "#FFFFFF",
         "description": "Pause/Resume Recording"
-      },
+      }
     },
 
-    "Microsoft Teams": {
+    "Microsoft Teams classic": {
       "0": {
         "key_sequence": "GUI+SHIFT+M",
         "color": "#FFFF00",
@@ -178,7 +218,7 @@
         "key_sequence": "GUI+SHIFT+E",
         "color": "#00FF00",
         "description": "Share Screen"
-      },
+      }
     },
 
     "Microsoft Outlook": {
@@ -274,11 +314,11 @@
     },
 
     "loginwindow": {
-      "ignore_globals": "true"
+      "ignore_default": "true"
     },
 
     "Bildschirmschoner": {
-      "ignore_globals": "true"
+      "ignore_default": "true"
     },
 
     "_otherwise": {}
@@ -287,7 +327,7 @@
   "folders": {
 
     "apps_folder": {
-      "ignore_globals": "true",
+      "ignore_default": "true",
       "0": {
         "application": "zoom.us",
         "color": "#0000FF",
@@ -341,7 +381,7 @@
     },
 
     "controls_folder": {
-      "ignore_globals": "true",
+      "ignore_default": "true",
       "0": {
         "key_sequence": "F11",
         "color": "#FFFF00",
@@ -395,7 +435,7 @@
     },
 
     "close_app_folder": {
-      "ignore_globals": "true",
+      "ignore_default": "true",
       "14": {
         "action": "close_folder",
         "color": "#FFFFFF",

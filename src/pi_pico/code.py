@@ -225,14 +225,22 @@ class KeyController:
 
 
     def get_config_items(self, config):
+        if 'alias_of' in config:
+            config = config['alias_of']
+
         key_sequence = config.get('key_sequence', [])
         key_sequences = tuple(self.convert_value(v) for v in key_sequence) if isinstance(
             key_sequence, list) else self.keycode_string_to_tuple (key_sequence)
+        
+        application = config.get('application', '')
+        if 'alias_of' in config:
+            application = config['alias_of']
+
         return {
             'key_sequences': key_sequences,
             'color': self.color_string_to_tuple(config.get('color', '')),
             'description': config.get('description', ''),
-            'application': config.get('application', ''),
+            'application': application,
             'action': self.convert_action_string(config.get('action', '')),
             'folder': config.get('folder', '')
         }
@@ -251,8 +259,8 @@ class KeyController:
 
     def process_global_section(self, json_data):
         global_config = {}
-        if "global" in json_data:
-            for key, config in json_data["global"].items():
+        if "applications" in json_data and "_default" in json_data["applications"]:
+            for key, config in json_data["applications"]["_default"].items():
                 config_items = self.get_config_items(config)
                 if config_items['folder'] and config_items['folder'] not in json_data["folders"]:
                     print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
@@ -265,8 +273,10 @@ class KeyController:
         app_config = {}
         for app, config in json_data["applications"].items():
             app_config[app] = {}
+            if 'alias_of' in config:
+                config = json_data["applications"][config['alias_of']]
             for key, value in config.items():
-                if key == "ignore_globals":
+                if key == "ignore_default":
                     continue
                 config_items = self.get_config_items(value)
                 if config_items['folder'] and config_items['folder'] not in json_data["folders"]:
@@ -274,10 +284,11 @@ class KeyController:
                     config_items['key_sequences'] = ()
                 else:                     
                     app_config[app][int(key)] = config_items
-            ignore_globals = config.get("ignore_globals", "false").lower() == "true"
-            if not ignore_globals:
+            ignore_default = config.get("ignore_default", "false").lower() == "true"
+            if not ignore_default:
                 self.add_global_config(app_config[app]);
         return app_config
+
 
 
     def process_folder_section(self, json_data):
@@ -287,7 +298,7 @@ class KeyController:
             folder_config[folder]['autoclose'] = config.get("autoclose", "true").lower() == "true"
             close_folder_found = False
             for key, value in config.items():
-                if key in ["ignore_globals", "autoclose"]:
+                if key in ["ignore_default", "autoclose"]:
                     continue
                 config_items = self.get_config_items(value)
                 folder_config[folder][int(key)] = config_items
@@ -295,8 +306,8 @@ class KeyController:
                     close_folder_found = True
             if not close_folder_found and not folder_config[folder]['autoclose']:
                 raise ValueError(f"Error: Folder '{folder}' does not have a 'close_folder' action defined.")
-            ignore_globals = config.get("ignore_globals", "false").lower() == "true"
-            if not ignore_globals:
+            ignore_default = config.get("ignore_default", "false").lower() == "true"
+            if not ignore_default:
                 self.add_global_config(folder_config[folder]);
         return folder_config
 
