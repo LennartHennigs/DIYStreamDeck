@@ -9,19 +9,19 @@ This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keyp
 
 - Assign actions and colors to the keypad keys
 - Actions can be...
-  - keyboard shortcuts
-  - open a folder (= a new page of key definitions)
+ - keyboard shortcuts
+ - open a folder (= a new page of key definitions)
 - There is a Mac script called `watchdog.py` to enable more capabilities...
-  - Determine the active application, to load and show app-specific shortcuts
-  - Launch a Mac application
-  - Launch a plugin command
+ - Determine the active application, to load and show app-specific shortcuts
+ - Launch a Mac application
+ - Launch a plugin command
 - Plugins are included for...
-  - Audio playback (to act as a sound board)
-  - Spotify playback
-  - Philips Hue control
+ - Audio playback (to act as a sound board)
+ - Spotify playback
+ - Philips Hue control
 - All key definitions are defined in a JSON file, stored on the Pi Pico
 - Define global shortcuts in a `_default` section for both, folders and apps
-- Use the  `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` running on a Mac)
+- Use the `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` running on a Mac)
 - Rotate the keyboard layout clockwise or counter-clockwise (for 3d printed cases) 🆕
 - Create your own plugin with the simple plugins system
 
@@ -51,18 +51,18 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 ## Getting Started
 
 - On the Pi Pico
-  - Install CircuitPython on your Raspberry Pi Pico following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython).
-  - Install the required CircuitPython libraries by following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/circuitpython-libraries).
-  - Add the [rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython) library to your `lib` folder
-  - Clone this repository and copy the contents of the `src/pico` folder to your Raspberry Pi Pico.
-  
+ - Install CircuitPython on your Raspberry Pi Pico following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython).
+ - Install the required CircuitPython libraries by following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/circuitpython-libraries).
+ - Add the [rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython) library to your `lib` folder
+ - Clone this repository and copy the contents of the `src/pico` folder to your Raspberry Pi Pico.
+ 
 - On the Mac
-  - Copy the content of `src/mac` and its sub folders to your Mac
-  - Install [Python3 on your Mac](https://www.freecodecamp.org/news/python-version-on-mac-update/), e.g. [via `brew`](https://brew.sh/)
-  - If you want to use the plugins, edit the config files in the `config` directory
+ - Copy the content of `src/mac` and its sub folders to your Mac
+ - Install [Python3 on your Mac](https://www.freecodecamp.org/news/python-version-on-mac-update/), e.g. [via `brew`](https://brew.sh/)
+ - If you want to use the plugins, edit the config files in the `config` directory
 
 - Defining keyboard layout
-  - Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
+ - Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
 
 ## Configuration
 
@@ -72,22 +72,23 @@ In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/mai
 - The `folders` section defines key sets that can be assigned to a single key.
 - The `urls` section contains keyboard definitions for Safari and Chrome URls.
 
-These are the possible fields for a key entry:
-
-- `key_sequence`: This field specifies the key combination to be executed when the key is pressed. You can use either a string or an array [to specify the key sequence](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html). If a string is provided, it should contain the keycodes separated by '+' (e.g., `CTRL+ALT+T`). If an array is provided, it should contain the keycodes as separate elements (e.g., `["CTRL", "ALT", "T"]`). You can also add delays between key presses within a shortcut by including a floating-point number in the list of keys for a specific shortcut in the `key_def.json` file. This number represents the delay in seconds between key presses. You can find a list of possible keycodes here.
-- `application`: This field is used to specify the application to be launched when an application key is pressed.
-- `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is mandatory inside a folder definition without an `autoclose` setting.
-- `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., `#FF0000` for red, `#00FF00` for green, `#0000FF` for blue).
-- `description`: This optional field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
-- `folder`: This field allows you assign a folder (a set of key definitions) to be opened. A folder will auto-close per default, ohter actions has been triggered inside. Folders can also be nested.
-- `alias_off`: This field will tell the keypad to use another applications key definition. All other keys will be ignored. 🆕
-With these fields you can define four types of keys, shortcut keys, application launch keys, and folder keys.
+You can define four types of keys: shortcut keys, application launch keys, and folder keys.
 
 - *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
 - *Application keys* have an `application` field which opens or brings the specified application to front when the key is pressed.
-- *Action Keys* have an `action` key. They are used to trigger event of plugins or are needed to provide a `close_folder` action for folders
-- *Folder keys*  have an `folder` key. When the key is pressed it will "open" the folder and display its key definitions.  
-  
+- *Action keys* have an `action` key. They are used to trigger event of plugins or are needed to provide a `close_folder` action for folders
+- *Folder keys* have an `folder` key. When the key is pressed it will "open" the folder and display its key definitions.
+
+These are the possible fields for a key entry:
+
+- `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., `#FF0000` for red, `#00FF00` for green, `#0000FF` for blue).
+- `key_sequence`: This field specifies the key combination to be executed when the key is pressed. You can use either a string or an array [to specify the key sequence](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html). If a string is provided, it should contain the keycodes separated by '+' (e.g., `CTRL+ALT+T`). If an array is provided, it should contain the keycodes as separate elements (e.g., `["CTRL", "ALT", "T"]`). You can also add delays between key presses within a shortcut by including a floating-point number in the list of keys for a specific shortcut in the `key_def.json` file. This number represents the delay in seconds between key presses. You can find a list of possible keycodes here.
+- `application`: This field is used to specify the application to be launched when an application key is pressed.
+- `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is mandatory inside a folder definition without an `autoclose` setting.
+- `folder`: This field allows you assign a folder (a set of key definitions) to be opened. A folder will auto-close per default, ohter actions has been triggered inside. Folders can also be nested.
+- `alias_of`: Only for application entries. This field will tell the keypad to use another applications key definition. All other keys will be ignored. 🆕
+- `description`: This optional field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
+
 In addition, two more keys are relevant for folders and applications:
 
 - `ignore_default": "true"` will don't ignore the global definitions and don't add them to a folder or an application.
@@ -97,95 +98,95 @@ Here is an example configuration file:
 
 ``` json
 {
-  "settings": {
-    "rotate": "CCW"
-  },
+ "settings": {
+  "rotate": "CCW"
+ },
 
 "applications": {
-      "_default": {
-      "15": {
-        "key_sequence": "GUI+Q",
-        "color": "#FF0000",
-        "description": "Close App"
-      }
-    },
-
-    "zoom.us": {
-      "0": {
-        "key_sequence": [
-          "GUI+SHIFT+A"
-        ],
-        "color": "#FFFF00",
-        "description": "Mute/Unmute Audio"
-      },
-      "1": {
-        "key_sequence": [
-          "GUI+SHIFT+V"
-        ],
-        "color": "#FFFF00",
-        "description": "Start/Stop Video"
-      },
-      "15": {
-        "key_sequence": [
-          "GUI+W",
-          0.1,
-          "RETURN"
-        ],
-        "color": "#FF0000",
-        "description": "End Meeting"
-      }
-    },
-
-    "_otherwise": {
-      "0": {
-        "key_sequence": [
-          "GUI+SPACE"
-        ],
-        "color": "#FFFFFF",
-        "description": "Open Spotlight Search"
-      },
-      "4": {
-        "action": "spotify.prev",
-        "color": "#00FF00",
-        "description": "Spotify - Previous Song"
-      },
-      "5": {
-        "action": "spotify.playpause",
-        "color": "#00FF00",
-        "description": "Spotify - Play or Pause"
-      },
-      "6": {
-        "action": "spotify.next",
-        "color": "#00FF00",
-        "description": "Spotify - Next Song"
-      },
-      "13": {
-        "folder": "apps",
-        "color": "#FFFFFF",
-        "description": "Apps Folder"
-      }
-    }
+   "_default": {
+   "15": {
+    "key_sequence": "GUI+Q",
+    "color": "#FF0000",
+    "description": "Close App"
+   }
   },
 
-  "folders": {
-    "apps": {
-      "0": {
-        "action": "close_folder",
-        "color": "#FFFFFF",
-        "description": "Close"
-      },
-      "12": {
-        "application": "zoom.us",
-        "color": "#0000FF",
-        "description": "Launch Zoom"
-      },
-      "13": {
-        "application": "Slack",
-        "color": "#FF0000",
-        "description": "Launch Slack"
-      }
-    }
+  "zoom.us": {
+   "0": {
+    "key_sequence": [
+     "GUI+SHIFT+A"
+    ],
+    "color": "#FFFF00",
+    "description": "Mute/Unmute Audio"
+   },
+   "1": {
+    "key_sequence": [
+     "GUI+SHIFT+V"
+    ],
+    "color": "#FFFF00",
+    "description": "Start/Stop Video"
+   },
+   "15": {
+    "key_sequence": [
+     "GUI+W",
+     0.1,
+     "RETURN"
+    ],
+    "color": "#FF0000",
+    "description": "End Meeting"
+   }
+  },
+
+  "_otherwise": {
+   "0": {
+    "key_sequence": [
+     "GUI+SPACE"
+    ],
+    "color": "#FFFFFF",
+    "description": "Open Spotlight Search"
+   },
+   "4": {
+    "action": "spotify.prev",
+    "color": "#00FF00",
+    "description": "Spotify - Previous Song"
+   },
+   "5": {
+    "action": "spotify.playpause",
+    "color": "#00FF00",
+    "description": "Spotify - Play or Pause"
+   },
+   "6": {
+    "action": "spotify.next",
+    "color": "#00FF00",
+    "description": "Spotify - Next Song"
+   },
+   "13": {
+    "folder": "apps",
+    "color": "#FFFFFF",
+    "description": "Apps Folder"
+   }
   }
+ },
+
+ "folders": {
+  "apps": {
+   "0": {
+    "action": "close_folder",
+    "color": "#FFFFFF",
+    "description": "Close"
+   },
+   "12": {
+    "application": "zoom.us",
+    "color": "#0000FF",
+    "description": "Launch Zoom"
+   },
+   "13": {
+    "application": "Slack",
+    "color": "#FF0000",
+    "description": "Launch Slack"
+   }
+  }
+ }
 }
 ```
 
@@ -195,7 +196,7 @@ In addition you can define a `_default` application. These key definitions will 
 
 ## Settings
 
-The `key_def.json` File can  also contain a `settings` section. There you can define the `rotate` parameter (`CW` or `CCW` – clockwise or counter-clockwise). This will rotate the keyboard layout. This is useful when using the keypad in some 3D printed cases. 🆕
+The `key_def.json` File can also contain a `settings` section. There you can define the `rotate` parameter (`CW` or `CCW` – clockwise or counter-clockwise). This will rotate the keyboard layout. This is useful when using the keypad in some 3D printed cases. 🆕
 
 ## Plugins
 
