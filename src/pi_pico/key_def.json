@@ -28,6 +28,49 @@
       }
     },
   
+    "Finder": {
+      "0": {
+        "key_sequence": "GUI+N",
+        "color": "#00FF00",
+        "description": "New Folder"
+      },
+      "1": {
+        "key_sequence": "GUI+SEMICOLON",
+        "color": "#FFFFFF",
+        "description": "Navigate back"
+      },
+      "2": {
+        "key_sequence": "GUI+QUOTE",
+        "color": "#FFFFFF",
+        "description": "Navigate forth"
+      },
+      "3": {
+        "key_sequence": "GUI+W",
+        "color": "#FF0000",
+        "description": "Close Window"
+      },
+      "4": {
+        "key_sequence": "GUI+SHIFT+D",
+        "color": "#FFFF00",
+        "description": "Desktop"
+      },
+      "5": {
+        "key_sequence": "GUI+SHIFT+O",
+        "color": "#FFFF00",
+        "description": "Documents"
+      },
+      "6": {
+        "key_sequence": "ALT+GUI+L",
+        "color": "#FFFF00",
+        "description": "Downloads"
+      },
+      "8": {
+        "key_sequence": "GUI+T",
+        "color": "#00FF00",
+        "description": "New Tab"
+      }
+    },
+    
     "Slack": {
       "0": {
         "key_sequence": "CONTROL+ONE",
@@ -222,7 +265,7 @@
     },
 
     "Microsoft Teams": {
-      "alias_off": "Microsoft Teams classic"
+      "alias_of": "Microsoft Teams classic"
     },
     
     "Microsoft Outlook": {
@@ -344,17 +387,12 @@
       },
       "2": {
         "application": "Slack",
-        "color": "#FF0000",
+        "color": "#4E1E66",
         "description": "Launch Slack"
       },
-      "3": {
-        "application": "Notes",
-        "color": "#FFFF00",
-        "description": "Launch Notes"
-      },
       "4": {
-        "application": "Sketch",
-        "color": "#F1C232",
+        "application": "Figma",
+        "color": "#FF0000",
         "description": "Launch Sketch"
       },
       "5": {
@@ -363,16 +401,21 @@
         "description": "Launch Zeplin"
       },
       "8": {
+        "application": "Finder",
+        "color": "#0000FF",
+        "description": "Launch Finder"
+      },
+      "9": {
         "application": "Spotify",
         "color": "#00FF00",
         "description": "Launch Spotify"
       },
-      "9": {
-        "application": "Visual Studio Code",
-        "color": "#0000FF",
-        "description": "Launch VS Code"
-      },
       "10": {
+        "application": "Notes",
+        "color": "#FFFF00",
+        "description": "Launch Notes"
+      },
+      "11": {
         "application": "iTerm",
         "color": "#808080",
         "description": "Launch iTerm"
