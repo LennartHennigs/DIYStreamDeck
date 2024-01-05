@@ -21,6 +21,7 @@ class KeyController:
     KEYCODE_MAPPING = {name: getattr(Keycode, name) for name in dir(
         Keycode) if not name.startswith("__")}
 
+    # mapping for rotating the keys
     CW = [12, 8, 4, 0, 13, 9, 5, 1, 14, 10, 6, 2, 15, 11, 7, 3]
     CCW = [3, 7, 11, 15, 2, 6, 10, 14, 1, 5, 9, 13, 0, 4, 8, 12]
 
@@ -45,7 +46,8 @@ class KeyController:
         self.folder_stack = [] 
         self.update_keys()
 
-    
+
+    # open a folder and display the key layout
     def open_folder(self, folder):        
         if folder in self.folders:
             self.folder_stack.append(self.current_config)
@@ -55,6 +57,7 @@ class KeyController:
             self.update_keys()
 
 
+    # close the current folder and display previous key layout
     def close_folder(self):
         if not self.folder_stack:
             return
@@ -62,6 +65,7 @@ class KeyController:
         self.update_keys()
 
 
+    # handle the key press
     def key_action(self, key):
         if key.number not in self.current_config:
             return
@@ -90,7 +94,8 @@ class KeyController:
         if (someAction and self.autoclose_current_folder) or action == 'close_folder':
             self.close_folder()      
 
-            
+
+    # handle the key sequences
     def handle_key_sequences(self, key_sequences):
         for item in key_sequences:
             # is it a delay?
@@ -108,19 +113,23 @@ class KeyController:
         self.keyboard.release_all()
 
 
+    # update the key layout
     def update_keys(self):
         for key in self.keys:
+            # is there a key definition for this key?
             if key.number in self.current_config:
                 key.set_led(*self.current_config[key.number]['color']);
-                # Set the actual key event handlers
+                # set the key press and release handlers
                 self.keypad.on_press(key, lambda key=key: key.led_off())
                 self.keypad.on_release(key, lambda key=key: self.key_action(key))
+            # no key definition found
             else:            
                 key.led_off()
                 self.keypad.on_press(key, lambda _, key=key: None)
                 self.keypad.on_release(key, lambda _, key=key: None)
 
 
+    # read a line from the serial console
     def read_serial_line(self):
         if usb_cdc.console.in_waiting > 0:
             raw_data = usb_cdc.console.readline()
@@ -131,6 +140,7 @@ class KeyController:
         return None
 
 
+    # send the application name via serial
     def send_application_name(self, app_name):
         try:
             usb_cdc.console.write(f"Launch: {app_name}\n".encode('utf-8'))
@@ -138,47 +148,12 @@ class KeyController:
             pass
 
 
+    # send the plugin command via serial
     def send_plugin_command(self, plugin, command):
         try:
             usb_cdc.console.write(f"Run: {plugin}.{command}\n".encode('utf-8'))
         except Exception as e:
             pass
-
-
-    def run(self):
-        while True:
-            serial_str = self.read_serial_line()
-            if serial_str is not None:
-                if serial_str is ".":
-                    continue
-                if serial_str.startswith("Rotate: "):
-                    self.rotate = serial_str[8:]
-                    self.current_config = self.rotate_keys_if_needed()                    
-                    self.update_keys()
-
-                elif serial_str.startswith("App: "):
-                    serial_str = serial_str[5:]
-                    # Split the app_name string on the first occurrence of " ("
-                    split_app_name = serial_str.split(" (", 1)
-                    # The first part is always the app name
-                    app_name = split_app_name[0]
-                    # The second part is the details, if they exist
-                    url = None
-                    if len(split_app_name) > 1:
-                        # Remove the trailing ")" from the details
-                        url = split_app_name[1].rstrip(')')
-                    # Check if there is a keyboard definition for the URL
-                    if url in self.urls:
-                        self.current_config = self.urls[url]
-                    else:
-                        self.current_config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
-
-                    self.current_config = self.rotate_keys_if_needed()                    
-                    self.update_keys()
-                
-            else:
-                time.sleep(0.1)
-                self.keypad.update()
 
 
     def rotate_keys_if_needed (self):
@@ -269,26 +244,35 @@ class KeyController:
         return global_config
 
 
+    def process_config(self, config, json_data, app, app_config):
+        for key, value in config.items():
+            if key == "ignore_default":
+                continue
+            config_items = self.get_config_items(value)
+            if config_items['folder'] and config_items['folder'] not in json_data["folders"]:
+                print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
+                config_items['key_sequences'] = ()
+            else:                     
+                app_config[app][int(key)] = config_items
+        ignore_default = config.get("ignore_default", "false").lower() == "true"
+        if not ignore_default:
+            self.add_global_config(app_config[app]);
+        return app_config
+
+
     def process_app_section(self, json_data):
         app_config = {}
         for app, config in json_data["applications"].items():
             app_config[app] = {}
+            #  check if this is an alias
             if 'alias_of' in config:
-                config = json_data["applications"][config['alias_of']]
-            for key, value in config.items():
-                if key == "ignore_default":
+                if config['alias_of'] in json_data["applications"]:
+                    config = json_data["applications"][config['alias_of']]
+                else:
+                    print(f"Error: Alias '{config['alias_of']}' not found in applications.")
                     continue
-                config_items = self.get_config_items(value)
-                if config_items['folder'] and config_items['folder'] not in json_data["folders"]:
-                    print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
-                    config_items['key_sequences'] = ()
-                else:                     
-                    app_config[app][int(key)] = config_items
-            ignore_default = config.get("ignore_default", "false").lower() == "true"
-            if not ignore_default:
-                self.add_global_config(app_config[app]);
+            self.process_config(config, json_data, app, app_config)
         return app_config
-
 
 
     def process_folder_section(self, json_data):
@@ -321,6 +305,45 @@ class KeyController:
     def parse_json(self, json_filename): 
         with open(json_filename, 'r') as json_file:
             return json.load(json_file)
+
+
+    # main loop
+    def run(self):
+        while True:
+            serial_str = self.read_serial_line()
+            # check if we have a serial command
+            if serial_str is not None:
+                if serial_str is ".":
+                    continue
+                # shall we rotate the keys?
+                if serial_str.startswith("Rotate: "):
+                    self.rotate = serial_str[8:]
+                    self.current_config = self.rotate_keys_if_needed()                    
+                    self.update_keys()
+                # shall we launch an application?
+                elif serial_str.startswith("App: "):
+                    serial_str = serial_str[5:]
+                    # Split the app_name string on the first occurrence of " ("
+                    split_app_name = serial_str.split(" (", 1)
+                    # The first part is always the app name
+                    app_name = split_app_name[0]
+                    # The second part is the details, if they exist
+                    url = None
+                    if len(split_app_name) > 1:
+                        # Remove the trailing ")" from the details
+                        url = split_app_name[1].rstrip(')')
+                    # Check if there is a keyboard definition for the URL
+                    if url in self.urls:
+                        self.current_config = self.urls[url]
+                    else:
+                        self.current_config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
+
+                    self.current_config = self.rotate_keys_if_needed()                    
+                    self.update_keys()
+                
+            else:
+                time.sleep(0.1)
+                self.keypad.update()
 
 
 if __name__ == "__main__":
