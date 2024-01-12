@@ -74,8 +74,10 @@ class WatchDog(Cocoa.NSObject):
 
     @objc.signature(b'v@:@')  # Encoded the signature string as bytes
     def applicationActivated_(self, notification: Cocoa.NSNotification) -> None:
-        app_name = notification.userInfo(
-        )['NSWorkspaceApplicationKey'].localizedName()
+        app = notification.userInfo()['NSWorkspaceApplicationKey']
+        app_name = app.localizedName()
+        if not app_name:
+            app_name = app.bundleIdentifier() or app.bundleExecutable()
         self.send_app_name_to_microcontroller(app_name)
 
 
