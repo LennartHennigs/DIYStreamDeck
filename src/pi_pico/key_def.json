@@ -172,7 +172,60 @@
       }
     },
     
-    "Baldur's Gate 3": {},
+    "com.larian.bg3": {
+      "0": {
+        "key_sequence": "TAB",
+        "color": "#FFFF00",
+        "description": "Party"
+      },
+      "1": {
+        "key_sequence": "I",
+        "color": "#FFFF00",
+        "description": "Inventory"
+      },
+      "3": {
+        "key_sequence": "M",
+        "color": "#FFFF00",
+        "description": "Map"
+      },
+      "2": {
+        "key_sequence": "ESCAPE",
+        "color": "#000000",
+        "description": "Escape"
+      },
+      "4": {
+        "key_sequence": "Q",
+        "color": "#FFFFFF",
+        "description": "rotate left",
+        "pressedUntilReleased": "true"
+      },
+      "5": {
+        "key_sequence": "HOME",
+        "color": "#FFFFFF",
+        "description": "to Char"
+      },
+      "6": {
+        "key_sequence": "E",
+        "color": "#FFFFFF",
+        "description": "rotate right",
+        "pressedUntilReleased": "true"
+      },
+      "8": {
+        "key_sequence": "LEFT_BRACKET",
+        "color": "#00FF00",
+        "description": "prev. char"
+      },
+      "9": {
+        "key_sequence": "RIGHT_BRACKET",
+        "color": "#00FF00",
+        "description": "next char"
+      },
+      "11": {
+        "key_sequence": "SPACE",
+        "color": "#FFFFFF",
+        "description": "end turn"
+      }
+    },
 
     "zoom.us": {
       "0": {
@@ -348,7 +401,7 @@
       "8": {
         "key_sequence": "GUI+SHIFT+V",
         "color": "#00FF00",
-        "description": "Preview Markldown"
+        "description": "Preview Markdown"
       }
     },
 
@@ -368,7 +421,8 @@
       "ignore_default": "true"
     },
 
-    "_otherwise": {}
+    "_otherwise": {
+    }
   },
 
   "folders": {
