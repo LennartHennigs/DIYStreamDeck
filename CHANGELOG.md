@@ -4,11 +4,11 @@
 # 01-12-2024
 
 - `watchdog.py` detects if localized app name is empty a uses different string to identify app
-- added `pressedUntilReleased` parameter to key config
+- added `pressedUntilReleased` parameter to key definition
 
 # 01-03-2024
 
-- added `alias_off` key for applications, to reuse key definitions
+- added `alias_of` parameter for applications, to reuse key definitions
 - moved the `global` section inside the `applications` section and renamed it to `_default`
 - renamed `ignore_globals` to `ignore_default`
 
