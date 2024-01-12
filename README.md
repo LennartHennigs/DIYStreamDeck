@@ -9,17 +9,17 @@ This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keyp
 
 - Assign actions and colors to the keypad keys
 - Actions can be...
- - keyboard shortcuts
- - open a folder (= a new page of key definitions)
-- There is a Mac script called `watchdog.py` to enable more capabilities...
- - Determine the active application, to load and show app-specific shortcuts
- - Launch a Mac application
- - Launch a plugin command
+  - keyboard shortcuts
+  - open a folder (= a new page of key definitions)
+- There is a Mac script called `watchdog.py` to enable more actions...
+  - Determine the active application, to load and show app-specific shortcuts
+  - Launch a Mac application
+  - Launch a plugin command
 - Plugins are included for...
- - Audio playback (to act as a sound board)
- - Spotify playback
- - Philips Hue control
-- All key definitions are defined in a JSON file, stored on the Pi Pico
+  - Audio playback (to act as a sound board)
+  - Spotify playback
+  - Philips Hue control
+- All key definitions are defined in a [JSON file](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json), stored on the Pi Pico
 - Define global shortcuts in a `_default` section for both, folders and apps
 - Use the `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` running on a Mac)
 - Rotate the keyboard layout clockwise or counter-clockwise (for 3d printed cases) 🆕
@@ -87,6 +87,7 @@ These are the possible fields for a key entry:
 - `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is mandatory inside a folder definition without an `autoclose` setting.
 - `folder`: This field allows you assign a folder (a set of key definitions) to be opened. A folder will auto-close per default, ohter actions has been triggered inside. Folders can also be nested.
 - `alias_of`: Only for application entries. This field will tell the keypad to use another applications key definition. All other keys will be ignored. 🆕
+- `pressedUntilReleased`: Tells the keypad to keep the button pressed until manually released. 🆕
 - `description`: This optional field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
 
 In addition, two more keys are relevant for folders and applications:

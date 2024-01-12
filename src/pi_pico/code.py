@@ -66,7 +66,7 @@ class KeyController:
 
 
     # handle the key press
-    def key_action(self, key):
+    def key_press_action(self, key):
         if key.number not in self.current_config:
             return
         key_def = self.current_config[key.number]
@@ -75,6 +75,11 @@ class KeyController:
         folder = key_def.get('folder')
         app = key_def.get('application')
         keys = key_def.get('key_sequences')
+        pressedUntilReleased = key_def.get('pressedUntilReleased', False)
+
+        # turn off the LED
+        key.led_off()
+
         someAction = True
         #  open a folder?
         if folder:
@@ -88,15 +93,27 @@ class KeyController:
             self.send_application_name(app)
         # handle the key sequences
         elif keys:
-            self.handle_key_sequences(keys)
+            self.handle_key_sequences(keys, pressedUntilReleased)
             key.set_led(*self.current_config[key.number]['color']);
         # close the folder
         if (someAction and self.autoclose_current_folder) or action == 'close_folder':
             self.close_folder()      
 
 
+    # handle the key release
+    def key_release_action(self, key):
+        if key.number not in self.current_config:
+            return
+        key_def = self.current_config[key.number]
+        keys = key_def.get('key_sequences')
+        pressedUntilReleased = key_def.get('pressedUntilReleased', False)
+
+        if keys and pressedUntilReleased:
+            self.keyboard.release_all()
+
+
     # handle the key sequences
-    def handle_key_sequences(self, key_sequences):
+    def handle_key_sequences(self, key_sequences, pressedUntilReleased):
         for item in key_sequences:
             # is it a delay?
             if isinstance(item, float):
@@ -109,8 +126,9 @@ class KeyController:
             else:
                 self.keyboard.press(item)
         # release all keys
-        time.sleep(0.025);
-        self.keyboard.release_all()
+        if not pressedUntilReleased:
+            time.sleep(0.025);
+            self.keyboard.release_all()
 
 
     # update the key layout
@@ -120,8 +138,8 @@ class KeyController:
             if key.number in self.current_config:
                 key.set_led(*self.current_config[key.number]['color']);
                 # set the key press and release handlers
-                self.keypad.on_press(key, lambda key=key: key.led_off())
-                self.keypad.on_release(key, lambda key=key: self.key_action(key))
+                self.keypad.on_press(key, lambda key=key: self.key_press_action(key))
+                self.keypad.on_release(key, lambda key=key: self.key_release_action(key))               
             # no key definition found
             else:            
                 key.led_off()
@@ -156,6 +174,7 @@ class KeyController:
             pass
 
 
+    # rotate the keys if needed
     def rotate_keys_if_needed (self):
         if self.rotate == "CW":
             return {i: self.current_config[cw] for i, cw in enumerate(self.CW) if cw in self.current_config}
@@ -165,6 +184,7 @@ class KeyController:
         return self.current_config
         
 
+# convert the keycodes to tuples if needed
     def keycode_string_to_tuple (self, keycode_string):
         keycode_list = keycode_string.split('+')
         keycodes = []
@@ -178,6 +198,7 @@ class KeyController:
         return tuple(keycodes)
 
 
+    # convert the color string to a tuple if needed
     def color_string_to_tuple(self, color_string):
         if color_string.startswith("#"):
             return tuple(int(color_string[i:i+2], 16) for i in (1, 3, 5))
@@ -185,6 +206,7 @@ class KeyController:
             return (0, 0, 0)
 
 
+    # convert the action string to a tuple
     def convert_action_string(self, action):
         if action and '.' in action:
             return tuple(action.split('.',1))
@@ -192,6 +214,7 @@ class KeyController:
             return action
 
 
+    # convert the value to a tuple if needed
     def convert_value(self, value):
         if isinstance(value, str):
             return self.keycode_string_to_tuple (value)
@@ -199,6 +222,7 @@ class KeyController:
             return value
 
 
+    # get the config items
     def get_config_items(self, config):
         if 'alias_of' in config:
             config = config['alias_of']
@@ -217,7 +241,8 @@ class KeyController:
             'description': config.get('description', ''),
             'application': application,
             'action': self.convert_action_string(config.get('action', '')),
-            'folder': config.get('folder', '')
+            'folder': config.get('folder', ''),
+            'pressedUntilReleased': config.get('pressedUntilReleased', '')
         }
 
 

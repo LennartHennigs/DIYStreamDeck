@@ -4,6 +4,7 @@
 # 01-12-2024
 
 - `watchdog.py` detects if localized app name is empty a uses different string to identify app
+- added `pressedUntilReleased` parameter to key config
 
 # 01-03-2024
 
