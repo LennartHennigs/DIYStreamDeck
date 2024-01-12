@@ -1,6 +1,10 @@
 
 # CHANGELOG
 
+# 01-12-2024
+
+- `watchdog.py` detects if localized app name is empty a uses different string to identify app
+
 # 01-03-2024
 
 - added `alias_off` key for applications, to reuse key definitions
