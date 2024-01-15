@@ -28,6 +28,7 @@ class KeyController:
     def __init__(self, verbose=False):
         self.verbose = verbose
         self.keypad = RgbKeypad()
+        self.current_colors = {}
         self.keyboard = Keyboard(usb_hid.devices)
         self.layout = KeyboardLayoutUS(self.keyboard)
         self.keys = self.keypad.keys
@@ -70,12 +71,13 @@ class KeyController:
         if key.number not in self.current_config:
             return
         key_def = self.current_config[key.number]
-
         action = key_def.get('action')
         folder = key_def.get('folder')
         app = key_def.get('application')
         keys = key_def.get('key_sequences')
-        pressedUntilReleased = key_def.get('pressedUntilReleased', False)
+        color = key_def.get('color')
+        pressedUntilReleased = key_def.get('pressedUntilReleased')
+        pressedColor = key_def.get('pressedColor')
 
         # turn off the LED
         key.led_off()
@@ -94,7 +96,10 @@ class KeyController:
         # handle the key sequences
         elif keys:
             self.handle_key_sequences(keys, pressedUntilReleased)
-            key.set_led(*self.current_config[key.number]['color']);
+            if pressedColor:
+                key.set_led(*pressedColor)
+            else:
+                key.set_led(*color)
         # close the folder
         if (someAction and self.autoclose_current_folder) or action == 'close_folder':
             self.close_folder()      
@@ -106,10 +111,22 @@ class KeyController:
             return
         key_def = self.current_config[key.number]
         keys = key_def.get('key_sequences')
-        pressedUntilReleased = key_def.get('pressedUntilReleased', False)
+        color = key_def.get('color')
+        pressedUntilReleased = key_def.get('pressedUntilReleased')
+        toggleColor = key_def.get('toggleColor')
 
-        if keys and pressedUntilReleased:
+        if keys:
             self.keyboard.release_all()
+            if pressedUntilReleased:
+                key.set_led(*color);
+            else:
+                if toggleColor:
+                    if self.current_colors[key.number] == toggleColor:
+                        self.current_colors[key.number] = color
+                        key.set_led(*color) 
+                    else:
+                        self.current_colors[key.number] = toggleColor
+                        key.set_led(*toggleColor)   
 
 
     # handle the key sequences
@@ -136,7 +153,9 @@ class KeyController:
         for key in self.keys:
             # is there a key definition for this key?
             if key.number in self.current_config:
-                key.set_led(*self.current_config[key.number]['color']);
+                color = self.current_config[key.number]['color']
+                self.current_colors[key.number] = color
+                key.set_led(*color);
                 # set the key press and release handlers
                 self.keypad.on_press(key, lambda key=key: self.key_press_action(key))
                 self.keypad.on_release(key, lambda key=key: self.key_release_action(key))               
@@ -237,6 +256,9 @@ class KeyController:
 
         return {
             'key_sequences': key_sequences,
+            'color': self.color_string_to_tuple(config.get('color', '')),
+            'toggleColor': self.color_string_to_tuple(config.get('toggleColor', '')),
+            'pressedColor': self.color_string_to_tuple(config.get('pressedColor', '')),
             'color': self.color_string_to_tuple(config.get('color', '')),
             'description': config.get('description', ''),
             'application': application,
@@ -377,6 +399,7 @@ if __name__ == "__main__":
         controller.run()
     except KeyboardInterrupt:
         # turn off all the LEDs when the program is interrupted
+        controller.keyboard.release_all()
         for key in controller.keys:
             key.led_off()
 
