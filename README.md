@@ -51,18 +51,16 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 ## Getting Started
 
 - On the Pi Pico
- - Install CircuitPython on your Raspberry Pi Pico following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython).
- - Install the required CircuitPython libraries by following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/circuitpython-libraries).
- - Add the [rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython) library to your `lib` folder
- - Clone this repository and copy the contents of the `src/pico` folder to your Raspberry Pi Pico.
- 
+  - Install CircuitPython on your Raspberry Pi Pico following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython).
+  - Install the required CircuitPython libraries by following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/circuitpython-libraries).
+  - Add the [rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython) library to your `lib` folder
+  - Clone this repository and copy the contents of the `src/pico` folder to your Raspberry Pi Pico. 
 - On the Mac
- - Copy the content of `src/mac` and its sub folders to your Mac
- - Install [Python3 on your Mac](https://www.freecodecamp.org/news/python-version-on-mac-update/), e.g. [via `brew`](https://brew.sh/)
- - If you want to use the plugins, edit the config files in the `config` directory
-
+  - Copy the content of `src/mac` and its sub folders to your Mac
+  - Install [Python3 on your Mac](https://www.freecodecamp.org/news/python-version-on-mac-update/), e.g. [via `brew`](https://brew.sh/)
+  - If you want to use the plugins, edit the config files in the `config` directory
 - Defining keyboard layout
- - Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
+  - Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
 
 ## Configuration
 
@@ -88,6 +86,8 @@ These are the possible fields for a key entry:
 - `folder`: This field allows you assign a folder (a set of key definitions) to be opened. A folder will auto-close per default, ohter actions has been triggered inside. Folders can also be nested.
 - `alias_of`: Only for application entries. This field will tell the keypad to use another applications key definition. All other keys will be ignored. 🆕
 - `pressedUntilReleased`: Tells the keypad to keep the button pressed until manually released. 🆕
+- `pressedColor` allows you to define a color for while the button is pressed 🆕
+- `toggleColor` allows you to define a color to show an active state 🆕
 - `description`: This optional field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
 
 In addition, two more keys are relevant for folders and applications:
