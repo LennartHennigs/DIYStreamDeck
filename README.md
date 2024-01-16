@@ -64,13 +64,14 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 
 ## Configuration
 
-In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with three possible entries: `applications`, `folders`, and `urls`.
+In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with four possible entries: `settings`, `applications`, `folders`, and `urls`.
 
-- In the `applications` area the different keys for various apps are defined with the key numbers (`0`-`15`).
+- For details on the `settings` section look [here](https://github.com/LennartHennigs/DIYStreamDeck?tab=readme-ov-file#settings).
+- In the `applications` section the different keys for various apps are defined with the key numbers (`0`-`15`).
 - The `folders` section defines key sets that can be assigned to a single key.
 - The `urls` section contains keyboard definitions for Safari and Chrome URls.
 
-You can define four types of keys: shortcut keys, application launch keys, and folder keys.
+You can define four types of keys: `shortcut`, `application launch`, `action`, and `folder` keys.
 
 - *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
 - *Application keys* have an `application` field which opens or brings the specified application to front when the key is pressed.
