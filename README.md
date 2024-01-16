@@ -71,30 +71,42 @@ In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/mai
 - The `folders` section defines key sets that can be assigned to a single key.
 - The `urls` section contains keyboard definitions for Safari and Chrome URls.
 
-You can define four types of keys: `shortcut`, `application launch`, `action`, and `folder` keys.
+You can define four types of keys: `shortcut`, `application launch`, folder`, and `action`, keys.
 
 - *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
 - *Application keys* have an `application` field which opens or brings the specified application to front when the key is pressed.
-- *Action keys* have an `action` key. They are used to trigger event of plugins or are needed to provide a `close_folder` action for folders
 - *Folder keys* have an `folder` key. When the key is pressed it will "open" the folder and display its key definitions.
+- *Action keys* have an `action` key. They are used to trigger event of plugins or are needed to provide a `close_folder` action for folders
 
-These are the possible fields for a key entry:
+### Shortcut key fields
+
+- `key_sequence`: This field specifies the key combination to be executed when the key is pressed. You can use either a string or an array [to specify the key sequence](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html). If a string is provided, it should contain the keycodes separated by '+' (e.g., `CTRL+ALT+T`). If an array is provided, it should contain the keycodes as separate elements (e.g., `["CTRL", "ALT", "T"]`). You can also add delays between key presses within a shortcut by including a floating-point number in the list of keys for a specific shortcut in the `key_def.json` file. This number represents the delay in seconds between key presses. You can find a list of possible keycodes here.
+- `pressedUntilReleased`: Tells the keypad to keep the button pressed until manually released. 🆕
+
+### Application key fields
+
+- `application`: This field is used to specify the application to be launched when an application key is pressed.
+- `alias_of`: Only for application entries. This field will tell the keypad to use another applications key definition. All other keys will be ignored. 🆕
+
+### Folder key fields
+
+- `folder`: This field allows you assign a folder (a set of key definitions) to be opened. A folder will auto-close per default, ohter actions has been triggered inside. Folders can also be nested.
+- `"autoclose": "false"` will keep a folder active after a key has been pressed. 🆕
+- `action`: It is mandatory inside a folder definition without the `autoclose` setting.
+
+- `ignore_default": "true"` will don't ignore the global definitions and don't add them to a folder or an application.
+
+### Action key fields
+
+- `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. 
+- `ignore_default": "true"` will don't ignore the global definitions and don't add them to a folder or an application.
+
+### Fields for any key type
 
 - `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., `#FF0000` for red, `#00FF00` for green, `#0000FF` for blue).
-- `key_sequence`: This field specifies the key combination to be executed when the key is pressed. You can use either a string or an array [to specify the key sequence](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html). If a string is provided, it should contain the keycodes separated by '+' (e.g., `CTRL+ALT+T`). If an array is provided, it should contain the keycodes as separate elements (e.g., `["CTRL", "ALT", "T"]`). You can also add delays between key presses within a shortcut by including a floating-point number in the list of keys for a specific shortcut in the `key_def.json` file. This number represents the delay in seconds between key presses. You can find a list of possible keycodes here.
-- `application`: This field is used to specify the application to be launched when an application key is pressed.
-- `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. The former is mandatory inside a folder definition without an `autoclose` setting.
-- `folder`: This field allows you assign a folder (a set of key definitions) to be opened. A folder will auto-close per default, ohter actions has been triggered inside. Folders can also be nested.
-- `alias_of`: Only for application entries. This field will tell the keypad to use another applications key definition. All other keys will be ignored. 🆕
-- `pressedUntilReleased`: Tells the keypad to keep the button pressed until manually released. 🆕
 - `pressedColor` allows you to define a color for while the button is pressed 🆕
 - `toggleColor` allows you to define a color to show an active state 🆕
 - `description`: This optional field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
-
-In addition, two more keys are relevant for folders and applications:
-
-- `ignore_default": "true"` will don't ignore the global definitions and don't add them to a folder or an application.
-- `"autoclose": "false"` will keep a folder active after a key has been pressed. 🆕
 
 Here is an example configuration file:
 
