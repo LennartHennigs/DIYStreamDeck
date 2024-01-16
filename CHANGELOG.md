@@ -1,6 +1,10 @@
 
 # CHANGELOG
 
+# 01-15-2024
+
+- added `pressedColor` and `toggleColor` parameters for key definitions.
+
 # 01-12-2024
 
 - `watchdog.py` detects if localized app name is empty a uses different string to identify app
