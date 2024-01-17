@@ -75,7 +75,6 @@ class KeyController:
         folder = key_def.get('folder')
         app = key_def.get('application')
         keys = key_def.get('key_sequences')
-        color = key_def.get('color')
         pressedUntilReleased = key_def.get('pressedUntilReleased')
         pressedColor = key_def.get('pressedColor')
 
@@ -98,8 +97,6 @@ class KeyController:
             self.handle_key_sequences(keys, pressedUntilReleased)
             if pressedColor:
                 key.set_led(*pressedColor)
-            else:
-                key.set_led(*color)
         # close the folder
         if (someAction and self.autoclose_current_folder) or action == 'close_folder':
             self.close_folder()      
@@ -127,7 +124,8 @@ class KeyController:
                     else:
                         self.current_colors[key.number] = toggleColor
                         key.set_led(*toggleColor)   
-
+                else:
+                    key.set_led(*color) 
 
     # handle the key sequences
     def handle_key_sequences(self, key_sequences, pressedUntilReleased):
@@ -154,8 +152,8 @@ class KeyController:
             # is there a key definition for this key?
             if key.number in self.current_config:
                 color = self.current_config[key.number]['color']
-                self.current_colors[key.number] = color
                 key.set_led(*color);
+                self.current_colors[key.number] = color
                 # set the key press and release handlers
                 self.keypad.on_press(key, lambda key=key: self.key_press_action(key))
                 self.keypad.on_release(key, lambda key=key: self.key_release_action(key))               
@@ -222,7 +220,7 @@ class KeyController:
         if color_string.startswith("#"):
             return tuple(int(color_string[i:i+2], 16) for i in (1, 3, 5))
         else:
-            return (0, 0, 0)
+            return False
 
 
     # convert the action string to a tuple
