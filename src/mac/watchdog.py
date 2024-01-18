@@ -21,14 +21,13 @@ import os
 from plugins.base_plugin import BasePlugin
 import threading
 import time
+from AppKit import NSWorkspaceDidTerminateApplicationNotification
 
-
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 HEARTBEAT_INTERVAL = 2
 
 plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
 sys.path.append(plugins_directory)
-
 
 def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Serial]:
     try:
@@ -52,6 +51,7 @@ class WatchDog(Cocoa.NSObject):
     run_pattern = r"^Run: (.+)$"
     running: bool = True
 
+
     def initWithSerial_args_plugins_(self, ser: serial.Serial, args: argparse.Namespace, plugins: Dict[str, Any]) -> Optional['WatchDog']:
         self = objc.super(WatchDog, self).init()
         if self is None:
@@ -59,7 +59,24 @@ class WatchDog(Cocoa.NSObject):
         self.ser = ser
         self.args = args
         self.plugins = plugins
+        # Add observer for application termination
+        Cocoa.NSWorkspace.sharedWorkspace().notificationCenter().addObserver_selector_name_object_(
+            self,
+            self.applicationTerminated_,
+            NSWorkspaceDidTerminateApplicationNotification,
+            None
+        )
         return self
+
+
+    @objc.signature(b'v@:@')  # Encoded the signature string as bytes
+    def applicationTerminated_(self, notification: Cocoa.NSNotification) -> None:
+        app = notification.userInfo()['NSWorkspaceApplicationKey']
+        app_name = app.localizedName()
+        if not app_name:
+            app_name = app.bundleIdentifier() or app.bundleExecutable()
+        print(f"{app_name} has been terminated")
+        # Here you can add your code to handle the termination of the application
 
 
     @objc.signature(b'v@:')  # Encoded the signature string as bytes
