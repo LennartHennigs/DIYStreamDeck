@@ -1,6 +1,6 @@
 # DIY Streamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0
-# last changed: 12-11-23
+# last changed: 01-17-24
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import time
@@ -28,7 +28,6 @@ class KeyController:
     def __init__(self, verbose=False):
         self.verbose = verbose
         self.keypad = RgbKeypad()
-        self.current_colors = {}
         self.keyboard = Keyboard(usb_hid.devices)
         self.layout = KeyboardLayoutUS(self.keyboard)
         self.keys = self.keypad.keys
@@ -114,18 +113,13 @@ class KeyController:
 
         if keys:
             self.keyboard.release_all()
-            if pressedUntilReleased:
-                key.set_led(*color);
-            else:
-                if toggleColor:
-                    if self.current_colors[key.number] == toggleColor:
-                        self.current_colors[key.number] = color
-                        key.set_led(*color) 
-                    else:
-                        self.current_colors[key.number] = toggleColor
-                        key.set_led(*toggleColor)   
-                else:
-                    key.set_led(*color) 
+            if toggleColor:
+                temp = color;
+                color = toggleColor;
+                self.current_config[key.number]['color'] = toggleColor;
+                self.current_config[key.number]['toggleColor'] = temp;
+            key.set_led(*color) 
+
 
     # handle the key sequences
     def handle_key_sequences(self, key_sequences, pressedUntilReleased):
@@ -153,7 +147,6 @@ class KeyController:
             if key.number in self.current_config:
                 color = self.current_config[key.number]['color']
                 key.set_led(*color);
-                self.current_colors[key.number] = color
                 # set the key press and release handlers
                 self.keypad.on_press(key, lambda key=key: self.key_press_action(key))
                 self.keypad.on_release(key, lambda key=key: self.key_release_action(key))               
@@ -196,8 +189,7 @@ class KeyController:
         if self.rotate == "CW":
             return {i: self.current_config[cw] for i, cw in enumerate(self.CW) if cw in self.current_config}
         elif self.rotate == "CCW":
-            return {i: self.current_config[ccw] for i, ccw in enumerate(self.CCW) if ccw in self.current_config}
-        
+            return {i: self.current_config[ccw] for i, ccw in enumerate(self.CCW) if ccw in self.current_config}     
         return self.current_config
         
 
@@ -254,14 +246,15 @@ class KeyController:
 
         return {
             'key_sequences': key_sequences,
-            'color': self.color_string_to_tuple(config.get('color', '')),
-            'toggleColor': self.color_string_to_tuple(config.get('toggleColor', '')),
-            'pressedColor': self.color_string_to_tuple(config.get('pressedColor', '')),
-            'color': self.color_string_to_tuple(config.get('color', '')),
-            'description': config.get('description', ''),
             'application': application,
             'action': self.convert_action_string(config.get('action', '')),
             'folder': config.get('folder', ''),
+
+            'color': self.color_string_to_tuple(config.get('color', '')),
+            'toggleColor': self.color_string_to_tuple(config.get('toggleColor', '')),
+            'pressedColor': self.color_string_to_tuple(config.get('pressedColor', '')),
+
+            'description': config.get('description', ''),
             'pressedUntilReleased': config.get('pressedUntilReleased', '')
         }
 
@@ -294,11 +287,13 @@ class KeyController:
             if key == "ignore_default":
                 continue
             config_items = self.get_config_items(value)
+            # check if the folder exists
             if config_items['folder'] and config_items['folder'] not in json_data["folders"]:
                 print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
                 config_items['key_sequences'] = ()
             else:                     
                 app_config[app][int(key)] = config_items
+        # add the default config if needed
         ignore_default = config.get("ignore_default", "false").lower() == "true"
         if not ignore_default:
             self.add_global_config(app_config[app]);
@@ -316,6 +311,7 @@ class KeyController:
                 else:
                     print(f"Error: Alias '{config['alias_of']}' not found in applications.")
                     continue
+            # process the config
             self.process_config(config, json_data, app, app_config)
         return app_config
 
@@ -382,15 +378,14 @@ class KeyController:
                         self.current_config = self.urls[url]
                     else:
                         self.current_config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
-
+                    # rotate the keys if needed
                     self.current_config = self.rotate_keys_if_needed()                    
-                    self.update_keys()
-                
+                    self.update_keys()                
             else:
                 time.sleep(0.1)
                 self.keypad.update()
 
-
+# main program
 if __name__ == "__main__":
     controller = KeyController()
     try:
