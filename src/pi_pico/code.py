@@ -300,19 +300,28 @@ class KeyController:
         return app_config
 
 
+    # load the config for a single application
+    def load_single_app_config(self, app, config, json_data):
+        # check if this is an alias
+        if 'alias_of' in config:
+            if config['alias_of'] in json_data["applications"]:
+                config = json_data["applications"][config['alias_of']]
+            else:
+                print(f"Error: Alias '{config['alias_of']}' not found in applications.")
+                return None
+        # process the config
+        app_config = {app: {}}
+        self.process_config(config, json_data, app, app_config)
+        return app_config[app]
+
+
+    # load the config for all applications
     def process_app_section(self, json_data):
         app_config = {}
         for app, config in json_data["applications"].items():
-            app_config[app] = {}
-            #  check if this is an alias
-            if 'alias_of' in config:
-                if config['alias_of'] in json_data["applications"]:
-                    config = json_data["applications"][config['alias_of']]
-                else:
-                    print(f"Error: Alias '{config['alias_of']}' not found in applications.")
-                    continue
-            # process the config
-            self.process_config(config, json_data, app, app_config)
+            single_app_config = self.load_single_app_config(app, config, json_data)
+            if single_app_config is not None:
+                app_config[app] = single_app_config
         return app_config
 
 
@@ -357,10 +366,17 @@ class KeyController:
                 if serial_str is ".":
                     continue
                 # shall we rotate the keys?
+                print(serial_str)
                 if serial_str.startswith("Rotate: "):
                     self.rotate = serial_str[8:]
                     self.current_config = self.rotate_keys_if_needed()                    
                     self.update_keys()
+                # was an app termined                
+                elif serial_str.startswith("Terminated: "):
+                    app_name = serial_str[12:]
+                    if app_name in self.json["applications"]:
+                        self.load_single_app_config(app_name, self.json["applications"][app_name], self.json)
+                        self.apps[app_name] = self.load_single_app_config(serial_str[12:], self.json["applications"][serial_str[12:]], self.json)
                 # shall we launch an application?
                 elif serial_str.startswith("App: "):
                     serial_str = serial_str[5:]
