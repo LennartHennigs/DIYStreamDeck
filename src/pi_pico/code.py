@@ -311,6 +311,7 @@ class KeyController:
 
     # load the config for a single application
     def process_config(self, config, json_data, app, app_config):
+        containsToggle = False
         for key, value in config.items():
             if key == "ignore_default":
                 continue
@@ -321,10 +322,15 @@ class KeyController:
                 config_items['key_sequences'] = ()
             else:                     
                 app_config[app][int(key)] = config_items
+            # check if toggleColor is set
+            if 'toggleColor' in config_items and config_items['toggleColor']:
+                containsToggle = True
+
         # add the default config if needed
         ignore_default = config.get("ignore_default", "false").lower() == "true"
         if not ignore_default:
             self.add_global_config(app_config[app]);
+        app_config[app]['containsToggle'] = containsToggle
         return app_config
 
 
@@ -398,7 +404,7 @@ class KeyController:
     # process the terminated serial command
     def process_terminated(self, serial_str):
         app_name = serial_str[12:]
-        if app_name in self.json["applications"]:
+        if app_name in self.json["applications"] and self.apps[app_name].get('containsToggle', False):
             self.apps[app_name] = self.load_single_app_config(app_name, self.json["applications"][app_name], self.json)
 
 
