@@ -23,7 +23,7 @@ import threading
 import time
 from AppKit import NSWorkspaceDidTerminateApplicationNotification
 
-VERSION = "1.3.0"
+VERSION = "1.2.0"
 HEARTBEAT_INTERVAL = 2
 
 plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
