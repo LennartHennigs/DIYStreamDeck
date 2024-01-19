@@ -75,7 +75,8 @@ class WatchDog(Cocoa.NSObject):
         app_name = app.localizedName()
         if not app_name:
             app_name = app.bundleIdentifier() or app.bundleExecutable()
-        print(f"{app_name} has been terminated")
+#        if self.args.verbose:
+#            print(f"{app_name} has been terminated")
         # send the app name to the keypad
         try:
             self.ser.write(("Terminated: " + app_name + '\n').encode('ascii', 'replace'))
