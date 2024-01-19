@@ -1,6 +1,10 @@
 
 # CHANGELOG
 
+# 01-19-2024
+
+- added detection of app termination to reset `toggleColor` settings
+
 # 01-15-2024
 
 - added `pressedColor` and `toggleColor` parameters for key definitions.
