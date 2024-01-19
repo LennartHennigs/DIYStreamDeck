@@ -1,6 +1,6 @@
 # DIY Streamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0
-# last changed: 01-17-24
+# last changed: 01-19-24
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import time

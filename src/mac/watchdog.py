@@ -1,6 +1,6 @@
 # DIY Streamdeck watchdog code for a Mac
 # L. Hennigs and ChatGPT 4.0
-# last changed: 12-12-23
+# last changed: 01-19-24
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import sys
@@ -23,7 +23,7 @@ import threading
 import time
 from AppKit import NSWorkspaceDidTerminateApplicationNotification
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 HEARTBEAT_INTERVAL = 2
 
 plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
