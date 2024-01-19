@@ -5,9 +5,9 @@
 
 import time
 import json
-from rgbkeypad import RgbKeypad
 import usb_hid
 import usb_cdc
+from rgbkeypad import RgbKeypad
 from adafruit_hid.keyboard import Keyboard
 from adafruit_hid.keyboard_layout_us import KeyboardLayoutUS
 from adafruit_hid.keycode import Keycode
@@ -15,9 +15,10 @@ import board
 
 
 class KeyController:
-    # https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html
     JSON_FILE = "key_def.json"
+    # https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html
 
+    # mapping for the keycodes
     KEYCODE_MAPPING = {name: getattr(Keycode, name) for name in dir(
         Keycode) if not name.startswith("__")}
 
@@ -25,34 +26,38 @@ class KeyController:
     CW = [12, 8, 4, 0, 13, 9, 5, 1, 14, 10, 6, 2, 15, 11, 7, 3]
     CCW = [3, 7, 11, 15, 2, 6, 10, 14, 1, 5, 9, 13, 0, 4, 8, 12]
 
+
+    # initialize the key controller
     def __init__(self, verbose=False):
-        self.verbose = verbose
+        # initialize the keypad and keyboard
         self.keypad = RgbKeypad()
         self.keyboard = Keyboard(usb_hid.devices)
         self.layout = KeyboardLayoutUS(self.keyboard)
         self.keys = self.keypad.keys
-        self.autoclose_current_folder = False
-
+        # load and process the json file
         self.json = self.parse_json(self.JSON_FILE)
         self.global_config = self.process_global_section(self.json)
         self.apps = self.process_app_section(self.json)
         self.folders = self.process_folder_section(self.json)
         self.urls = self.process_url_section(self.json)
-
         self.current_config = self.apps.get("_otherwise", {})
+        # rotate the keys if needed
         self.rotate = self.json["settings"]["rotate"].upper() if "rotate" in self.json.get("settings", {}) else ''
-        self.current_config = self.rotate_keys_if_needed()                    
-
+        self.current_config = self.rotate_keys_if_needed()
+        # default settings
+        self.verbose = verbose
+        self.autoclose_current_folder = False
         self.folder_stack = [] 
+        #  load the key layout
         self.update_keys()
 
 
     # open a folder and display the key layout
-    def open_folder(self, folder):        
+    def open_folder(self, folder):
         if folder in self.folders:
             self.folder_stack.append(self.current_config)
             self.current_config = self.folders[folder]
-            self.current_config = self.rotate_keys_if_needed()                    
+            self.current_config = self.rotate_keys_if_needed()
             self.autoclose_current_folder = self.current_config.get('autoclose', True)
             self.update_keys()
 
@@ -66,6 +71,35 @@ class KeyController:
 
 
     # handle the key press
+    def perform_folder_action(self, folder):
+        self.open_folder(folder)
+        return False
+
+
+    # handle the key press
+    def perform_plugin_action(self, action):
+        self.send_plugin_command(*action)
+
+
+    # handle the key press
+    def perform_app_action(self, app):
+        self.send_application_name(app)
+
+
+    # handle the key press
+    def perform_key_sequence_action(self, keys, pressedUntilReleased, pressedColor, key):
+        self.handle_key_sequences(keys, pressedUntilReleased)
+        if pressedColor:
+            key.set_led(*pressedColor)
+
+
+    # close the current folder if needed
+    def close_folder_if_needed(self, someAction, action):
+        if (someAction and self.autoclose_current_folder) or action == 'close_folder':
+            self.close_folder()
+
+
+    # handle the key press
     def key_press_action(self, key):
         if key.number not in self.current_config:
             return
@@ -76,30 +110,21 @@ class KeyController:
         keys = key_def.get('key_sequences')
         pressedUntilReleased = key_def.get('pressedUntilReleased')
         pressedColor = key_def.get('pressedColor')
-
         # turn off the LED
         key.led_off()
-
         someAction = True
-        #  open a folder?
+        # process the action
         if folder:
-            self.open_folder(folder)
-            someAction = False
-        # is the action is a plugin command
+            someAction = self.perform_folder_action(folder)
         elif isinstance(action, tuple):
-            self.send_plugin_command(*action)
-        # open an application?
+            self.perform_plugin_action(action)
         elif app:
-            self.send_application_name(app)
-        # handle the key sequences
+            self.perform_app_action(app)
         elif keys:
-            self.handle_key_sequences(keys, pressedUntilReleased)
-            if pressedColor:
-                key.set_led(*pressedColor)
-        # close the folder
-        if (someAction and self.autoclose_current_folder) or action == 'close_folder':
-            self.close_folder()      
+            self.perform_key_sequence_action(keys, pressedUntilReleased, pressedColor, key)
 
+        self.close_folder_if_needed(someAction, action)
+        
 
     # handle the key release
     def key_release_action(self, key):
@@ -149,7 +174,7 @@ class KeyController:
                 key.set_led(*color);
                 # set the key press and release handlers
                 self.keypad.on_press(key, lambda key=key: self.key_press_action(key))
-                self.keypad.on_release(key, lambda key=key: self.key_release_action(key))               
+                self.keypad.on_release(key, lambda key=key: self.key_release_action(key))
             # no key definition found
             else:            
                 key.led_off()
@@ -189,11 +214,11 @@ class KeyController:
         if self.rotate == "CW":
             return {i: self.current_config[cw] for i, cw in enumerate(self.CW) if cw in self.current_config}
         elif self.rotate == "CCW":
-            return {i: self.current_config[ccw] for i, ccw in enumerate(self.CCW) if ccw in self.current_config}     
+            return {i: self.current_config[ccw] for i, ccw in enumerate(self.CCW) if ccw in self.current_config}
         return self.current_config
         
 
-# convert the keycodes to tuples if needed
+    # convert the keycodes to tuples if needed
     def keycode_string_to_tuple (self, keycode_string):
         keycode_list = keycode_string.split('+')
         keycodes = []
@@ -258,7 +283,8 @@ class KeyController:
             'pressedUntilReleased': config.get('pressedUntilReleased', '')
         }
 
-
+    
+    # load the config for the urls
     def process_url_section(self, json_data):
         urls = {}
         if "urls" in json_data:
@@ -270,6 +296,7 @@ class KeyController:
         return urls
     
 
+    # load the config for the global section
     def process_global_section(self, json_data):
         global_config = {}
         if "applications" in json_data and "_default" in json_data["applications"]:
@@ -278,10 +305,11 @@ class KeyController:
                 if config_items['folder'] and config_items['folder'] not in json_data["folders"]:
                     print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
                 else:                 
-                    global_config[int(key)] = config_items               
+                    global_config[int(key)] = config_items
         return global_config
 
 
+    # load the config for a single application
     def process_config(self, config, json_data, app, app_config):
         for key, value in config.items():
             if key == "ignore_default":
@@ -325,6 +353,7 @@ class KeyController:
         return app_config
 
 
+    # load the config for all folders
     def process_folder_section(self, json_data):
         folder_config = {}
         for folder, config in json_data["folders"].items():
@@ -346,60 +375,80 @@ class KeyController:
         return folder_config
 
 
+    # add the global config to the app config
     def add_global_config(self, config):
         for key, value in self.global_config.items():
             if key not in config:
                 config[key] = value
 
 
+    # parse the json file
     def parse_json(self, json_filename): 
         with open(json_filename, 'r') as json_file:
             return json.load(json_file)
+
+
+    # process the rotate serial command
+    def process_rotate(self, serial_str):
+        self.rotate = serial_str[8:]
+        self.current_config = self.rotate_keys_if_needed()
+        self.update_keys()
+
+
+    # process the terminated serial command
+    def process_terminated(self, serial_str):
+        app_name = serial_str[12:]
+        if app_name in self.json["applications"]:
+            self.apps[app_name] = self.load_single_app_config(app_name, self.json["applications"][app_name], self.json)
+
+
+    #  process the app serial command
+    def process_app(self, serial_str):
+        app_name, url = self.parse_app_name_and_url(serial_str[5:])
+        if url in self.urls:
+            self.current_config = self.urls[url]
+        else:
+            self.current_config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
+        self.current_config = self.rotate_keys_if_needed()
+        self.update_keys()
+
+
+    # parse the app name and url
+    def parse_app_name_and_url(self, serial_str):
+        split_app_name = serial_str.split(" (", 1)
+        app_name = split_app_name[0]
+        url = split_app_name[1].rstrip(')') if len(split_app_name) > 1 else None
+        return app_name, url
+
+
+    # process the ping serial command
+    def process_ping(self):
+        return
+
+
+    # process the serial string
+    def process_serial_str(self, serial_str):
+            # process the ping command
+        if serial_str is ".":
+            self.process_ping();
+        if serial_str.startswith("Rotate: "):
+            self.process_rotate(serial_str)
+        elif serial_str.startswith("Terminated: "):
+            self.process_terminated(serial_str)
+        elif serial_str.startswith("App: "):
+            self.process_app(serial_str)
 
 
     # main loop
     def run(self):
         while True:
             serial_str = self.read_serial_line()
-            # check if we have a serial command
             if serial_str is not None:
-                if serial_str is ".":
-                    continue
-                # shall we rotate the keys?
-                print(serial_str)
-                if serial_str.startswith("Rotate: "):
-                    self.rotate = serial_str[8:]
-                    self.current_config = self.rotate_keys_if_needed()                    
-                    self.update_keys()
-                # was an app termined                
-                elif serial_str.startswith("Terminated: "):
-                    app_name = serial_str[12:]
-                    if app_name in self.json["applications"]:
-                        self.load_single_app_config(app_name, self.json["applications"][app_name], self.json)
-                        self.apps[app_name] = self.load_single_app_config(serial_str[12:], self.json["applications"][serial_str[12:]], self.json)
-                # shall we launch an application?
-                elif serial_str.startswith("App: "):
-                    serial_str = serial_str[5:]
-                    # Split the app_name string on the first occurrence of " ("
-                    split_app_name = serial_str.split(" (", 1)
-                    # The first part is always the app name
-                    app_name = split_app_name[0]
-                    # The second part is the details, if they exist
-                    url = None
-                    if len(split_app_name) > 1:
-                        # Remove the trailing ")" from the details
-                        url = split_app_name[1].rstrip(')')
-                    # Check if there is a keyboard definition for the URL
-                    if url in self.urls:
-                        self.current_config = self.urls[url]
-                    else:
-                        self.current_config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
-                    # rotate the keys if needed
-                    self.current_config = self.rotate_keys_if_needed()                    
-                    self.update_keys()                
+                self.process_serial_str(serial_str)
             else:
                 time.sleep(0.1)
                 self.keypad.update()
+
 
 # main program
 if __name__ == "__main__":
@@ -407,7 +456,7 @@ if __name__ == "__main__":
     try:
         controller.run()
     except KeyboardInterrupt:
-        # turn off all the LEDs when the program is interrupted
+        # release all keys and turn off the LEDs
         controller.keyboard.release_all()
         for key in controller.keys:
             key.led_off()
