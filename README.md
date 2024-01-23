@@ -40,7 +40,7 @@ It is (still)) a very successful experiment in programming with ChatGPT-4 and Co
 - Raspberry Pi Pico
 - Pimoroni RGB Keypad for Raspberry Pi Pico
 - Micro-USB cable to connect the Pi Pico to your computer
-- (optional: a Mac for the Watchdog script)
+- Optional (but strongly suggested): a Mac running the Watchdog script
 
 ## How it Works
 
@@ -49,19 +49,28 @@ The [`code.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi
 The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/watchdog.py) script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad. It also receives `action` commands for plugin events. You can use the pad it without, but then you lose the application-specific launch feature. It is currently only available for a Mac.
 
 ## Getting Started
+- Download this repository.
 
 - On the Pi Pico
-  - Install CircuitPython on your Raspberry Pi Pico following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython).
-  - Install the required CircuitPython libraries by following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/circuitpython-libraries).
-  - Add the [rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython) library to your `lib` folder
-  - Clone this repository and copy the contents of the `src/pico` folder to your Raspberry Pi Pico. 
-- On the Mac
-  - Copy the content of `src/mac` and its sub folders to your Mac
-  - Install [Python3 on your Mac](https://www.freecodecamp.org/news/python-version-on-mac-update/), e.g. [via `brew`](https://brew.sh/)
-  - If you want to use the plugins, edit the config files in the `config` directory
+  - Install **CircuitPython** on your Raspberry Pi Pico following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython).
+  - Install the required **CircuitPython libraries** by following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/circuitpython-libraries) ([download](https://circuitpython.org/libraries)). You definatetly need `adafruit_dotstar.mpy`, and `adafruit_hid` files/folders in your `lib\`folder.
+  - Add the library **[rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython)** to your `lib` folder.
+  - Copy the contents of the **`src/pico` folder** to your Raspberry Pi Pico. 
+- On the Mac (for running `watchdog.py`)
+  - Install **[Python3 on your Mac](https://www.freecodecamp.org/news/python-version-on-mac-update/)**, e.g. [via `brew`](https://brew.sh/).
+  - Copy the contents of **`src/mac`** and its sub-folders to your Mac (best in a separate folder).
+  - Install the needed **libraries** to the folder. (Use `pip` and the `requirements/mac/requirements_mac.txt` file, see [here](https://note.nkmk.me/en/python-pip-install-requirements/).
+  - If you want to use the plugins, edit the config files in the `config` directory.
+  - Run `watchdog.py`, e.g.:
+
+    ``` bash
+    python3 watchdog.py --port /dev/cu.usbmodem2101 --verbose
+    ```
+    
 - Defining keyboard layout
   - Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
-
+  - Install [Thonny](https://thonny.org/) on your Mac– this IDE makes starting and stopping the Pi Pico easier, as well as editing the `key_def.json` file.
+  
 ## Configuration
 
 In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with four possible entries: `settings`, `applications`, `folders`, and `urls`.
