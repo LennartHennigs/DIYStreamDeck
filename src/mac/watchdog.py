@@ -69,7 +69,7 @@ class WatchDog(Cocoa.NSObject):
         return self
 
     # Called when an application is terminated
-    @objc.signature(b'v@:@')  # Encoded the signature string as bytes
+    @objc.typedSelector(b'v@:@')  # Encoded the signature string as bytes
     def applicationTerminated_(self, notification: Cocoa.NSNotification) -> None:
         app = notification.userInfo()['NSWorkspaceApplicationKey']
         app_name = app.localizedName()
@@ -84,8 +84,8 @@ class WatchDog(Cocoa.NSObject):
             print(f"Error sending app name to microcontroller: {e}")
 
 
-    # Ccalled every HEARTBEAT_INTERVAL seconds
-    @objc.signature(b'v@:')  # Encoded the signature string as bytes
+    # Called every HEARTBEAT_INTERVAL seconds
+    @objc.typedSelector(b'v@:')  # Encoded the signature string as bytes
     def send_heartbeat(self) -> None:
         while self.running:
             try:
@@ -96,7 +96,7 @@ class WatchDog(Cocoa.NSObject):
 
 
     # Called when the active application changes
-    @objc.signature(b'v@:@')  # Encoded the signature string as bytes
+    @objc.typedSelector(b'v@:@')  # Encoded the signature string as bytes
     def applicationActivated_(self, notification: Cocoa.NSNotification) -> None:
         app = notification.userInfo()['NSWorkspaceApplicationKey']
         app_name = app.localizedName()
@@ -106,7 +106,7 @@ class WatchDog(Cocoa.NSObject):
 
 
     # Get the URL of the active tab in Google Chrome or Safari
-    @objc.signature(b'v@:@')  # Encoded the signature string as bytes
+    @objc.typedSelector(b'v@:@')  # Encoded the signature string as bytes
     def get_url(self, app_name) -> str:
         command_dict = {
             "Google Chrome": '''
@@ -145,8 +145,9 @@ class WatchDog(Cocoa.NSObject):
         return ""
 
 
+
     # Send the name of the active application to the keypad via serial
-    @objc.signature(b'v@:@')
+    @objc.typedSelector(b'v@:@')
     def send_app_name_to_microcontroller(self, app_name: str) -> str:
         if app_name in ["Safari", "Google Chrome"]:
             app_name = app_name + self.get_url(app_name)
@@ -171,7 +172,7 @@ class WatchDog(Cocoa.NSObject):
 
 
     # Launch an application
-    @objc.signature(b'v@:@')
+    @objc.typedSelector(b'v@:@')
     def launch_app(self, match: re.Match) -> None:
         launch_app_name = match.group(1)
         if self.args.verbose:
@@ -184,7 +185,7 @@ class WatchDog(Cocoa.NSObject):
 
 
     # Run a plugin command
-    @objc.signature(b'v@:@')
+    @objc.typedSelector(b'v@:@')
     def run_plugin_command(self, match: re.Match) -> None:
         parts = match.group(1).split(' ', 1)
         command = parts[0].strip()
@@ -193,7 +194,8 @@ class WatchDog(Cocoa.NSObject):
 
         # Check if the plugin exists
         if not plugin:
-            print(f"Plugin {command.split('.')[0]} not found")
+            if self.args.verbose:
+                print(f"Plugin {command.split('.')[0]} not found")
             return
         # Check if the plugin command exists
         if command not in plugin.commands():
