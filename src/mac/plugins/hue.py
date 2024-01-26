@@ -1,4 +1,5 @@
 import json
+import os
 from typing import Dict, Callable, Union, List, Optional
 from phue import Bridge, Light
 from base_plugin import BasePlugin
@@ -32,21 +33,22 @@ class HuePlugin(BasePlugin):
             )
 
     def _connect_to_bridge(self) -> Bridge:
-        try:
-            bridge = Bridge(self.config['bridge_ip'])
-            bridge.connect()
-            return bridge
-        except Exception as e:
-            self._log_and_raise(f"Failed to initialize HuePlugin: {e}")
+        bridge_ip = self.config.get('bridge_ip')
+        if not bridge_ip:
+            raise ValueError("Bridge IP not found in the config.")
+        
+        # ping the bridge_ip to check if it is reachable
+        if not self._ping(bridge_ip):
+            raise ConnectionError("Bridge IP not reachable.")
 
-    def _log_and_raise(self, message: str) -> None:
-        print(message)
-        raise Exception(message)
+        bridge = Bridge(bridge_ip)
+        bridge.connect()
+            
+        if not bridge.is_connected():
+            raise ConnectionError("Failed to connect to the bridge.")
+            
+        return bridge
 
-    def _find_light(self, lamp_identifier: Union[int, str]) -> Optional[Light]:
-        lights = self._get_lights(lamp_identifier)
-        if lights:
-            return lights[0]
 
     def _get_lights(self, lamp_identifier: Union[int, str]) -> List[Light]:
         return [
