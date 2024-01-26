@@ -4,6 +4,7 @@
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 from abc import ABC, abstractmethod
+import os
 
 class BasePlugin(ABC):
     
@@ -14,3 +15,13 @@ class BasePlugin(ABC):
         callable functions that implement the command.
         """
         pass
+
+    
+    def _log_and_raise(self, msg: str) -> None:
+        print(msg)
+        raise Exception(msg)
+    
+
+    def _ping(self, ip: str) -> bool:
+        return os.system(f"ping -c 1 -W 2 {ip} > /dev/null 2>&1") == 0   
+    
