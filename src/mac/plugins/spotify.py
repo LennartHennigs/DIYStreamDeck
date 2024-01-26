@@ -36,17 +36,21 @@ class SpotifyPlugin(BasePlugin):
         except (FileNotFoundError, json.JSONDecodeError) as e:
             self._log_and_raise(str(e))
 
+
     def _authenticate(self) -> Spotify:
-        try:
-            scope = "user-read-playback-state, user-modify-playback-state,"
-            auth_manager = SpotifyOAuth(
-                client_id=self.config['client_id'],
-                client_secret=self.config['client_secret'],
-                redirect_uri=self.config['redirect_uri'],
-                scope=scope)
-            return Spotify(auth_manager=auth_manager)
-        except Exception as e:
-            self._log_and_raise(f"Failed to authenticate with Spotify: {e}")
+        scope = "user-read-playback-state, user-modify-playback-state,"
+        auth_manager = SpotifyOAuth(
+            client_id=self.config['client_id'],
+            client_secret=self.config['client_secret'],
+            redirect_uri=self.config['redirect_uri'],
+            scope=scope)
+        spotify = Spotify(auth_manager=auth_manager)
+
+        user = spotify.current_user()
+        if not user:
+            raise Exception("Failed to authenticate with Spotify.")        
+        return spotify
+
 
     def execute_command(self, command: str) -> None:
         command_name, params = self._parse_command(command)
@@ -56,12 +60,14 @@ class SpotifyPlugin(BasePlugin):
         else:
             self._log(f"Invalid command: {command}")
 
+
     def _parse_command(self, command: str) -> tuple:
         command_parts = command.split('(')
         command_name = command_parts[0]
         params = command_parts[1][:-1].split(',') if len(command_parts) > 1 else []
         params = [param.strip() for param in params]
         return command_name, params
+
 
     def play_pause(self) -> None:
         try:
@@ -74,6 +80,7 @@ class SpotifyPlugin(BasePlugin):
             self._log("Error")
             pass;
     
+
     def play(self) -> None:
         current_playback = self.sp.current_playback()
         if current_playback is None or not current_playback['is_playing']:
@@ -82,12 +89,14 @@ class SpotifyPlugin(BasePlugin):
         else:
             self._log("No song is currently playing.")
 
+
     def pause(self) -> None:
         try:
             self.sp.pause_playback()
         except Exception as e:
             self._log("Error")
             pass
+
 
     def next(self) -> None:
         try:
@@ -96,7 +105,8 @@ class SpotifyPlugin(BasePlugin):
         except Exception as e:
             self._log("Error")
             pass
-        
+
+
     def prev(self) -> None:
         try:
             self.sp.previous_track()
@@ -105,11 +115,14 @@ class SpotifyPlugin(BasePlugin):
             self._log("Error")
             pass
 
+
     def volume_up(self, volume_change: int = 10) -> None:
         self._adjust_volume(volume_change)
 
+
     def volume_down(self, volume_change: int = 10) -> None:
         self._adjust_volume(-volume_change)
+
 
     def _adjust_volume(self, volume_change: int) -> None:
         try:
@@ -119,6 +132,7 @@ class SpotifyPlugin(BasePlugin):
             self._log(f"Volume {'increased' if volume_change > 0 else 'decreased'} to {new_volume}%")
         except Exception as e:
             self._log(f"Failed to {'increase' if volume_change > 0 else 'decrease'} volume")
+
 
     def get_current_song_info(self) -> Optional[str]:
         current_song = self.sp.current_user_playing_track()
@@ -130,9 +144,6 @@ class SpotifyPlugin(BasePlugin):
         else:
             return None
 
-    def _log_and_raise(self, message: str) -> None:
-        self._log(message)
-        raise Exception(message)
 
     def _log(self, message: str) -> None:
         if self.verbose:
