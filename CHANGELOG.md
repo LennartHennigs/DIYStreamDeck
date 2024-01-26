@@ -4,27 +4,28 @@
 # 01-27-2024
 
 - made plugins more robust
-  - spotify now checks if credentials work
-  - hue checks if ip of bridge exists and checks whether connecting to it was successful
+  - `spotify.py` now checks if credentials work
+  - `hue.py` checks if ip of bridge exists and checks whether connecting to it was successful
+- `watchdog.py` has new cocoa signature encoding
   
 # 01-19-2024
 
-- added detection of app termination to reset `toggleColor` settings
+- `code.py` and `watchdog.py`: added detection of app termination to reset `toggleColor` settings
 
 # 01-15-2024
 
-- added `pressedColor` and `toggleColor` parameters for key definitions.
+- `code.py`: added `pressedColor` and `toggleColor` parameters for key definitions.
 
 # 01-12-2024
 
-- `watchdog.py` detects if localized app name is empty a uses different string to identify app
-- added `pressedUntilReleased` parameter to key definition
+- `watchdog.py`: detects if localized app name is empty a uses different string to identify app
+- `code.py`: added `pressedUntilReleased` parameter to key definition
 
 # 01-03-2024
 
-- added `alias_of` parameter for applications, to reuse key definitions
-- moved the `global` section inside the `applications` section and renamed it to `_default`
-- renamed `ignore_globals` to `ignore_default`
+- `code.py`: added `alias_of` parameter for applications, to reuse key definitions
+- `code.py`: moved the `global` section inside the `applications` section and renamed it to `_default`
+- `code.py`: renamed `ignore_globals` to `ignore_default`
 
 ## 12-12-2023
 
