@@ -1,6 +1,6 @@
 # DIY Streamdeck watchdog code for a Mac
 # L. Hennigs and ChatGPT 4.0
-# last changed: 12-12-23
+# last changed: 01-19-24
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import sys
@@ -21,14 +21,13 @@ import os
 from plugins.base_plugin import BasePlugin
 import threading
 import time
+from AppKit import NSWorkspaceDidTerminateApplicationNotification
 
-
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 HEARTBEAT_INTERVAL = 2
 
 plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
 sys.path.append(plugins_directory)
-
 
 def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Serial]:
     try:
@@ -52,6 +51,7 @@ class WatchDog(Cocoa.NSObject):
     run_pattern = r"^Run: (.+)$"
     running: bool = True
 
+    # Initializer
     def initWithSerial_args_plugins_(self, ser: serial.Serial, args: argparse.Namespace, plugins: Dict[str, Any]) -> Optional['WatchDog']:
         self = objc.super(WatchDog, self).init()
         if self is None:
@@ -59,9 +59,32 @@ class WatchDog(Cocoa.NSObject):
         self.ser = ser
         self.args = args
         self.plugins = plugins
+        # Add observer for application termination
+        Cocoa.NSWorkspace.sharedWorkspace().notificationCenter().addObserver_selector_name_object_(
+            self,
+            self.applicationTerminated_,
+            NSWorkspaceDidTerminateApplicationNotification,
+            None
+        )
         return self
 
+    # Called when an application is terminated
+    @objc.signature(b'v@:@')  # Encoded the signature string as bytes
+    def applicationTerminated_(self, notification: Cocoa.NSNotification) -> None:
+        app = notification.userInfo()['NSWorkspaceApplicationKey']
+        app_name = app.localizedName()
+        if not app_name:
+            app_name = app.bundleIdentifier() or app.bundleExecutable()
+#        if self.args.verbose:
+#            print(f"{app_name} has been terminated")
+        # send the app name to the keypad
+        try:
+            self.ser.write(("Terminated: " + app_name + '\n').encode('ascii', 'replace'))
+        except (serial.SerialException, UnicodeEncodeError) as e:
+            print(f"Error sending app name to microcontroller: {e}")
 
+
+    # Ccalled every HEARTBEAT_INTERVAL seconds
     @objc.signature(b'v@:')  # Encoded the signature string as bytes
     def send_heartbeat(self) -> None:
         while self.running:
@@ -72,6 +95,7 @@ class WatchDog(Cocoa.NSObject):
             time.sleep(HEARTBEAT_INTERVAL)
 
 
+    # Called when the active application changes
     @objc.signature(b'v@:@')  # Encoded the signature string as bytes
     def applicationActivated_(self, notification: Cocoa.NSNotification) -> None:
         app = notification.userInfo()['NSWorkspaceApplicationKey']
@@ -81,6 +105,7 @@ class WatchDog(Cocoa.NSObject):
         self.send_app_name_to_microcontroller(app_name)
 
 
+    # Get the URL of the active tab in Google Chrome or Safari
     @objc.signature(b'v@:@')  # Encoded the signature string as bytes
     def get_url(self, app_name) -> str:
         command_dict = {
@@ -119,6 +144,8 @@ class WatchDog(Cocoa.NSObject):
         
         return ""
 
+
+    # Send the name of the active application to the keypad via serial
     @objc.signature(b'v@:@')
     def send_app_name_to_microcontroller(self, app_name: str) -> str:
         if app_name in ["Safari", "Google Chrome"]:
@@ -132,6 +159,7 @@ class WatchDog(Cocoa.NSObject):
             print(f"Error sending app name to microcontroller: {e}")
 
 
+    # Read data from the serial connection from the keypad
     def read_serial_data(self) -> Optional[str]:
         if self.ser.in_waiting == 0:
             return
@@ -142,6 +170,7 @@ class WatchDog(Cocoa.NSObject):
             return
 
 
+    # Launch an application
     @objc.signature(b'v@:@')
     def launch_app(self, match: re.Match) -> None:
         launch_app_name = match.group(1)
@@ -154,6 +183,7 @@ class WatchDog(Cocoa.NSObject):
         return
 
 
+    # Run a plugin command
     @objc.signature(b'v@:@')
     def run_plugin_command(self, match: re.Match) -> None:
         parts = match.group(1).split(' ', 1)
@@ -189,6 +219,7 @@ class WatchDog(Cocoa.NSObject):
         command_func(param) if param is not None else command_func()
 
 
+    # Check if there's any data in the serial buffer
     def check_serial(self) -> None:
         # Check if there's any data in the buffer
         command = self.read_serial_data()
@@ -206,6 +237,7 @@ class WatchDog(Cocoa.NSObject):
             return
 
 
+# Load all plugins
 def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, BasePlugin]:
     plugins = {}
     base_path = os.path.dirname(os.path.abspath(__file__))
@@ -227,6 +259,7 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
     return plugins
 
 
+# Load a plugin module
 def load_plugin_module(plugin_file: str, full_path: str) -> Tuple[str, Any]:
     plugin_name = os.path.splitext(plugin_file.name)[0]
     abs_path = os.path.join(full_path, plugin_file.name)
