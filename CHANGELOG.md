@@ -1,6 +1,12 @@
 
 # CHANGELOG
 
+# 01-27-2024
+
+- made plugins more robust
+  - spotify now checks if credentials work
+  - hue checks if ip of bridge exists and checks whether connecting to it was successful
+  
 # 01-19-2024
 
 - added detection of app termination to reset `toggleColor` settings
