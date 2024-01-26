@@ -38,22 +38,18 @@ class SpotifyPlugin(BasePlugin):
 
 
     def _authenticate(self) -> Spotify:
-        try:
-            scope = "user-read-playback-state, user-modify-playback-state,"
-            auth_manager = SpotifyOAuth(
-                client_id=self.config['client_id'],
-                client_secret=self.config['client_secret'],
-                redirect_uri=self.config['redirect_uri'],
-                scope=scope)
-            spotify = Spotify(auth_manager=auth_manager)
+        scope = "user-read-playback-state, user-modify-playback-state,"
+        auth_manager = SpotifyOAuth(
+            client_id=self.config['client_id'],
+            client_secret=self.config['client_secret'],
+            redirect_uri=self.config['redirect_uri'],
+            scope=scope)
+        spotify = Spotify(auth_manager=auth_manager)
 
-            user = spotify.current_user()
-            if not user:
-                raise Exception("Failed to get user profile, authentication may have failed.")
-        
-            return spotify
-        except Exception as e:
-            self._log_and_raise(f"Failed to authenticate with Spotify: {e}")
+        user = spotify.current_user()
+        if not user:
+            raise Exception("Failed to authenticate with Spotify.")        
+        return spotify
 
 
     def execute_command(self, command: str) -> None:

@@ -39,7 +39,7 @@ class HuePlugin(BasePlugin):
         
         # ping the bridge_ip to check if it is reachable
         if not self._ping(bridge_ip):
-            raise ConnectionError("Bridge IP is not reachable.")
+            raise ConnectionError("Bridge IP not reachable.")
 
         bridge = Bridge(bridge_ip)
         bridge.connect()
