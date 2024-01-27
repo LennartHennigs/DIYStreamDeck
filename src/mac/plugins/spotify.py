@@ -69,51 +69,70 @@ class SpotifyPlugin(BasePlugin):
         return command_name, params
 
 
-    def play_pause(self) -> None:
-        try:
-            if self.sp.current_playback()['is_playing']:
-                self._log("Pause")
-                self.pause()
-            else:
-                self.play()
-        except Exception as e:
-            self._log("Error")
-            pass;
+    def has_active_device(self):
+        current_playback = self.sp.current_playback()
+        if current_playback is None:
+            self._log("No active device")
+            return False
+        else:
+#            for device in self.sp.devices()['devices']:
+#                if device['is_active']:
+#                    print(device['name'])   
+            return True 
+
+
+    def play_pause(self) -> None: 
+        if self.has_active_device():
+            try:
+                if self.sp.current_playback()['is_playing']:
+                    self._log("Pause")
+                    self.pause(False)
+                else:
+                    self.play(False)
+            except Exception as e:
+                self._log("Error")
+                pass;
+#        devices = self.sp.devices()
+#        self.sp.transfer_playback(devices['devices'][0]['id'])
     
 
-    def play(self) -> None:
-        current_playback = self.sp.current_playback()
-        if current_playback is None or not current_playback['is_playing']:
-            self.sp.start_playback()
-            self._log(self.get_current_song_info())
-        else:
-            self._log("No song is currently playing.")
+    def play(self, check_active_device=True) -> None:
+        if self.has_active_device():
+            current_playback = self.sp.current_playback()
+            if current_playback is None or not current_playback['is_playing']:
+                self.sp.start_playback()
+                self._log(self.get_current_song_info())
+            else:
+                self._log("No song is currently playing.")
 
 
-    def pause(self) -> None:
-        try:
-            self.sp.pause_playback()
-        except Exception as e:
-            self._log("Error")
-            pass
+    def pause(self, check_active_device=True) -> None:
+        if self.has_active_device():
+            try:
+                self.sp.pause_playback()
+            except Exception as e:
+                self._log("Error")
+                pass
 
 
     def next(self) -> None:
-        try:
-            self.sp.next_track()
-            self._log(self.get_current_song_info())
-        except Exception as e:
-            self._log("Error")
-            pass
+        if self.has_active_device():
+            try:
+                self.sp.next_track()
+                self._log(self.get_current_song_info())
+            except Exception as e:
+                self._log("Error")
+                pass
 
 
     def prev(self) -> None:
-        try:
-            self.sp.previous_track()
-            self._log(self.get_current_song_info())
-        except Exception as e:
-            self._log("Error")
-            pass
+        if self.has_active_device():
+            try:
+                self.sp.previous_track()
+                self._log(self.get_current_song_info())
+            except Exception as e:
+                self._log("Error")
+                pass
 
 
     def volume_up(self, volume_change: int = 10) -> None:
