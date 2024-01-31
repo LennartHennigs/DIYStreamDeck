@@ -1,6 +1,6 @@
 # DIY Streamdeck watchdog code for a Mac
 # L. Hennigs and ChatGPT 4.0
-# last changed: 01-19-24
+# last changed: 01-31-24
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import sys
@@ -23,7 +23,7 @@ import threading
 import time
 from AppKit import NSWorkspaceDidTerminateApplicationNotification
 
-VERSION = "1.2.0"
+VERSION = "1.2.1"
 HEARTBEAT_INTERVAL = 2
 
 plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
@@ -292,7 +292,7 @@ def main() -> None:
 
     try:
         with create_serial_connection(args.port, args.speed) as ser:
-            print('Keypad watchdog {VERSION} is running...'.format(VERSION=VERSION))
+            print('\nKeypad watchdog {VERSION} is running...'.format(VERSION=VERSION))
 
             plugins = load_plugins(verbose=args.verbose)
             watchdog = WatchDog.alloc().initWithSerial_args_plugins_(ser, args, plugins)

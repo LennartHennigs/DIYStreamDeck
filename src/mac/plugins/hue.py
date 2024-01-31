@@ -42,14 +42,18 @@ class HuePlugin(BasePlugin):
             raise ConnectionError("Bridge IP not reachable.")
 
         bridge = Bridge(bridge_ip)
-        bridge.connect()
-            
-        if not bridge.is_connected():
-            raise ConnectionError("Failed to connect to the bridge.")
-            
+        try:
+            bridge.connect()
+        except Exception as e:
+            raise ConnectionError("Failed to connect to the bridge.") from e
         return bridge
 
 
+    def _find_light(self, lamp_identifier: Union[int, str]) -> Optional[Light]:
+            lights = self._get_lights(lamp_identifier)
+            if lights:
+                return lights[0]
+        
     def _get_lights(self, lamp_identifier: Union[int, str]) -> List[Light]:
         return [
             light for light in self.bridge.lights
