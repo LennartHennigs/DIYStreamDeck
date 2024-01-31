@@ -1,6 +1,6 @@
 # DIY Streamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0
-# last changed: 01-19-24
+# last changed: 01-31-24
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import time
@@ -62,41 +62,13 @@ class KeyController:
             self.update_keys()
 
 
-    # close the current folder and display previous key layout
-    def close_folder(self):
-        if not self.folder_stack:
-            return
-        self.current_config = self.folder_stack.pop()
-        self.update_keys()
-
-
-    # handle the key press
-    def perform_folder_action(self, folder):
-        self.open_folder(folder)
-        return False
-
-
-    # handle the key press
-    def perform_plugin_action(self, action):
-        self.send_plugin_command(*action)
-
-
-    # handle the key press
-    def perform_app_action(self, app):
-        self.send_application_name(app)
-
-
-    # handle the key press
-    def perform_key_sequence_action(self, keys, pressedUntilReleased, pressedColor, key):
-        self.handle_key_sequences(keys, pressedUntilReleased)
-        if pressedColor:
-            key.set_led(*pressedColor)
-
-
     # close the current folder if needed
     def close_folder_if_needed(self, someAction, action):
         if (someAction and self.autoclose_current_folder) or action == 'close_folder':
-            self.close_folder()
+            if not self.folder_stack:
+                return
+            self.current_config = self.folder_stack.pop()
+            self.update_keys()
 
 
     # handle the key press
@@ -115,14 +87,17 @@ class KeyController:
         someAction = True
         # process the action
         if folder:
-            someAction = self.perform_folder_action(folder)
+            self.open_folder(folder)
+            someAction = False
         elif isinstance(action, tuple):
-            self.perform_plugin_action(action)
+            self.send_plugin_command(*action)
         elif app:
-            self.perform_app_action(app)
+            self.send_application_name(app)
         elif keys:
-            self.perform_key_sequence_action(keys, pressedUntilReleased, pressedColor, key)
-
+            self.handle_key_sequences(keys, pressedUntilReleased)
+            if pressedColor:
+                key.set_led(*pressedColor)
+        # close the folder if needed
         self.close_folder_if_needed(someAction, action)
         
 
@@ -135,7 +110,7 @@ class KeyController:
         color = key_def.get('color')
         pressedUntilReleased = key_def.get('pressedUntilReleased')
         toggleColor = key_def.get('toggleColor')
-
+        # process the action
         if keys:
             self.keyboard.release_all()
             if toggleColor:
@@ -171,7 +146,10 @@ class KeyController:
             # is there a key definition for this key?
             if key.number in self.current_config:
                 color = self.current_config[key.number]['color']
-                key.set_led(*color);
+                if color:
+                    key.set_led(*color);
+                else:
+                    raise ValueError(f"Error: Color not defined for key {key.number}.")
                 # set the key press and release handlers
                 self.keypad.on_press(key, lambda key=key: self.key_press_action(key))
                 self.keypad.on_release(key, lambda key=key: self.key_release_action(key))
@@ -260,15 +238,15 @@ class KeyController:
     def get_config_items(self, config):
         if 'alias_of' in config:
             config = config['alias_of']
-
+        # get the key sequences
         key_sequence = config.get('key_sequence', [])
         key_sequences = tuple(self.convert_value(v) for v in key_sequence) if isinstance(
             key_sequence, list) else self.keycode_string_to_tuple (key_sequence)
-        
+        # get the application
         application = config.get('application', '')
         if 'alias_of' in config:
             application = config['alias_of']
-
+        # return the config items
         return {
             'key_sequences': key_sequences,
             'application': application,
@@ -325,7 +303,6 @@ class KeyController:
             # check if toggleColor is set
             if 'toggleColor' in config_items and config_items['toggleColor']:
                 containsToggle = True
-
         # add the default config if needed
         ignore_default = config.get("ignore_default", "false").lower() == "true"
         if not ignore_default:
@@ -466,5 +443,4 @@ if __name__ == "__main__":
         controller.keyboard.release_all()
         for key in controller.keys:
             key.led_off()
-
 
