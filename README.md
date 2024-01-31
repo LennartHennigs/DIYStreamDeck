@@ -89,7 +89,7 @@ Applications and URLs are similar in their content. They usually contain *shortc
 
 ### Key Definitions
 
-You can define four types of keys: `shortcut`, `application launch`, folder`, and `action`, keys.
+You can define four types of keys: `shortcut`, `application launch`, `folder`, and `action`, keys.
 
 - *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
 - *Application keys* have an `application` field which opens or brings the specified application to front when the key is pressed.
