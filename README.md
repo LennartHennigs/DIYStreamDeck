@@ -69,9 +69,12 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
     
 - Defining keyboard layout
   - Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
+  - Note: The first key (top left) has the number `0` and the last one (bottom right) has the number `15`.
   - Install [Thonny](https://thonny.org/) on your Mac– this IDE makes starting and stopping the Pi Pico easier, as well as editing the `key_def.json` file.
   
 ## Configuration
+
+### Sections
 
 In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with four possible entries: `settings`, `applications`, `folders`, and `urls`.
 
@@ -79,6 +82,12 @@ In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/mai
 - In the `applications` section the different keys for various apps are defined with the key numbers (`0`-`15`).
 - The `folders` section defines key sets that can be assigned to a single key.
 - The `urls` section contains keyboard definitions for Safari and Chrome URls.
+
+Applications and URLs are similar in their content. They usually contain *shortcut keys* for an app or a web site.
+
+*Note*: The `watchdog.py` script cannot detect tab changes in a browser. The current browser tab URL is only detected when Chrome/Firefox becomes active.
+
+### Key Definitions
 
 You can define four types of keys: `shortcut`, `application launch`, folder`, and `action`, keys.
 
