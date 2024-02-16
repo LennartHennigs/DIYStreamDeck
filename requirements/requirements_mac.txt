@@ -1,5 +1,5 @@
 pyobjc-framework-Cocoa==7.3
-pyserial==3.5i
+pyserial==3.5
 urllib3==1.26.6
 spotipy==2.23.0
 phue==1.1
