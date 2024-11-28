@@ -1,4 +1,7 @@
-pyobjc-framework-Cocoa==7.3
+pyobjc-core==8.0b1
+pyobjc-framework-Cocoa==8.0b1
+pyobjc-framework-Quartz==8.0b1
+# pyobjc-framework-Cocoa==7.3
 pyserial==3.5
 urllib3==1.26.6
 spotipy==2.23.0
