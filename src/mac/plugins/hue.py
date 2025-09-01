@@ -2,7 +2,7 @@ import json
 import os
 from typing import Dict, Callable, Union, List, Optional
 from phue import Bridge, Light
-from base_plugin import BasePlugin
+from src.mac.plugins.base_plugin import BasePlugin
 
 class HuePlugin(BasePlugin):
     verbose: bool

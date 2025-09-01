@@ -8,7 +8,7 @@ import json
 from typing import Optional
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
-from base_plugin import BasePlugin
+from src.mac.plugins.base_plugin import BasePlugin
 
 
 class SpotifyPlugin(BasePlugin):

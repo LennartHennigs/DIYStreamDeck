@@ -1,0 +1,755 @@
+{
+  "metadata": {
+    "version": "2.0.0",
+    "description": "StreamDeck configuration with semantic colors and consistent descriptions",
+    "created": "2024-01-01",
+    "color_scheme_version": "1.0.0"
+  },
+
+  "color_scheme": {
+    "navigation": "#FFFFFF",
+    "creation": "#00FF00", 
+    "destruction": "#FF0000",
+    "media_control": "#1DB954",
+    "communication": "#FFFF00",
+    "system": "#0000FF",
+    "folders": "#FFA500",
+    "utilities": "#800080",
+    "escape": "#2C2C2C"
+  },
+
+  "settings": {
+    "rotate": "CCW"
+  },
+
+  "applications": {
+    "_default": {
+      "12": {
+        "folder": "apps_folder",
+        "color": "#FFA500",
+        "description": "Open: Apps Folder"
+      },
+      "13": {
+        "folder": "controls_folder", 
+        "color": "#FFA500",
+        "description": "Open: Controls Folder"
+      },
+      "14": {
+        "key_sequence": "GUI+TAB",
+        "color": "#0000FF",
+        "description": "Switch: Previous App"
+      },
+      "15": {
+        "folder": "close_app_folder",
+        "color": "#FF0000", 
+        "description": "Open: Close App Menu"
+      }
+    },
+
+    "Finder": {
+      "0": {
+        "key_sequence": "GUI+N",
+        "color": "#00FF00",
+        "description": "Create: New Folder"
+      },
+      "1": {
+        "key_sequence": "GUI+SEMICOLON", 
+        "color": "#FFFFFF",
+        "description": "Navigate: Back"
+      },
+      "2": {
+        "key_sequence": "GUI+QUOTE",
+        "color": "#FFFFFF", 
+        "description": "Navigate: Forward"
+      },
+      "3": {
+        "key_sequence": "GUI+W",
+        "color": "#FF0000",
+        "description": "Close: Window"
+      },
+      "4": {
+        "key_sequence": "GUI+SHIFT+D",
+        "color": "#0000FF",
+        "description": "Go To: Desktop"
+      },
+      "5": {
+        "key_sequence": "GUI+SHIFT+O", 
+        "color": "#0000FF",
+        "description": "Go To: Documents"
+      },
+      "6": {
+        "key_sequence": "ALT+GUI+L",
+        "color": "#0000FF", 
+        "description": "Go To: Downloads"
+      },
+      "7": {
+        "key_sequence": "GUI+SHIFT+H",
+        "color": "#0000FF",
+        "description": "Go To: Home"
+      },
+      "8": {
+        "key_sequence": "GUI+T",
+        "color": "#00FF00",
+        "description": "Create: New Tab"
+      }
+    },
+
+    "Slack": {
+      "0": {
+        "key_sequence": "CONTROL+ONE",
+        "color": "#FFFFFF",
+        "description": "Navigate: Home"
+      },
+      "1": {
+        "key_sequence": "CONTROL+TWO", 
+        "color": "#FFFFFF",
+        "description": "Navigate: Direct Messages"
+      },
+      "2": {
+        "key_sequence": "CONTROL+THREE",
+        "color": "#FFFFFF",
+        "description": "Navigate: Activity Feed"
+      },
+      "3": {
+        "key_sequence": "CONTROL+FOUR",
+        "color": "#FFFFFF", 
+        "description": "Navigate: Save for Later"
+      },
+      "4": {
+        "key_sequence": "GUI+N",
+        "color": "#00FF00",
+        "description": "Create: New Conversation"
+      },
+      "5": {
+        "key_sequence": "GUI+F",
+        "color": "#800080",
+        "description": "Search: Find Conversation"
+      },
+      "6": {
+        "key_sequence": "ESCAPE",
+        "color": "#2C2C2C",
+        "description": "Cancel: Current Action"
+      },
+      "7": {
+        "key_sequence": "GUI+COMMA",
+        "color": "#0000FF",
+        "description": "Open: Preferences"
+      },
+      "8": {
+        "key_sequence": "GUI+SHIFT+D",
+        "color": "#0000FF",
+        "description": "Toggle: Sidebar"
+      }
+    },
+
+    "Notes": {
+      "0": {
+        "key_sequence": "GUI+N",
+        "color": "#00FF00", 
+        "description": "Create: New Note"
+      },
+      "1": {
+        "key_sequence": "GUI+F",
+        "color": "#800080",
+        "description": "Search: Find in Notes"
+      },
+      "2": {
+        "key_sequence": "GUI+SHIFT+L",
+        "color": "#0000FF",
+        "description": "Toggle: Checklist"
+      },
+      "3": {
+        "key_sequence": "GUI+W",
+        "color": "#FF0000",
+        "description": "Close: Current Note"
+      }
+    },
+
+    "Notizen": {
+      "alias_of": "Notes"
+    },
+
+    "Google Chrome": {
+      "0": {
+        "key_sequence": "GUI+T",
+        "color": "#00FF00",
+        "description": "Create: New Tab"
+      },
+      "1": {
+        "key_sequence": "CONTROL+SHIFT+TAB",
+        "color": "#FFFFFF",
+        "description": "Navigate: Previous Tab"
+      },
+      "2": {
+        "key_sequence": "CONTROL+TAB", 
+        "color": "#FFFFFF",
+        "description": "Navigate: Next Tab"
+      },
+      "3": {
+        "key_sequence": "GUI+W",
+        "color": "#FF0000",
+        "description": "Close: Current Tab"
+      },
+      "4": {
+        "key_sequence": "GUI+SHIFT+T",
+        "color": "#800080",
+        "description": "Restore: Recently Closed Tab"
+      },
+      "5": {
+        "key_sequence": "GUI+LEFT_ARROW",
+        "color": "#FFFFFF", 
+        "description": "Navigate: Back"
+      },
+      "6": {
+        "key_sequence": "GUI+RIGHT_ARROW",
+        "color": "#FFFFFF",
+        "description": "Navigate: Forward"
+      },
+      "7": {
+        "key_sequence": "GUI+R",
+        "color": "#800080",
+        "description": "Refresh: Current Page"
+      },
+      "8": {
+        "key_sequence": "GUI+L",
+        "color": "#800080",
+        "description": "Focus: Address Bar"
+      }
+    },
+
+    "Thonny": {
+      "0": {
+        "key_sequence": "GUI+N",
+        "color": "#00FF00",
+        "description": "Create: New File"
+      },
+      "1": {
+        "key_sequence": "GUI+O",
+        "color": "#800080",
+        "description": "Open: File"
+      },
+      "2": {
+        "key_sequence": "F5",
+        "color": "#00FF00",
+        "description": "Run: Execute Script"
+      },
+      "3": {
+        "key_sequence": "CONTROL+F2", 
+        "color": "#FF0000",
+        "description": "Stop: Script Execution"
+      },
+      "4": {
+        "key_sequence": "GUI+S",
+        "color": "#0000FF",
+        "description": "Save: Current File"
+      }
+    },
+
+    "Baldur's Gate 3": {
+      "0": {
+        "key_sequence": "TAB",
+        "color": "#FFFF00",
+        "description": "Toggle: Party Panel"
+      },
+      "1": {
+        "key_sequence": "I",
+        "color": "#800080",
+        "description": "Open: Inventory"
+      },
+      "2": {
+        "key_sequence": "ESCAPE",
+        "color": "#2C2C2C",
+        "description": "Cancel: Current Action"
+      },
+      "3": {
+        "key_sequence": "M", 
+        "color": "#800080",
+        "description": "Open: Map"
+      },
+      "4": {
+        "key_sequence": "Q",
+        "color": "#FFFFFF",
+        "description": "Rotate: Camera Left",
+        "pressedUntilReleased": "true"
+      },
+      "5": {
+        "key_sequence": "HOME",
+        "color": "#FFFFFF",
+        "description": "Center: On Character"
+      },
+      "6": {
+        "key_sequence": "E",
+        "color": "#FFFFFF",
+        "description": "Rotate: Camera Right",
+        "pressedUntilReleased": "true"
+      },
+      "7": {
+        "key_sequence": "J",
+        "color": "#800080",
+        "description": "Open: Journal"
+      },
+      "8": {
+        "key_sequence": "LEFT_BRACKET",
+        "color": "#FFFFFF",
+        "description": "Select: Previous Character"
+      },
+      "9": {
+        "key_sequence": "RIGHT_BRACKET", 
+        "color": "#FFFFFF",
+        "description": "Select: Next Character"
+      },
+      "10": {
+        "key_sequence": "G",
+        "color": "#800080",
+        "description": "Toggle: Group/Ungroup"
+      },
+      "11": {
+        "key_sequence": "SPACE",
+        "color": "#0000FF",
+        "description": "End: Turn"
+      }
+    },
+
+    "zoom.us": {
+      "0": {
+        "key_sequence": "GUI+SHIFT+A",
+        "color": "#FFFF00",
+        "description": "Toggle: Audio Mute"
+      },
+      "1": {
+        "key_sequence": "GUI+SHIFT+V",
+        "color": "#FFFF00", 
+        "description": "Toggle: Video"
+      },
+      "2": {
+        "key_sequence": "ESCAPE",
+        "color": "#2C2C2C",
+        "description": "Cancel: Current Action"
+      },
+      "3": {
+        "key_sequence": "ALT+Z",
+        "color": "#FFFF00",
+        "description": "Toggle: Raise Hand"
+      },
+      "4": {
+        "key_sequence": "GUI+U",
+        "color": "#0000FF",
+        "description": "Show: Participants Panel"
+      },
+      "5": {
+        "key_sequence": "GUI+SHIFT+H",
+        "color": "#FFFF00",
+        "description": "Toggle: Chat Panel"
+      },
+      "6": {
+        "key_sequence": "GUI+SHIFT+S", 
+        "color": "#0000FF",
+        "description": "Share: Screen"
+      },
+      "7": {
+        "key_sequence": [
+          "GUI+I",
+          0.175,
+          "TAB"
+        ],
+        "color": "#800080",
+        "description": "Invite: Participants"
+      },
+      "8": {
+        "key_sequence": "GUI+SHIFT+F",
+        "color": "#0000FF",
+        "description": "Toggle: Full Screen"
+      },
+      "9": {
+        "key_sequence": "GUI+SHIFT+W",
+        "color": "#0000FF",
+        "description": "Switch: Camera"
+      },
+      "10": {
+        "key_sequence": "GUI+SHIFT+C",
+        "color": "#FF0000",
+        "description": "Toggle: Recording"
+      },
+      "11": {
+        "key_sequence": "GUI+SHIFT+P",
+        "color": "#800080",
+        "description": "Toggle: Recording Pause"
+      }
+    },
+
+    "Microsoft Teams": {
+      "0": {
+        "key_sequence": "GUI+SHIFT+M",
+        "color": "#FFFF00",
+        "description": "Toggle: Audio Mute"
+      },
+      "1": {
+        "key_sequence": "GUI+SHIFT+O",
+        "color": "#FFFF00", 
+        "description": "Toggle: Video"
+      },
+      "2": {
+        "key_sequence": "ESCAPE",
+        "color": "#2C2C2C",
+        "description": "Cancel: Current Action"
+      },
+      "3": {
+        "key_sequence": "GUI+SHIFT+K",
+        "color": "#FFFF00",
+        "description": "Toggle: Raise Hand"
+      },
+      "4": {
+        "key_sequence": "GUI+SHIFT+E",
+        "color": "#0000FF",
+        "description": "Share: Screen"
+      },
+      "5": {
+        "key_sequence": "GUI+SHIFT+H",
+        "color": "#FFFF00", 
+        "description": "Toggle: Chat"
+      },
+      "6": {
+        "key_sequence": "GUI+SHIFT+B",
+        "color": "#0000FF",
+        "description": "Toggle: Background Blur"
+      }
+    },
+
+    "Microsoft Outlook": {
+      "0": {
+        "key_sequence": "GUI+ONE",
+        "color": "#FFFFFF",
+        "description": "Switch: To Mail"
+      },
+      "1": {
+        "key_sequence": "GUI+TWO",
+        "color": "#FFFFFF", 
+        "description": "Switch: To Calendar"
+      },
+      "2": {
+        "key_sequence": "GUI+THREE",
+        "color": "#FFFFFF",
+        "description": "Switch: To People"
+      },
+      "3": {
+        "key_sequence": "GUI+ALT+N",
+        "color": "#00FF00",
+        "description": "Create: New Email"
+      },
+      "4": {
+        "key_sequence": "GUI+R",
+        "color": "#FFFF00",
+        "description": "Reply: To Email"
+      },
+      "5": {
+        "key_sequence": "GUI+SHIFT+R",
+        "color": "#FFFF00",
+        "description": "Reply: To All"
+      }
+    },
+
+    "Spotify": {
+      "4": {
+        "key_sequence": "GUI+LEFT_ARROW",
+        "color": "#1DB954",
+        "description": "Media: Previous Track"
+      },
+      "5": {
+        "key_sequence": "SPACE",
+        "color": "#1DB954",
+        "description": "Media: Play/Pause"
+      },
+      "6": {
+        "key_sequence": "GUI+RIGHT_ARROW", 
+        "color": "#1DB954",
+        "description": "Media: Next Track"
+      },
+      "7": {
+        "key_sequence": "GUI+SHIFT+DOWN_ARROW",
+        "color": "#1DB954",
+        "description": "Media: Volume Down"
+      },
+      "8": {
+        "key_sequence": "GUI+SHIFT+UP_ARROW",
+        "color": "#1DB954", 
+        "description": "Media: Volume Up"
+      },
+      "9": {
+        "key_sequence": "GUI+L",
+        "color": "#800080",
+        "description": "Toggle: Liked Songs"
+      }
+    },
+
+    "Visual Studio Code": {
+      "0": {
+        "key_sequence": "GUI+SHIFT+E",
+        "color": "#0000FF",
+        "description": "View: File Explorer"
+      },
+      "1": {
+        "key_sequence": "GUI+SHIFT+F",
+        "color": "#800080",
+        "description": "Search: In Files"
+      },
+      "2": {
+        "key_sequence": "CONTROL+SHIFT+G",
+        "color": "#0000FF", 
+        "description": "View: Source Control"
+      },
+      "3": {
+        "key_sequence": "GUI+SHIFT+D",
+        "color": "#0000FF",
+        "description": "View: Run & Debug"
+      },
+      "4": {
+        "key_sequence": "GUI+B",
+        "color": "#0000FF",
+        "description": "Toggle: Sidebar"
+      },
+      "5": {
+        "key_sequence": "GUI+SHIFT+P",
+        "color": "#800080",
+        "description": "Open: Command Palette"
+      },
+      "6": {
+        "key_sequence": "ESCAPE",
+        "color": "#2C2C2C",
+        "description": "Cancel: Current Action"
+      },
+      "7": {
+        "key_sequence": "GUI+SHIFT+B",
+        "color": "#00FF00",
+        "description": "Run: Build Task"
+      },
+      "8": {
+        "key_sequence": "GUI+SHIFT+V",
+        "color": "#800080",
+        "description": "Preview: Markdown"
+      },
+      "9": {
+        "key_sequence": "GUI+SHIFT+X",
+        "color": "#0000FF",
+        "description": "View: Extensions"
+      },
+      "10": {
+        "key_sequence": "GUI+J",
+        "color": "#0000FF",
+        "description": "Toggle: Terminal Panel"
+      },
+      "11": {
+        "key_sequence": "GUI+SHIFT+BACKTICK",
+        "color": "#00FF00",
+        "description": "Create: New Terminal"
+      }
+    },
+
+    "iTerm2": {
+      "0": {
+        "key_sequence": "GUI+T",
+        "color": "#00FF00",
+        "description": "Create: New Tab"
+      },
+      "1": {
+        "key_sequence": "GUI+SHIFT+LEFT_ARROW", 
+        "color": "#FFFFFF",
+        "description": "Navigate: Previous Tab"
+      },
+      "2": {
+        "key_sequence": "GUI+SHIFT+RIGHT_ARROW",
+        "color": "#FFFFFF",
+        "description": "Navigate: Next Tab"
+      },
+      "3": {
+        "key_sequence": "GUI+W",
+        "color": "#FF0000",
+        "description": "Close: Current Tab"
+      },
+      "4": {
+        "key_sequence": "GUI+D",
+        "color": "#00FF00", 
+        "description": "Split: Horizontally"
+      },
+      "5": {
+        "key_sequence": "GUI+SHIFT+D",
+        "color": "#00FF00",
+        "description": "Split: Vertically"
+      }
+    },
+
+    "loginwindow": {
+      "ignore_default": "true"
+    },
+
+    "Bildschirmschoner": {
+      "ignore_default": "true"
+    },
+
+    "_otherwise": {
+    }
+  },
+
+  "folders": {
+    "apps_folder": {
+      "ignore_default": "true",
+      "0": {
+        "application": "zoom.us",
+        "color": "#0000FF",
+        "description": "Launch: Zoom"
+      },
+      "1": {
+        "application": "Microsoft Outlook", 
+        "color": "#0078D4",
+        "description": "Launch: Outlook"
+      },
+      "2": {
+        "application": "Slack",
+        "color": "#4A154B", 
+        "description": "Launch: Slack"
+      },
+      "3": {
+        "application": "Microsoft Teams",
+        "color": "#6264A7",
+        "description": "Launch: Teams"
+      },
+      "4": {
+        "application": "Figma",
+        "color": "#F24E1E",
+        "description": "Launch: Figma"
+      },
+      "5": {
+        "application": "Zeplin",
+        "color": "#FDBD39",
+        "description": "Launch: Zeplin"
+      },
+      "6": {
+        "application": "Visual Studio Code",
+        "color": "#007ACC", 
+        "description": "Launch: VS Code"
+      },
+      "7": {
+        "application": "Xcode",
+        "color": "#1575F9",
+        "description": "Launch: Xcode"
+      },
+      "8": {
+        "application": "Finder",
+        "color": "#0066CC",
+        "description": "Launch: Finder"
+      },
+      "9": {
+        "application": "Spotify",
+        "color": "#1DB954",
+        "description": "Launch: Spotify"
+      },
+      "10": {
+        "application": "Notes", 
+        "color": "#FFD60A",
+        "description": "Launch: Notes"
+      },
+      "11": {
+        "application": "iTerm",
+        "color": "#000000",
+        "description": "Launch: iTerm"
+      },
+      "12": {
+        "action": "close_folder",
+        "color": "#FFFFFF",
+        "description": "Close: Folder"
+      }
+    },
+
+    "controls_folder": {
+      "ignore_default": "true",
+      "0": {
+        "key_sequence": "F11",
+        "color": "#0000FF",
+        "description": "Show: Desktop"
+      },
+      "1": {
+        "key_sequence": "LEFT_CONTROL+UP_ARROW",
+        "color": "#0000FF", 
+        "description": "Show: Mission Control"
+      },
+      "2": {
+        "key_sequence": "LEFT_CONTROL+DOWN_ARROW",
+        "color": "#0000FF",
+        "description": "Show: App Windows"
+      },
+      "3": {
+        "key_sequence": "GUI+LEFT_CONTROL+Q",
+        "color": "#FF0000",
+        "description": "Lock: Screen"
+      },
+      "4": {
+        "action": "spotify.prev",
+        "color": "#1DB954",
+        "description": "Media: Previous Track"
+      },
+      "5": {
+        "action": "spotify.playpause",
+        "color": "#1DB954",
+        "description": "Media: Play/Pause"
+      },
+      "6": {
+        "action": "spotify.next", 
+        "color": "#1DB954",
+        "description": "Media: Next Track"
+      },
+      "7": {
+        "key_sequence": "F1",
+        "color": "#0000FF",
+        "description": "Brightness: Decrease"
+      },
+      "8": {
+        "key_sequence": "F2", 
+        "color": "#0000FF",
+        "description": "Brightness: Increase"
+      },
+      "9": {
+        "action": "hue.toggle 'Schreibtisch Lampe'",
+        "color": "#FFAA00",
+        "description": "Toggle: Desk Light"
+      },
+      "10": {
+        "key_sequence": "F10",
+        "color": "#0000FF",
+        "description": "Volume: Mute"
+      },
+      "11": {
+        "action": "sounds.play 'grillen.mp3'",
+        "color": "#800080", 
+        "description": "Play: Cricket Sound"
+      },
+      "12": {
+        "key_sequence": "F11",
+        "color": "#0000FF",
+        "description": "Volume: Decrease"
+      },
+      "13": {
+        "action": "close_folder",
+        "color": "#FFFFFF",
+        "description": "Close: Folder"
+      },
+      "14": {
+        "key_sequence": "F12",
+        "color": "#0000FF", 
+        "description": "Volume: Increase"
+      }
+    },
+
+    "close_app_folder": {
+      "ignore_default": "true",
+      "14": {
+        "action": "close_folder",
+        "color": "#FFFFFF",
+        "description": "Close: Folder"
+      },
+      "15": {
+        "key_sequence": "GUI+Q",
+        "color": "#FF0000",
+        "description": "Quit: Application"
+      }
+    }
+  }
+}

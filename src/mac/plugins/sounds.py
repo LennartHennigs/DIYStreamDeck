@@ -1,12 +1,18 @@
 import os
 import json
-from typing import Dict, Callable, Union
+from typing import Dict, Callable, Union, List
 from playsound import playsound
-from concurrent.futures import ThreadPoolExecutor
-from base_plugin import BasePlugin
+from concurrent.futures import ThreadPoolExecutor, Future
+from src.mac.plugins.base_plugin import BasePlugin
 
 
 class SoundsPlugin(BasePlugin):
+    """Plugin to play local sound files asynchronously.
+
+    Tracks submitted futures so playback can be cancelled and executor
+    shut down cleanly.
+    """
+
     verbose: bool
     config: Dict[str, Union[str, int]]
     executor: ThreadPoolExecutor
@@ -17,6 +23,8 @@ class SoundsPlugin(BasePlugin):
         self.config = self._load_config(config_file)
         self.sound_path = self.config.get('sound_path', '')
         self.executor = ThreadPoolExecutor(max_workers=2)
+        # Keep track of submitted futures so we can cancel them on stop()
+        self._futures: List[Future] = []
 
     def commands(self) -> Dict[str, Callable]:
         return {
@@ -42,11 +50,11 @@ class SoundsPlugin(BasePlugin):
 
     def play(self, filename: str) -> None:
         try:
-            
             full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.sound_path, filename)
             if not os.path.exists(full_path):
                 self._log_and_raise(f"File {filename} not found.")
-            self.executor.submit(playsound, full_path)
+            future = self.executor.submit(playsound, full_path)
+            self._futures.append(future)
             if self.verbose:
                 print(f"Playing '{filename}'")
         except Exception as e:
@@ -54,10 +62,21 @@ class SoundsPlugin(BasePlugin):
 
     def stop(self) -> None:
         try:
-            # Cancel all futures
-            for future in self.executor.futures:
-                future.cancel()
+            # Attempt to cancel all submitted futures
+            for future in list(self._futures):
+                try:
+                    future.cancel()
+                except Exception:
+                    pass
+            # Stop accepting new tasks
+            try:
+                self.executor.shutdown(wait=False)
+            except Exception:
+                # Best-effort shutdown
+                pass
+            # clear tracked futures
+            self._futures.clear()
             if self.verbose:
-                print(f"Stopped all playback")
+                print("Stopped playback and shutdown executor")
         except Exception as e:
             self._log_and_raise(f"Failed to stop playback: {e}")
