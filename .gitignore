@@ -10,6 +10,7 @@ test_venv/
 # Python bytecode and cache
 __pycache__/
 *.py[cod]
+.cache
 
 # Coverage and test artifacts
 .coverage
@@ -28,3 +29,4 @@ Thumbs.db
 .vscode/
 .idea/
 .env
+
