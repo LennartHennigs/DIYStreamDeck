@@ -5,8 +5,63 @@ import pytest
 import json
 import tempfile
 import os
+import sys
 from unittest.mock import Mock, MagicMock
 from pathlib import Path
+
+# Set up CircuitPython mocks globally before any imports
+# This ensures consistent mocking across all pico tests
+try:
+    from tests.unit.pico.mock_circuitpython import MockUSBCDC, MockRgbKeypad, MockKeycode
+    # The import itself triggers the sys.modules setup
+    # Force ensure our specific MockUSBCDC instance is used
+    if 'usb_cdc' in sys.modules:
+        sys.modules['usb_cdc'].console = MockUSBCDC()
+except ImportError:
+    # Fallback if import path is different
+    pass
+
+
+def ensure_console_compatibility(console):
+    """Ensure console object has all required methods for tests"""
+    if not hasattr(console, 'get_output'):
+        # Add get_output method if missing
+        if hasattr(console, 'output_buffer'):
+            def get_output():
+                output = console.output_buffer
+                console.output_buffer = ""
+                return output
+            console.get_output = get_output
+        else:
+            console.get_output = lambda: ""
+    
+    if not hasattr(console, 'add_input'):
+        # Add add_input method if missing
+        if hasattr(console, 'input_buffer'):
+            def add_input(text):
+                console.input_buffer += text
+            console.add_input = add_input
+        elif hasattr(console, '_buf'):
+            def add_input(text):
+                if isinstance(text, str):
+                    text = text.encode('utf-8')
+                if text not in console._buf:
+                    console._buf.append(text)
+            console.add_input = add_input
+        else:
+            console.add_input = lambda text: None
+    
+    return console
+
+
+@pytest.fixture(autouse=True)
+def ensure_pico_console_compatibility(request):
+    """Auto-use fixture to ensure console compatibility for pico tests"""
+    # Only apply to pico tests
+    if 'pico' in str(request.fspath):
+        if 'usb_cdc' in sys.modules and hasattr(sys.modules['usb_cdc'], 'console'):
+            console = sys.modules['usb_cdc'].console
+            ensure_console_compatibility(console)
 
 
 @pytest.fixture
