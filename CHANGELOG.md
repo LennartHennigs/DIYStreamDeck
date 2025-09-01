@@ -1,39 +1,83 @@
 
 # CHANGELOG
 
-# 01-31-2024
+## 2025-09-01
+
+### Security
+
+- Replaced unsafe shell-based ping with a validated subprocess-based `_ping` (in
+  `src/mac/plugins/base_plugin.py`) to prevent command injection and validate IPs.
+
+### Fixes
+
+- `SoundsPlugin` now tracks ThreadPool futures and implements a robust `stop()`
+  that cancels outstanding futures and shuts down the executor
+  (`src/mac/plugins/sounds.py`).
+
+### Tests
+
+- Added unit tests and security tests. New tests include:
+  - `tests/unit/mac/plugins/test_base_plugin_ping.py`
+  - `tests/unit/mac/plugins/test_sounds_plugin.py`
+  - additional unit and security tests under `tests/` (pytest config and test
+    requirements added).
+  - Added `tests/unit/mac/plugins/test_load_plugins_config.py` to assert that
+    the plugin loader prefers the centralized `src/mac/plugins_config/<name>.json`,
+    falls back to `src/mac/plugins/config/<name>.json` when necessary, and skips
+    plugins with no configuration file.
+
+### Packaging & imports
+
+- Made `src` a proper package and migrated plugin imports to package-absolute
+  imports (e.g. `from src.mac.plugins.base_plugin import BasePlugin`). Added
+  `__init__.py` in `src/`, `src/mac/`, and `src/mac/plugins/`.
+
+### Tooling
+
+- Added `run-mac-watchdog.sh` launcher that respects a local `.venv` and sets
+  `PYTHONPATH`, and added `README-run-mac-watchdog.md` with bootstrap/run
+  instructions.
+
+### Repo hygiene & misc
+
+- Updated `.gitignore` with common ignores (`test_venv/`, `.coverage`, `.claude`).
+- Added CLAUDE-related metadata files and restructured `src/` layout with
+  per-component requirement files (`src/mac/requirements.txt`,
+  `src/pi_pico/requirements.txt`).
+
+## 2024-01-31
 
 - some refactoring
 
-# 01-27-2024
+## 2024-01-27
 
-- made plugins more robust
+- Made plugins more robust
   - `spotify.py` now checks if credentials work
-  - `hue.py` checks if ip of bridge exists and checks whether connecting to it was successful
-- `watchdog.py` has new cocoa signature encoding
-  
-# 01-19-2024
+  - `hue.py` checks if IP of bridge exists and verifies connection
+- `watchdog.py` has new Cocoa signature encoding
+
+## 2024-01-19
 
 - `code.py` and `watchdog.py`: added detection of app termination to reset `toggleColor` settings
 
-# 01-15-2024
+## 2024-01-15
 
 - `code.py`: added `pressedColor` and `toggleColor` parameters for key definitions.
 
-# 01-12-2024
+## 2024-01-12
 
-- `watchdog.py`: detects if localized app name is empty a uses different string to identify app
+- `watchdog.py`: detects if localized app name is empty and uses different strings to identify the app
 - `code.py`: added `pressedUntilReleased` parameter to key definition
 
-# 01-03-2024
+## 2024-01-03
 
-- `code.py`: added `alias_of` parameter for applications, to reuse key definitions
+- `code.py`: added `alias_of` parameter for applications to reuse key definitions
 - `code.py`: moved the `global` section inside the `applications` section and renamed it to `_default`
 - `code.py`: renamed `ignore_globals` to `ignore_default`
 
-## 12-12-2023
+## 2023-12-12
 
-- added `settings` section to JSON file. You can now define the `rotate`` parameter there, too.
+- added `settings` section to JSON file. You can now define the `rotate` parameter there.
 - added `--rotate` parameter (`CW` or `CCW`) to `watchdog.py`
 - added heartbeat to `watchdog.py` (code for it still missing on client)
 - refactored the code of `watchdog.py`

@@ -266,7 +266,7 @@ The Spotify plugin has the following commands:
 - `spotify.volume_up`
 - `spotify.volume_down`
 
-To use it you need to have a Spotify premium account and need to add you API credentials to the [spotify.json](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins/config/spotify.json) config file.
+To use it you need to have a Spotify premium account and need to add your API credentials to the [spotify.json](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins_config/spotify.json) config file.
 
 ### Hue Plugin
 
