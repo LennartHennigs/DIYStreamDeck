@@ -88,7 +88,7 @@ Plugins are located in `src/mac/plugins/` and extend `BasePlugin`:
 
 - **Main Config**: `src/pi_pico/key_def.json` - Primary key layout configuration
 - **Mac Dependencies**: `requirements/requirements_mac.txt` - Python package requirements
-- **Plugin Configs**: `arc/mac/plugins_config/` - Individual plugin configuration files
+- **Plugin Configs**: `src/mac/plugins_config/` - Individual plugin configuration files
 - **Sounds**: `src/mac/sounds/` - Audio files for sound plugin
 
 ## Development Principles
