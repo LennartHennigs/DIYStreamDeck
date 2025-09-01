@@ -258,11 +258,27 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
 
         try:
             plugin_class = getattr(plugin_module, f'{plugin_name.capitalize()}Plugin')
-            # Prefer centralized config in repo/arc/mac/plugins_config if present
-            repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            alt_config = os.path.join(repo_root, '..', 'arc', 'mac', 'plugins_config', f'{plugin_name}.json')
-            alt_config = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'arc', 'mac', 'plugins_config', f'{plugin_name}.json'))
-            config_path = alt_config if os.path.exists(alt_config) else os.path.join(full_path, 'config', f'{plugin_name}.json')
+            # Prefer centralized config in src/mac/plugins_config if present
+            # base_path is already the absolute path to src/mac
+            central = os.path.join(base_path, 'plugins_config', f'{plugin_name}.json')
+            fallback = os.path.join(full_path, 'config', f'{plugin_name}.json')
+
+            # Choose which config to use, if any
+            if os.path.exists(central):
+                config_path = central
+                source = 'central'
+            elif os.path.exists(fallback):
+                config_path = fallback
+                source = 'plugin-local'
+            else:
+                # Neither config exists; skip loading this plugin and log a helpful message
+                print(f"Skipping plugin '{plugin_name}': no config found at {central} or {fallback}")
+                continue
+
+            # Log the config path being used for easier debugging
+            if verbose:
+                print(f"Using {source} config for plugin '{plugin_name}': {config_path}")
+
             plugins[plugin_name] = plugin_class(config_path, verbose)
             print(f"Loaded plugin: {plugin_name}")
         except Exception as e:
