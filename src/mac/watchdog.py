@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from urllib.parse import urlparse
 import importlib.util
 import os
-from plugins.base_plugin import BasePlugin
+from src.mac.plugins.base_plugin import BasePlugin
 import threading
 import time
 from AppKit import NSWorkspaceDidTerminateApplicationNotification
@@ -245,7 +245,12 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
     base_path = os.path.dirname(os.path.abspath(__file__))
     full_path = os.path.join(base_path, path)
 
-    plugin_files = [f for f in os.scandir(full_path) if f.is_file() and f.name.endswith('.py') and f.name != 'base_plugin.py']
+    # Only consider real plugin python files. Skip base_plugin, __init__.py, and hidden files.
+    plugin_files = [f for f in os.scandir(full_path)
+                    if f.is_file()
+                    and f.name.endswith('.py')
+                    and f.name not in ('base_plugin.py', '__init__.py')
+                    and not f.name.startswith('.')]
     for plugin_file in plugin_files:
         plugin_name, plugin_module = load_plugin_module(plugin_file, full_path)
         if plugin_module is None:
@@ -253,10 +258,15 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
 
         try:
             plugin_class = getattr(plugin_module, f'{plugin_name.capitalize()}Plugin')
-            plugins[plugin_name] = plugin_class(os.path.join(full_path, 'config', f'{plugin_name}.json'), verbose)
+            # Prefer centralized config in repo/arc/mac/plugins_config if present
+            repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            alt_config = os.path.join(repo_root, '..', 'arc', 'mac', 'plugins_config', f'{plugin_name}.json')
+            alt_config = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'arc', 'mac', 'plugins_config', f'{plugin_name}.json'))
+            config_path = alt_config if os.path.exists(alt_config) else os.path.join(full_path, 'config', f'{plugin_name}.json')
+            plugins[plugin_name] = plugin_class(config_path, verbose)
             print(f"Loaded plugin: {plugin_name}")
         except Exception as e:
-            print(f"Error initializing plugin {plugin_name}: {e}")
+            print(f"Error initializing plugin {plugin_name} (file={plugin_file.name}): {e}")
     print()
     return plugins
 
