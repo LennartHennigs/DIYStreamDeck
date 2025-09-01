@@ -59,11 +59,30 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
 - On the Mac (for running `watchdog.py`)
   - Install [Python3 on your Mac](https://www.freecodecamp.org/news/python-version-on-mac-update/), e.g. [via `brew`](https://brew.sh/).
   - Copy the contents of `src/mac` and its sub-folders to your Mac (best in a separate folder).
-  - Install the needed libraries to the folder. (Use `pip` and the `requirements/mac/requirements_mac.txt` file, see [here](https://note.nkmk.me/en/python-pip-install-requirements/).
-  - If you want to use the plugins, edit the config files in the `config` directory.
-  - Run `watchdog.py`, e.g.:
+  - **Set up a Python virtual environment** (recommended to avoid conflicts):
 
     ``` bash
+    # Navigate to the Mac source directory
+    cd src/mac
+    
+    # Create virtual environment
+    python3 -m venv venv
+    
+    # Activate virtual environment
+    source venv/bin/activate
+    
+    # Install dependencies
+    pip install -r requirements.txt
+    ```
+
+  - If you want to use the plugins, edit the config files in the `config` directory.
+  - Run `watchdog.py` (make sure virtual environment is activated):
+
+    ``` bash
+    # Make sure venv is activated (you should see (venv) in your prompt)
+    source venv/bin/activate
+    
+    # Run the watchdog script
     python3 watchdog.py --port /dev/cu.usbmodem2101 --verbose
     ```
     
@@ -285,3 +304,69 @@ When the watchdog script detects a change in the active app, it sends the app's 
 
 - As you can see in the picture above I use [a 3d printed case](https://www.printables.com/model/80088-pimoroni-keypad-case/). You can get it [here](https://www.printables.com/model/80088-pimoroni-keypad-case/).
 - Since the case rotates the keypad, I added a `settings` section and a `rotate` option for the keyboard layout.
+
+## Testing
+
+This project includes a comprehensive test suite to ensure code quality and security. The tests cover both Pi Pico and macOS components.
+
+### Running Tests
+
+**Set up the test environment** (one-time setup):
+```bash
+# Create test virtual environment
+python3 -m venv test_venv
+
+# Activate virtual environment  
+source test_venv/bin/activate
+
+# Install test dependencies
+pip install -r tests/requirements_test.txt
+```
+
+**Run tests** (activate virtual environment first):
+```bash
+# Activate test environment
+source test_venv/bin/activate
+
+# Quick unit tests (recommended for development)
+pytest tests/unit/ -m "not slow" --tb=line -q
+
+# Full unit tests with verbose output
+pytest tests/unit/ -v
+
+# Security vulnerability tests
+pytest tests/security/ -m security -v
+
+# All tests with verbose output
+pytest tests/ -v
+```
+
+### Test Categories
+
+- **Unit Tests** (31 tests): Test individual components in isolation
+  - Pi Pico configuration loading and JSON parsing
+  - macOS plugin functionality (Spotify, Hue, Sounds)
+  - Mock-based testing for hardware independence
+
+- **Security Tests** (9 tests): Validate security measures  
+  - Command injection vulnerability detection
+  - Path traversal protection testing
+  - Input validation and sanitization checks
+  - *Note: Some "failures" are intentional - they demonstrate actual vulnerabilities in the current code that need fixing*
+
+### Test Files Structure
+```
+tests/
+├── conftest.py              # Shared test fixtures
+├── pytest.ini             # Test configuration
+├── requirements_test.txt   # Test dependencies
+├── security/               # Security tests
+│   └── test_command_injection.py
+└── unit/                   # Unit tests
+    ├── mac/plugins/        # macOS plugin tests
+    │   └── test_spotify.py
+    └── pico/              # Pi Pico tests
+        └── test_config_loader.py
+```
+
+For detailed testing information, see [`tests/CLAUDE.md`](tests/CLAUDE.md).
