@@ -50,10 +50,31 @@ class SoundsPlugin(BasePlugin):
 
     def play(self, filename: str) -> None:
         try:
-            full_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), self.sound_path, filename)
-            if not os.path.exists(full_path):
+            # Security: Validate filename to prevent path traversal and injection attacks
+            if (not filename or 
+                '..' in filename or 
+                filename.startswith('/') or 
+                '\\' in filename or
+                '\x00' in filename or  # Null byte injection
+                any(ord(c) < 32 and c not in '\t\n\r' for c in filename)):  # Control characters
+                self._log_and_raise(f"Invalid filename: {filename}")
+            
+            # Use basename to strip any path components
+            safe_filename = os.path.basename(filename)
+            
+            # Construct the full path
+            sound_base_dir = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), self.sound_path))
+            full_path = os.path.join(sound_base_dir, safe_filename)
+            
+            # Security: Ensure resolved path is within the sound directory
+            resolved_path = os.path.realpath(full_path)
+            if not resolved_path.startswith(sound_base_dir):
+                self._log_and_raise(f"Invalid file path: {filename}")
+            
+            if not os.path.exists(resolved_path):
                 self._log_and_raise(f"File {filename} not found.")
-            future = self.executor.submit(playsound, full_path)
+                
+            future = self.executor.submit(playsound, resolved_path)
             self._futures.append(future)
             if self.verbose:
                 print(f"Playing '{filename}'")
