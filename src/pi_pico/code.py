@@ -13,14 +13,20 @@ from adafruit_hid.keyboard_layout_us import KeyboardLayoutUS
 from adafruit_hid.keycode import Keycode
 import board
 
+# Heartbeat and timeout configuration for the keypad firmware.
+# The host sends heartbeat frames at roughly PICO_HEARTBEAT_INTERVAL seconds.
+# If no heartbeat (or HELLO) is seen within PICO_HEARTBEAT_INTERVAL * PICO_TIMEOUT_MULTIPLIER
+# the keypad will clear and unload itself.
+PICO_HEARTBEAT_INTERVAL = 2
+PICO_TIMEOUT_MULTIPLIER = 2
+
 
 class KeyController:
     JSON_FILE = "key_def.json"
     # https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html
 
-    # mapping for the keycodes
-    KEYCODE_MAPPING = {name: getattr(Keycode, name) for name in dir(
-        Keycode) if not name.startswith("__")}
+    # mapping for the keycodes - will be initialized in __init__
+    KEYCODE_MAPPING = None
 
     # mapping for rotating the keys
     CW = [12, 8, 4, 0, 13, 9, 5, 1, 14, 10, 6, 2, 15, 11, 7, 3]
@@ -29,11 +35,16 @@ class KeyController:
 
     # initialize the key controller
     def __init__(self, verbose=False):
+        # initialize keycode mapping first
+        self.KEYCODE_MAPPING = {name: getattr(Keycode, name) for name in dir(
+            Keycode) if not name.startswith("__")}
+        
         # initialize the keypad and keyboard
         self.keypad = RgbKeypad()
         self.keyboard = Keyboard(usb_hid.devices)
         self.layout = KeyboardLayoutUS(self.keyboard)
         self.keys = self.keypad.keys
+
         # load and process the json file
         self.json = self.parse_json(self.JSON_FILE)
         self.global_config = self.process_global_section(self.json)
@@ -41,15 +52,25 @@ class KeyController:
         self.folders = self.process_folder_section(self.json)
         self.urls = self.process_url_section(self.json)
         self.current_config = self.apps.get("_otherwise", {})
-        # rotate the keys if needed
-        self.rotate = self.json["settings"]["rotate"].upper() if "rotate" in self.json.get("settings", {}) else ''
+
+        # rotate the keys if needed (robust to missing settings)
+        rotate_setting = self.json.get("settings", {}).get("rotate", "")
+        self.rotate = rotate_setting.upper() if isinstance(rotate_setting, str) else ''
         self.current_config = self.rotate_keys_if_needed()
+
         # default settings
         self.verbose = verbose
         self.autoclose_current_folder = False
-        self.folder_stack = [] 
-        #  load the key layout
+        self.folder_stack = []
+
+        # load the key layout
         self.update_keys()
+
+        # Heartbeat / timeout handling
+        # Keep a timestamp of the last received heartbeat (or HELLO)
+        self.last_heartbeat = time.time()
+        # If True the keypad has been unloaded due to timeout or BYE
+        self.unloaded = False
 
 
     # open a folder and display the key layout
@@ -204,8 +225,13 @@ class KeyController:
             if key.upper() == "CMD":
                 key = "GUI"
             if key not in self.KEYCODE_MAPPING:
-                raise ValueError(
-                    f"Unknown keycode constant: {key} in '{keycode_string}'")
+                # Try to rebuild KEYCODE_MAPPING if key is missing (for test robustness)
+                try:
+                    self.KEYCODE_MAPPING = {name: getattr(Keycode, name) for name in dir(Keycode) if not name.startswith("__")}
+                    if key not in self.KEYCODE_MAPPING:
+                        raise ValueError(f"Unknown keycode constant: {key} in '{keycode_string}'")
+                except Exception:
+                    raise ValueError(f"Unknown keycode constant: {key} in '{keycode_string}'")
             keycodes.append(self.KEYCODE_MAPPING[key])
         return tuple(keycodes)
 
@@ -404,16 +430,64 @@ class KeyController:
         return app_name, url
 
 
-    # process the ping serial command
-    def process_ping(self):
-        return
+    # Clear the keypad LEDs and handlers (leave no active config)
+    def clear_keypad(self):
+        # release any pressed keys and turn off LEDs
+        try:
+            self.keyboard.release_all()
+        except Exception:
+            pass
+        for key in self.keys:
+            try:
+                key.led_off()
+            except Exception:
+                pass
+            # detach handlers to prevent accidental actions
+            try:
+                self.keypad.on_press(key, lambda _, key=key: None)
+                self.keypad.on_release(key, lambda _, key=key: None)
+            except Exception:
+                pass
+        # empty current config
+        self.current_config = {}
+
+
+    # Load the basic/default config (the _otherwise app)
+    def load_basic_config(self):
+        self.current_config = self.apps.get("_otherwise", {})
+        self.current_config = self.rotate_keys_if_needed()
+        # re-apply key handlers and colors
+        self.update_keys()
+        self.unloaded = False
+
+
+    # Unload the keypad: clear and mark unloaded so timeout actions are idempotent
+    def unload_keypad(self):
+        self.clear_keypad()
+        self.unloaded = True
 
 
     # process the serial string
     def process_serial_str(self, serial_str):
-            # process the ping command
-        if serial_str is ".":
-            self.process_ping();
+        # Heartbeat frame from host
+        if serial_str == "HB":
+            # update last seen heartbeat timestamp
+            self.last_heartbeat = time.time()
+            return
+
+        # HELLO: host started -> clear keypad then load basic config
+        if serial_str.startswith("HELLO"):
+            self.clear_keypad()
+            self.load_basic_config()
+            self.last_heartbeat = time.time()
+            return
+
+        # BYE: host shutting down -> clear and mark unloaded
+        if serial_str.startswith("BYE"):
+            self.clear_keypad()
+            self.unloaded = True
+            return
+
         if serial_str.startswith("Rotate: "):
             self.process_rotate(serial_str)
         elif serial_str.startswith("Terminated: "):
@@ -424,13 +498,27 @@ class KeyController:
 
     # main loop
     def run(self):
+        # Timeout configuration - use module-level constants
+        TIMEOUT_SECONDS = PICO_HEARTBEAT_INTERVAL * PICO_TIMEOUT_MULTIPLIER
+
         while True:
             serial_str = self.read_serial_line()
             if serial_str is not None:
                 self.process_serial_str(serial_str)
             else:
+                # No incoming serial - allow keypad to service updates
                 time.sleep(0.1)
                 self.keypad.update()
+
+            # Check for heartbeat timeout. If we haven't seen a heartbeat (or HELLO)
+            # within TIMEOUT_SECONDS, clear and unload the keypad.
+            try:
+                if (not self.unloaded) and (time.time() - self.last_heartbeat > TIMEOUT_SECONDS):
+                    # perform unload on timeout
+                    self.unload_keypad()
+            except Exception:
+                # keep loop resilient
+                pass
 
 
 # main program

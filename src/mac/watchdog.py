@@ -89,7 +89,8 @@ class WatchDog(Cocoa.NSObject):
     def send_heartbeat(self) -> None:
         while self.running:
             try:
-                self.ser.write('.\n'.encode('ascii', 'replace'))
+                # Send a framed heartbeat message so the keypad can detect liveness
+                self.ser.write(('HB\n').encode('ascii', 'replace'))
             except (serial.SerialException, UnicodeEncodeError) as e:
                 print(f"Error sending heartbeat to microcontroller: {e}")
             time.sleep(HEARTBEAT_INTERVAL)
@@ -159,6 +160,19 @@ class WatchDog(Cocoa.NSObject):
         except (serial.SerialException, UnicodeEncodeError) as e:
             print(f"Error sending app name to microcontroller: {e}")
 
+    # Send a HELLO or BYE message so the keypad can react to clean startup/shutdown
+    def send_hello(self) -> None:
+        try:
+            self.ser.write((f"HELLO:{VERSION}\n").encode('ascii', 'replace'))
+        except Exception as e:
+            print(f"Error sending HELLO: {e}")
+
+    def send_bye(self) -> None:
+        try:
+            self.ser.write(("BYE\n").encode('ascii', 'replace'))
+        except Exception as e:
+            print(f"Error sending BYE: {e}")
+
 
     # Read data from the serial connection from the keypad
     def read_serial_data(self) -> Optional[str]:
@@ -226,6 +240,17 @@ class WatchDog(Cocoa.NSObject):
         # Check if there's any data in the buffer
         command = self.read_serial_data()
         if not command:
+            return
+
+        # Support a lightweight echo diagnostic: keypad -> "ECHO" or "ECHO:<token>"
+        if command.upper().startswith('ECHO'):
+            parts = command.split(':', 1)
+            token = parts[1] if len(parts) > 1 else None
+            reply = 'ECHO-OK' + (f':{token}' if token else '') + '\n'
+            try:
+                self.ser.write(reply.encode('ascii', 'replace'))
+            except Exception:
+                pass
             return
 
         match = re.match(self.launch_pattern, command)
@@ -316,40 +341,44 @@ def main() -> None:
                         help='Rotation direction for the keypad (default: CW)')
     args = parser.parse_args()
 
-    try:
-        with create_serial_connection(args.port, args.speed) as ser:
-            print('\nKeypad watchdog {VERSION} is running...'.format(VERSION=VERSION))
-
-            plugins = load_plugins(verbose=args.verbose)
-            watchdog = WatchDog.alloc().initWithSerial_args_plugins_(ser, args, plugins)
-            notification_center = Cocoa.NSWorkspace.sharedWorkspace().notificationCenter()
-            notification_center.addObserver_selector_name_object_(
-                watchdog,
-                objc.selector(watchdog.applicationActivated_,
-                              signature=b'v@:@'),
-                Cocoa.NSWorkspaceDidActivateApplicationNotification,
-                None,
-            )
-            running = [True]
-            heartbeat_thread = threading.Thread(target=watchdog.send_heartbeat)
-            heartbeat_thread.start()
-
-            if args.rotate :
-                ser.write(f'Rotate: {args.rotate}\n'.encode('ascii', 'replace'))
-
-            try:
-                run_loop(watchdog)
-            except KeyboardInterrupt:
-                pass  # User pressed CTRL-C to exit
-            except Exception as e:
-                print(f"An error occurred during the execution: {e}")
-            finally:
-                notification_center.removeObserver_(watchdog)
-                watchdog.running = False
-                heartbeat_thread.join() 
-
-    except TypeError:
+    ser = create_serial_connection(args.port, args.speed)
+    if ser is None:
         print("Error: No serial connection.")
+        return
+
+    print('\nKeypad watchdog {VERSION} is running...'.format(VERSION=VERSION))
+
+    plugins = load_plugins(verbose=args.verbose)
+    watchdog = WatchDog.alloc().initWithSerial_args_plugins_(ser, args, plugins)
+    notification_center = Cocoa.NSWorkspace.sharedWorkspace().notificationCenter()
+    notification_center.addObserver_selector_name_object_(
+        watchdog,
+        objc.selector(watchdog.applicationActivated_,
+                      signature=b'v@:@'),
+        Cocoa.NSWorkspaceDidActivateApplicationNotification,
+        None,
+    )
+    # send HELLO so the keypad can know we started
+    watchdog.send_hello()
+    running = [True]
+    heartbeat_thread = threading.Thread(target=watchdog.send_heartbeat)
+    heartbeat_thread.start()
+
+    if args.rotate :
+        ser.write(f'Rotate: {args.rotate}\n'.encode('ascii', 'replace'))
+
+    try:
+        run_loop(watchdog)
+    except KeyboardInterrupt:
+        pass  # User pressed CTRL-C to exit
+    except Exception as e:
+        print(f"An error occurred during the execution: {e}")
+    finally:
+        notification_center.removeObserver_(watchdog)
+        watchdog.running = False
+        # send a clean BYE
+        watchdog.send_bye()
+        heartbeat_thread.join()
 
 
 # Entry point for the script
