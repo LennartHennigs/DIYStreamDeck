@@ -1,7 +1,40 @@
 
 # CHANGELOG
 
-## 2025-09-01
+## 2025-09-02
+
+### Major Testing Infrastructure Overhaul
+
+- **Comprehensive Pi Pico test suite added** - 85+ new tests covering all Pi Pico functionality:
+  - **Configuration loading tests** (14 tests) - JSON parsing, validation, keycodes
+  - **Core controller tests** (14 tests) - Initialization, serial commands, basic functionality  
+  - **Keypad functionality tests** (20 tests) - Key press/release, LEDs, folders, plugins
+  - **Heartbeat system tests** (18 tests) - Timeout detection, recovery, edge cases
+  - **JSON corruption tests** (19 tests) - Malformed JSON handling, error recovery
+- **Mock CircuitPython framework** - Complete testing framework allowing Pi Pico code testing without physical hardware
+- **CircuitPython compliance verified** - All Pi Pico code confirmed compatible with CircuitPython
+
+### Enhanced Communication Protocol
+
+- **Improved heartbeat system** - Watchdog now sends "HB" messages instead of "." for better protocol clarity
+- **HELLO/BYE protocol** - Added startup/shutdown handshake messages with version information
+- **Echo diagnostic support** - Added lightweight echo command for connection diagnostics
+- **Heartbeat timeout detection** - Pi Pico now detects host disconnection and automatically unloads keypad
+
+### Development & Testing Tools
+
+- **Test runner script** (`run-tests.sh`) - Convenient script for running different test categories
+- **Enhanced test configuration** - Improved pytest configuration and CircuitPython mocking
+- **Plugin configuration tests** - Verified centralized vs plugin-local config file precedence
+- **Security vulnerability tests** - Added real security tests for path traversal and injection attacks
+
+### Development
+
+- **Enhanced test infrastructure** - Test coverage now includes 85+ Pi Pico tests + existing Mac/security tests (~125+ total)
+- **Mock hardware simulation** - RGB keypad, keyboard HID, USB CDC, and all CircuitPython dependencies mocked for testing
+- **Over 3,400 lines of test code** - Comprehensive testing framework ensuring code quality and reliability
+
+## 2025-09-01 - Original
 
 ### Security
 

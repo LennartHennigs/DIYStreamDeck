@@ -75,7 +75,7 @@ The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/sr
     pip install -r requirements.txt
     ```
 
-  - If you want to use the plugins, edit the config files in the `config` directory.
+  - If you want to use the plugins, edit the config files in the `src/mac/plugins_config/` directory.
   - Run `watchdog.py` (make sure virtual environment is activated):
 
     ``` bash
