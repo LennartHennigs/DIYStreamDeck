@@ -36,10 +36,6 @@ class HuePlugin(BasePlugin):
         bridge_ip = self.config.get('bridge_ip')
         if not bridge_ip:
             raise ValueError("Bridge IP not found in the config.")
-        
-        # ping the bridge_ip to check if it is reachable
-        if not self._ping(bridge_ip):
-            raise ConnectionError("Bridge IP not reachable.")
 
         bridge = Bridge(bridge_ip)
         try:

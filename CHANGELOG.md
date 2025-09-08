@@ -1,6 +1,12 @@
 
 # CHANGELOG
 
+## 2025-09-08
+
+### Bug Fixes
+
+- **Fixed Hue plugin initialization error** - Removed obsolete `_ping` method call from HuePlugin that was causing initialization failure after recent heartbeat system updates
+
 ## 2025-09-02
 
 ### Major Testing Infrastructure Overhaul
