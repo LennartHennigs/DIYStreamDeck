@@ -49,6 +49,7 @@ class WatchDog(Cocoa.NSObject):
     plugins: Dict[str, BasePlugin]
     launch_pattern = re.compile(r"^Launch: (.+)$")
     run_pattern = re.compile(r"^Run: (.+)$")
+    unsafe_app_name_pattern = re.compile(r"^-|[/\\\x00]")  # leading dash → flag injection; / \ \x00 → path traversal
     running: bool = True
 
     # Initializer
@@ -185,8 +186,8 @@ class WatchDog(Cocoa.NSObject):
     @objc.typedSelector(b'v@:@')
     def launch_app(self, match: re.Match) -> None:
         launch_app_name = match.group(1)
-        # Reject names with path separators or null bytes to prevent unexpected binary execution
-        if '/' in launch_app_name or '\\' in launch_app_name or '\x00' in launch_app_name:
+        # Leading dash injects flags into `open -a`; / \ \x00 are path traversal / null injection
+        if self.unsafe_app_name_pattern.search(launch_app_name):
             if self.args.verbose:
                 print(f"Refused unsafe app name: {launch_app_name!r}")
             return

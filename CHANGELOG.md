@@ -7,6 +7,7 @@
 - **`BasePlugin._log_and_raise`: respect `verbose` flag** — previous implementation called `logging.error()` unconditionally, inconsistent with `_log()` which gates on `verbose`. Replaced with `self._log(msg)` so all plugin error messages respect the verbose setting uniformly.
 - **`SoundsPlugin._log_and_raise`: remove override** — `sounds.py` had a local `_log_and_raise` that duplicated the above fix manually. Removed now that `BasePlugin` has the correct implementation.
 - **`WatchDog`: pre-compile regex patterns** — `launch_pattern` and `run_pattern` were plain strings recompiled by `re.match()` on every incoming serial command. Changed to `re.compile()` at class level.
+- **`WatchDog.launch_app`: reject leading-dash names** — validation blocked `/`, `\`, `\x00` but not names starting with `-`, which could inject flags to `open -a`. Added `or launch_app_name.startswith('-')` guard.
 
 ## 2026-04-13 (robustness fixes)
 

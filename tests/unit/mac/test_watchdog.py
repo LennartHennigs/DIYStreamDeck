@@ -422,7 +422,7 @@ class TestSecurityGuards:
         ser = MagicMock()
         wdog = _make_watchdog(ser)
 
-        for bad_name in ['/usr/bin/evil', 'App/Subdir', 'App\\Evil', 'App\x00Null']:
+        for bad_name in ['/usr/bin/evil', 'App/Subdir', 'App\\Evil', 'App\x00Null', '-application']:
             mock_match = MagicMock()
             mock_match.group.return_value = bad_name
             with patch('subprocess.run') as mock_run:
