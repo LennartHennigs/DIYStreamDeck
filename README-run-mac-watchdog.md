@@ -1,4 +1,4 @@
-Run the Mac watchdog
+# Run the Mac watchdog
 
 This file explains how to bootstrap a venv and run the Mac watchdog using the
 provided launcher `run-mac-watchdog.sh`.
@@ -20,9 +20,9 @@ fi
 ./run-mac-watchdog.sh --port /dev/tty.usbmodemXXXX --speed 9600 --verbose
 ```
 
-Notes
-- The launcher prepends `./src` to `PYTHONPATH` so you don't need to `pip install` the
-  project to run it.
+## Notes
+
+- The launcher prepends `./src` to `PYTHONPATH` so you don't need to `pip install` the project to run it.
 - If `.venv` exists the launcher will use its Python and packages automatically.
 - On macOS installing `pyobjc` may require Xcode command-line tools.
 - Serial devices are typically under `/dev/tty.*` or `/dev/cu.*` on macOS; use
