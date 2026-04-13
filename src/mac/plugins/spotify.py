@@ -78,25 +78,30 @@ class SpotifyPlugin(BasePlugin):
 
 
     def play_pause(self) -> None:
-        if self.has_active_device():
-            try:
-                if self.sp.current_playback()['is_playing']:
-                    self._log("Pause")
-                    self.pause()
-                else:
-                    self.play()
-            except Exception:
-                self._log("Error")
+        try:
+            current_playback = self.sp.current_playback()
+            if current_playback is None:
+                self._log("No active device")
+                return
+            if current_playback['is_playing']:
+                self._log("Pause")
+                self.sp.pause_playback()
+            else:
+                self.sp.start_playback()
+                self._log(self.get_current_song_info())
+        except Exception:
+            self._log("Error")
 
 
     def play(self) -> None:
-        if self.has_active_device():
-            current_playback = self.sp.current_playback()
-            if current_playback is None or not current_playback['is_playing']:
-                self.sp.start_playback()
-                self._log(self.get_current_song_info())
-            else:
-                self._log("No song is currently playing.")
+        current_playback = self.sp.current_playback()
+        if current_playback is None:
+            return
+        if not current_playback['is_playing']:
+            self.sp.start_playback()
+            self._log(self.get_current_song_info())
+        else:
+            self._log("No song is currently playing.")
 
 
     def pause(self) -> None:

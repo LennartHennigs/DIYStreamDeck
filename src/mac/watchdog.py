@@ -76,10 +76,7 @@ class WatchDog(Cocoa.NSObject):
         if not app_name:
             app_name = app.bundleIdentifier() or app.bundleExecutable()
         # send the app name to the keypad
-        try:
-            self.ser.write(("Terminated: " + app_name + '\n').encode('ascii', 'replace'))
-        except (serial.SerialException, UnicodeEncodeError) as e:
-            print(f"Error sending app name to microcontroller: {e}")
+        self._serial_write("Terminated: " + app_name + '\n', "Terminated")
 
 
     # Called every HEARTBEAT_INTERVAL seconds
@@ -153,10 +150,7 @@ class WatchDog(Cocoa.NSObject):
 
         if self.args.verbose:
             print(f'Active app: {app_name}')
-        try:
-            self.ser.write(("App: " + app_name + '\n').encode('ascii', 'replace'))
-        except (serial.SerialException, UnicodeEncodeError) as e:
-            print(f"Error sending app name to microcontroller: {e}")
+        self._serial_write("App: " + app_name + '\n', "App")
 
     # Send a HELLO or BYE message so the keypad can react to clean startup/shutdown
     def _serial_write(self, message: str, label: str) -> None:
