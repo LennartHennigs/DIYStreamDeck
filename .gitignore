@@ -33,3 +33,4 @@ Thumbs.db
 # Plugin credentials (use *.example files as templates)
 src/mac/plugins_config/*.json
 
+/_answers/*
