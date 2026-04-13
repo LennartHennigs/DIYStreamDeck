@@ -111,13 +111,13 @@ class TestHuePlugin:
 
     # --- unknown light ---
 
-    def test_unknown_light_name_prints_error(self, hue_plugin, capsys):
-        hue_plugin.turn_on("Nonexistent Light")
+    def test_unknown_light_name_prints_error(self, hue_plugin_verbose, capsys):
+        hue_plugin_verbose.turn_on("Nonexistent Light")
         captured = capsys.readouterr()
         assert "Could not find" in captured.out
 
-    def test_out_of_range_index_prints_error(self, hue_plugin, capsys):
-        hue_plugin.turn_on(99)
+    def test_out_of_range_index_prints_error(self, hue_plugin_verbose, capsys):
+        hue_plugin_verbose.turn_on(99)
         captured = capsys.readouterr()
         assert "Could not find" in captured.out
 
@@ -141,3 +141,24 @@ class TestHuePlugin:
         with patch("src.mac.plugins.hue.Bridge"):
             with pytest.raises((ValueError, Exception)):
                 HuePlugin(str(config_file), verbose=False)
+
+    def test_missing_light_uses_log_not_bare_print(self, hue_plugin_verbose, capsys):
+        """_change_light_state must use self._log() (not bare print) for the missing-light message.
+
+        Before fix: bare print() is used, which is inconsistent with other plugins.
+        After fix: self._log() is used, which respects verbose=True/False uniformly.
+        This test verifies the message appears when verbose=True.
+        """
+        hue_plugin_verbose.turn_on("Light That Does Not Exist")
+        captured = capsys.readouterr()
+        assert "Light That Does Not Exist" in captured.out, (
+            "Missing-light message must appear when verbose=True"
+        )
+
+    def test_missing_light_silent_when_not_verbose(self, hue_plugin, capsys):
+        """_change_light_state must not print anything when verbose=False and light is missing."""
+        hue_plugin.turn_on("Light That Does Not Exist")
+        captured = capsys.readouterr()
+        assert not captured.out, (
+            "No output expected when verbose=False and light is missing"
+        )

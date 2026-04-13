@@ -45,7 +45,7 @@ class HuePlugin(BasePlugin):
     def _change_light_state(self, lamp_identifier: Union[int, str, Light], state: bool) -> None:
         light = self._find_light(lamp_identifier) if isinstance(lamp_identifier, (int, str)) else lamp_identifier
         if light is None:
-            print(f"Could not find a light with the name or index: {lamp_identifier}")
+            self._log(f"Could not find a light with the name or index: {lamp_identifier}")
             return
         light.on = state
         if self.verbose:
@@ -60,6 +60,6 @@ class HuePlugin(BasePlugin):
     def toggle(self, lamp_identifier: Union[int, str]) -> None:
         light = self._find_light(lamp_identifier)
         if light is None:
-            print(f"Could not find a light with the name or index: '{lamp_identifier}'")
+            self._log(f"Could not find a light with the name or index: '{lamp_identifier}'")
             return
         self._change_light_state(light, not light.on)

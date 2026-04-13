@@ -200,7 +200,8 @@ class KeyController:
         try:
             usb_cdc.console.write(f"Launch: {app_name}\n".encode('utf-8'))
         except Exception as e:
-            pass
+            if self.verbose:
+                print(f"Serial write error: {e}")
 
 
     # send the plugin command via serial
@@ -208,7 +209,8 @@ class KeyController:
         try:
             usb_cdc.console.write(f"Run: {plugin}.{command}\n".encode('utf-8'))
         except Exception as e:
-            pass
+            if self.verbose:
+                print(f"Serial write error: {e}")
 
 
     # rotate the keys if needed
@@ -351,11 +353,17 @@ class KeyController:
     def load_single_app_config(self, app, config, json_data):
         # check if this is an alias
         if 'alias_of' in config:
-            if config['alias_of'] in json_data["applications"]:
-                config = json_data["applications"][config['alias_of']]
-            else:
-                print(f"Error: Alias '{config['alias_of']}' not found in applications.")
+            alias_target = config['alias_of']
+            if alias_target not in json_data["applications"]:
+                print(f"Error: Alias '{alias_target}' not found in applications.")
                 return None
+            resolved = json_data["applications"][alias_target]
+            # Hard limit: chained aliases are not supported
+            if 'alias_of' in resolved:
+                print(f"Error: Chained alias not supported: "
+                      f"'{app}' -> '{alias_target}' -> '{resolved['alias_of']}'")
+                return None
+            config = resolved
         # process the config
         app_config = {app: {}}
         self.process_config(config, json_data, app, app_config)
@@ -477,6 +485,8 @@ class KeyController:
 
     # Unload the keypad: clear and mark unloaded so timeout actions are idempotent
     def unload_keypad(self):
+        if self.unloaded:
+            return
         self.unloaded = True
         self.clear_keypad()
 

@@ -201,9 +201,11 @@ class TestJSONCorruption:
         with patch('builtins.open', mock_open(read_data=circular_alias_json)):
             from src.pi_pico.code import KeyController
             
-            # Should raise AttributeError when trying to process alias string
-            with pytest.raises(AttributeError):
-                KeyController(verbose=True)
+            # After Fix 4: chained aliases are rejected gracefully — no crash,
+            # the aliasing apps are simply skipped and not loaded.
+            controller = KeyController(verbose=True)
+            assert "app1" not in controller.apps
+            assert "app2" not in controller.apps
             
     def test_missing_alias_target(self):
         """Test behavior with alias pointing to non-existent app"""

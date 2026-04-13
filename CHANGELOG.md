@@ -1,6 +1,22 @@
 
 # CHANGELOG
 
+## 2026-04-13 (simplify pass)
+
+- **Watchdog `check_serial` ECHO reply: use `_serial_write`** — ECHO response wrote directly to `self.ser` bypassing the serial lock, creating a race with the heartbeat thread. Replaced with `self._serial_write()`.
+- **`BasePlugin._log_and_raise`: respect `verbose` flag** — previous implementation called `logging.error()` unconditionally, inconsistent with `_log()` which gates on `verbose`. Replaced with `self._log(msg)` so all plugin error messages respect the verbose setting uniformly.
+- **`SoundsPlugin._log_and_raise`: remove override** — `sounds.py` had a local `_log_and_raise` that duplicated the above fix manually. Removed now that `BasePlugin` has the correct implementation.
+- **`WatchDog`: pre-compile regex patterns** — `launch_pattern` and `run_pattern` were plain strings recompiled by `re.match()` on every incoming serial command. Changed to `re.compile()` at class level.
+
+## 2026-04-13 (robustness fixes)
+
+- **Pi Pico `send_application_name` / `send_plugin_command`: log serial write errors** — both methods swallowed all exceptions silently. Serial write failures now print an error message when `verbose=True`, making hardware disconnects and buffer overflows visible during debugging.
+- **Mac watchdog `launch_app`: log `CalledProcessError`** — a failed `open -a` call (e.g. app not installed) was caught with `except … pass`. Now prints a failure message when `verbose=True`.
+- **Pi Pico `unload_keypad`: idempotent guard** — calling `unload_keypad()` twice would call `clear_keypad()` twice, risking inconsistent hardware state. Added `if self.unloaded: return` early exit.
+- **Pi Pico `load_single_app_config`: hard limit on alias depth** — chained aliases (A→B where B also has `alias_of`) previously crashed with `AttributeError`. Now detected and rejected with a clear error message; the offending app is skipped and the rest of the config loads normally.
+- **Mac watchdog `get_url`: escape double-quotes in app name before AppleScript interpolation** — defense in depth alongside the existing allowlist. Introduced `safe_app_name = app_name.replace('"', '\\"')` so any future extension of the allowlist cannot introduce injection.
+- **Plugins: move `_log` to `BasePlugin`** — `SpotifyPlugin` had its own `_log(message)` helper; `HuePlugin` used bare `print()` that always fired regardless of `verbose`. Consolidated `_log` in `BasePlugin` and updated `HuePlugin` to use it, so missing-light messages respect the `verbose` flag consistently across all plugins.
+
 ## 2026-04-13 (second-pass fixes)
 
 - **Watchdog `_get_app_name`: never returns `None`** — if `localizedName()`, `bundleIdentifier()`, and `bundleExecutable()` all return falsy, callers would receive `None` and crash on string concatenation in `_serial_write`. Added `or "unknown"` final fallback.

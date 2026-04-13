@@ -139,8 +139,3 @@ class SpotifyPlugin(BasePlugin):
             return f"{artist} - {song_name}"
         else:
             return None
-
-
-    def _log(self, message: str) -> None:
-        if self.verbose:
-            print(message)

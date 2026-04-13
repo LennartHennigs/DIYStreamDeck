@@ -1,125 +1,134 @@
 # StreamDeck Improvement Plan
 
-## Executive Summary
+## Summary
 
-This document provides an updated assessment of the DIY StreamDeck project based on a comprehensive code analysis conducted in September 2025. The analysis reveals a **professional-grade, production-ready hardware control system** with outstanding security practices and comprehensive testing infrastructure.
+This document provides an honest assessment of the DIY StreamDeck project based on a code review conducted in April 2026. The project is a well-built hobby tool that does its job reliably, but several real issues should be addressed before treating it as a reference for others or extending it significantly.
 
-**Overall Assessment**: ⭐⭐⭐⭐ (Excellent - Production Ready)
-
----
-
-## ✅ COMPLETED ACHIEVEMENTS
-
-### Major Accomplishments
-
-- **Outstanding Architecture**: Clean separation between Pi Pico (CircuitPython) and Mac (Python) with proper abstraction layers
-- **Security-First Design**: Path traversal protection, input validation, null byte injection prevention
-- **World-Class Testing**: 120+ tests with 3,400+ lines of test code (2.5x test-to-source ratio - industry leading)
-- **Professional Threading**: Proper resource cleanup, graceful shutdown, heartbeat monitoring
-- **Robust Plugin System**: Extensible architecture with centralized configuration management
-- **Production-Ready Features**: Timeout handling, error recovery, graceful degradation
-- **Comprehensive Documentation**: Detailed guides, setup instructions, and API documentation
-- **Recent Bug Fixes**: Fixed Hue plugin initialization error (September 2025)
+Overall Assessment: ⭐⭐⭐ (Good hobby project)
 
 ---
 
-## 📋 OPEN ITEMS
+## ✅ Real Achievements
 
-### 🔵 Low Priority Enhancements
-
-These items are **optional quality-of-life improvements** - the project is fully functional without them:
-
-#### Documentation Polish (30 minutes)
-
-- [ ] Fix README.md markdown formatting issues:
-  - MD059: Non-descriptive link text ("here" links) - 4 instances
-  - MD009: Trailing spaces - 2 instances  
-  - MD031: Missing blank lines around code blocks - 2 instances
-  - MD040: Missing language specification - 1 instance
-
-#### Optional Code Quality Improvements
-
-- [ ] More descriptive error messages in certain edge cases
-- [ ] Add structured logging framework  
-- [ ] Optional performance profiling dashboard
-- [ ] More granular error reporting for plugin loading failures
-
-### 🌟 Future Enhancement Opportunities (Optional)
-
-These are **potential future enhancements** but not needed for current functionality:
-
-- [ ] Web-based configuration interface
-- [ ] Plugin marketplace system
-- [ ] Multi-platform support (Windows/Linux)
-- [ ] Mobile companion app
-- [ ] Visual LED animation system
-- [ ] Configuration backup/restore system
+- **Working hardware integration**: Clean Pi Pico ↔ Mac communication over USB serial with heartbeat monitoring and graceful shutdown
+- **Sound file security**: `sounds.py` path traversal defence is genuinely correct — multi-layer (blacklist check → basename extraction → realpath canonicalisation → prefix check)
+- **Threading**: Proper resource cleanup and graceful shutdown in the Mac watchdog
+- **Extensible plugin system**: New plugins are straightforward to add by extending `BasePlugin`
+- **Test infrastructure exists**: pytest fixtures, hardware mocking, and CI-ready configuration are in place
+- **Config flexibility**: `_default`, `_otherwise`, alias, and folder navigation all work correctly
 
 ---
 
-## ✅ TECHNICAL ANALYSIS - COMPLETED
+## 🔴 High Priority — Fix These
 
-### Security Implementation - OUTSTANDING ✅
-- **Path Traversal Protection**: Comprehensive filename validation with null byte injection prevention
-- **Input Validation**: Keycode validation, JSON schema validation, parameter sanitization
-- **Security Testing**: 11 comprehensive security tests covering real attack vectors
-- **Bounds Checking**: All user inputs validated (key numbers 0-15, file paths, etc.)
+### 1. Exception swallowing (silent failures)
 
-### Code Quality - PROFESSIONAL GRADE ✅
-- **Architecture Excellence**: Clean separation of concerns, well-structured 535-line KeyController
-- **Error Handling**: Robust exception handling with graceful degradation
-- **Resource Management**: Professional threading with proper cleanup and shutdown
-- **Hardware Abstraction**: Clean interface to CircuitPython APIs
+`code.py` lines ~200–211 and `watchdog.py` ~195 contain bare `except Exception: pass` blocks. Serial writes and app launches fail silently. The user gets no feedback and debugging is very hard.
 
-### Testing Infrastructure - WORLD-CLASS ✅
-- **120+ comprehensive tests** across all system components
-- **3,400+ lines of test code** (2.5x test-to-source ratio - exceptional)
-- **Complete hardware isolation** through comprehensive mocking framework
-- **CI-ready configuration** with pytest markers and fixtures
+**Fix**: At minimum, log the exception when `verbose=True`. Preferably surface it as a print to stderr.
 
-### Performance - OPTIMIZED ✅
-- **Sub-100ms key response**: Hardware-optimized for real-time control
-- **Efficient memory usage**: CircuitPython optimizations for embedded systems
-- **Non-blocking operations**: Proper threading prevents UI freezing
-- **Heartbeat monitoring**: Built-in connection monitoring with configurable intervals
+### 2. `unload_keypad()` double-call risk (`code.py` ~479)
 
-### Configuration Management - EXCELLENT ✅
-- **Hierarchical JSON system**: Applications → Folders → URLs structure
-- **Plugin configuration**: Centralized config with intelligent fallback paths
-- **Color management**: RGB LED control with hex validation
-- **Alias system**: Application name mapping for efficiency
+No guard prevents calling `unload_keypad()` twice. The second call clears hardware that may already be in an undefined state.
+
+**Fix**: Add `if self.unloaded: return` at the top of `unload_keypad()`.
 
 ---
 
-## 📊 FINAL ASSESSMENT
+## 🟡 Medium Priority — Worth Fixing
 
-**This StreamDeck project represents a production-ready, professional-grade hardware control system that exemplifies software engineering best practices.**
+### 3. Alias resolution: add explicit hard depth limit (`code.py` lines 351–358)
 
-### 🏆 Project Readiness Status
+`load_single_app_config` currently resolves exactly one alias level and stops — this works correctly today. However there is no explicit guard, so a future change could accidentally introduce recursion. A misconfigured alias chain should fail fast with a clear error.
 
-**Code Quality**: ⭐⭐⭐⭐⭐ (Exceptional)  
-**Security**: ⭐⭐⭐⭐⭐ (Outstanding)  
-**Testing**: ⭐⭐⭐⭐⭐ (World-class)  
-**Documentation**: ⭐⭐⭐⭐ (Comprehensive)  
-**Overall**: ⭐⭐⭐⭐ (Excellent - Production Ready)
+**Fix**: Add a `max_depth=1` parameter and assert it is not exceeded. If depth exceeded, print a clear error and return `None`.
 
-### 🎯 Current Capabilities - READY FOR:
+### 4. AppleScript injection risk (`watchdog.py` ~lines 105–130)
 
-- ✅ **Production deployment** in commercial applications
-- ✅ **Community sharing** and open-source contribution
-- ✅ **Educational use** as software engineering best-practice example  
-- ✅ **Enterprise integration** and customization
-- ✅ **IoT hardware control platform** foundation
+`app_name` is interpolated directly into an AppleScript string. The `command_dict` allowlist prevents misuse today, but if the allowlist is ever extended without adding escaping the risk appears.
 
-### 🚀 Architecture Highlights
+**Fix**: Escape `"` → `\"` in `app_name` before interpolation, regardless of allowlist.
 
-- **Security-First Engineering**: Comprehensive vulnerability testing and mitigation
-- **Professional Architecture**: Clean, maintainable code with proper abstraction
-- **Test-Driven Excellence**: Industry-leading test coverage with comprehensive mocks
-- **Production Quality**: Robust error handling, resource management, and monitoring
-- **Documentation Excellence**: Comprehensive guides enabling easy adoption
+### 5. Inconsistent error handling across plugins
+
+`hue.py` uses bare `print()`, `sounds.py` uses `_log_and_raise()`, Spotify swallows exceptions. No shared strategy.
+
+**Fix**: Settle on one approach (logging + re-raise, or logging + return `None`). Apply consistently.
 
 ---
 
-*Assessment completed September 2025 - Updated with recent Hue plugin fix*  
-*Codebase serves as a model for IoT hardware control projects*
+## 🔵 Low Priority — Optional Improvements
+
+### 6. Testing quality
+
+Test count (190+) is high but several tests assert on `Mock()` properties rather than real behaviour, and at least one test file inspects source code with regex rather than running code. Mocks are shallow (e.g. Hue light mock exposes only `name` and `on` vs. 20+ real properties).
+
+**Improvements**:
+
+- Remove or replace trivial mock-on-mock tests
+- Add at least one integration-style test per plugin covering a real error path
+- Deepen mock shapes to match real API responses
+
+### 7. Architecture coupling
+
+`WatchDog` imports Cocoa, `serial`, `subprocess`, and plugin system directly. This ties everything to macOS and makes unit testing require mocking the entire OS. Not a problem for a personal tool, but limits portability and testability.
+
+### 8. Documentation gaps
+
+README covers setup well but is missing:
+
+- Serial protocol spec (message format, timing, heartbeat interval)
+- State machine for app switching and folder navigation
+- Thread safety model
+- What happens to key bindings when config is partially invalid
+
+### 9. `launch_app()` validation gaps (`watchdog.py` ~184–197)
+
+Blocks `/`, `\`, `\x00` but not leading dashes (option injection to `open -a`).
+
+**Fix**: Reject app names that start with `-`.
+
+---
+
+## 🚫 Not Recommended
+
+- **Splitting `KeyController` into multiple files**: On CircuitPython, each additional file costs RAM and import time on the Pico. The monolith is the right approach for this hardware.
+
+---
+
+## Known Limitations
+
+These are structural constraints, not bugs — worth knowing before extending the project:
+
+- **macOS only**: The Mac watchdog depends on Cocoa/NSWorkspace and cannot run on Windows or Linux without a rewrite
+- **No integration tests**: All tests mock serial, Cocoa, and plugins. The serial roundtrip and real app-switching behaviour are not tested
+- **Plugin interface is minimal**: `BasePlugin` has no type hints, no lifecycle hooks, and no dependency injection — fine for the current three plugins but would need work for a larger set
+- **Plugin discovery is hardcoded**: `watchdog.py` matches filenames directly rather than using a registry
+
+---
+
+## Future Enhancements (Optional)
+
+These are ideas, not gaps:
+
+- Web-based configuration interface
+- Configuration backup/restore
+- Visual LED animation system
+- Multi-platform support (Windows/Linux)
+- Plugin marketplace
+
+---
+
+## Ratings
+
+| Category | Rating | Notes |
+| --- | --- | --- |
+| Code Quality | ⭐⭐⭐ | Works well; exception swallowing and inconsistent error handling are the main rough edges |
+| Security | ⭐⭐⭐ | `sounds.py` path traversal defence is solid; AppleScript and `launch_app` validation are shallow |
+| Testing | ⭐⭐½ | High quantity hides shallow quality; mocks are weak and no integration tests exist |
+| Documentation | ⭐⭐⭐ | Good setup docs; design/protocol docs missing |
+| Overall | ⭐⭐⭐ | Good hobby project with real rough edges |
+
+---
+
+Assessment completed April 2026

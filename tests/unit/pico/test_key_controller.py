@@ -185,13 +185,45 @@ class TestKeyController:
         """Test complete unload/reload cycle"""
         # Initial state
         assert self.controller.unloaded is False
-        
+
         # Unload
         self.controller.unload_keypad()
         assert self.controller.unloaded is True
         assert self.controller.current_config == {}
-        
+
         # Reload
         self.controller.load_basic_config()
+
+    def test_unload_keypad_idempotent(self):
+        """Calling unload_keypad() twice must not call clear_keypad() twice."""
+        from unittest.mock import patch
+        with patch.object(self.controller, 'clear_keypad') as mock_clear:
+            self.controller.unload_keypad()
+            self.controller.unload_keypad()
+        assert mock_clear.call_count == 1, (
+            "clear_keypad must only be called once even if unload_keypad() is called twice"
+        )
+
+    def test_send_application_name_logs_error_when_verbose(self, capsys):
+        """send_application_name must print the error when write fails and verbose=True."""
+        import sys
+        from unittest.mock import patch
+        self.controller.verbose = True
+        with patch.object(sys.modules['usb_cdc'].console, 'write',
+                          side_effect=Exception("port closed")):
+            self.controller.send_application_name("Spotify")
+        captured = capsys.readouterr()
+        assert captured.out.strip(), "Expected an error message when verbose=True"
+
+    def test_send_plugin_command_logs_error_when_verbose(self, capsys):
+        """send_plugin_command must print the error when write fails and verbose=True."""
+        import sys
+        from unittest.mock import patch
+        self.controller.verbose = True
+        with patch.object(sys.modules['usb_cdc'].console, 'write',
+                          side_effect=Exception("port closed")):
+            self.controller.send_plugin_command("spotify", "next")
+        captured = capsys.readouterr()
+        assert captured.out.strip(), "Expected an error message when verbose=True"
         assert self.controller.unloaded is False
         assert len(self.controller.current_config) > 0

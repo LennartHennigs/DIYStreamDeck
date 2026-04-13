@@ -471,3 +471,53 @@ class TestSecurityGuards:
             wdog.get_url('Safari')
             assert mock_popen.call_count == 1
 
+
+class TestLaunchApp:
+
+    def test_launch_app_logs_failure_when_verbose(self, capsys):
+        """launch_app must print a failure message when CalledProcessError occurs and verbose=True."""
+        import re
+        import subprocess as subproc
+        wdog = _make_watchdog(verbose=True)
+        m = re.match(r'Launch: (.+)', 'Launch: NonExistentApp')
+        with patch('subprocess.run',
+                   side_effect=subproc.CalledProcessError(1, 'open')):
+            wdog.launch_app(m)
+        captured = capsys.readouterr()
+        # Current code already prints "Launching: ..." — this test requires an *additional*
+        # failure/error indication after the CalledProcessError.
+        assert any(word in captured.out.lower()
+                   for word in ['fail', 'error', 'could not']), (
+            "Expected a failure/error message after CalledProcessError, not just 'Launching:'"
+        )
+
+    def test_launch_app_silent_on_failure_when_not_verbose(self, capsys):
+        """launch_app must not print anything on CalledProcessError when verbose=False."""
+        import re
+        import subprocess as subproc
+        wdog = _make_watchdog(verbose=False)
+        m = re.match(r'Launch: (.+)', 'Launch: NonExistentApp')
+        with patch('subprocess.run',
+                   side_effect=subproc.CalledProcessError(1, 'open')):
+            wdog.launch_app(m)   # must not raise
+        captured = capsys.readouterr()
+        # No output expected when verbose is off
+        assert not captured.out
+
+
+class TestGetUrlAppleScriptEscaping:
+
+    def test_get_url_escapes_app_name_before_interpolation(self):
+        """app_name must be escaped before being interpolated into the AppleScript string.
+
+        The fix introduces `safe_app_name = app_name.replace('"', '\\"')` and uses
+        safe_app_name in the tell-application block (defense in depth alongside allowlist).
+        """
+        src = _read_source()
+        assert 'safe_app_name' in src, (
+            "get_url must use a 'safe_app_name' variable to hold the escaped app name"
+        )
+        assert 'replace' in src, (
+            "get_url must call .replace() to escape double-quotes in the app name"
+        )
+

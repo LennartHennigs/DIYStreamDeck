@@ -47,8 +47,8 @@ class WatchDog(Cocoa.NSObject):
     ser: serial.Serial
     args: argparse.Namespace
     plugins: Dict[str, BasePlugin]
-    launch_pattern = r"^Launch: (.+)$"
-    run_pattern = r"^Run: (.+)$"
+    launch_pattern = re.compile(r"^Launch: (.+)$")
+    run_pattern = re.compile(r"^Run: (.+)$")
     running: bool = True
 
     # Initializer
@@ -122,8 +122,9 @@ class WatchDog(Cocoa.NSObject):
         # Only proceed for known-safe app names (prevents AppleScript injection)
         if app_name not in command_dict:
             return ""
+        safe_app_name = app_name.replace('"', '\\"')
         script = f'''
-            tell application "{app_name}"
+            tell application "{safe_app_name}"
                 {command_dict[app_name]}
             end tell
         '''
@@ -193,8 +194,9 @@ class WatchDog(Cocoa.NSObject):
             print(f"Launching: {launch_app_name}")
         try:
             subprocess.run(["open", "-a", launch_app_name], check=True)
-        except subprocess.CalledProcessError:
-            pass
+        except subprocess.CalledProcessError as e:
+            if self.args.verbose:
+                print(f"Failed to launch '{launch_app_name}': {e}")
 
 
     # Run a plugin command
@@ -247,10 +249,7 @@ class WatchDog(Cocoa.NSObject):
             parts = command.split(':', 1)
             token = parts[1] if len(parts) > 1 else None
             reply = 'ECHO-OK' + (f':{token}' if token else '') + '\n'
-            try:
-                self.ser.write(reply.encode('ascii', 'replace'))
-            except Exception:
-                pass
+            self._serial_write(reply, 'ECHO-OK')
             return
 
         for pattern, handler in (

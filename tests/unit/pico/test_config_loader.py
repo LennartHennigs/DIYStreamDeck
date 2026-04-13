@@ -471,3 +471,33 @@ class TestRotationValidation:
         assert "diagonal" in captured.out or "diagonal" in captured.err, (
             "Expected a warning mentioning the invalid rotation value"
         )
+
+    def test_chained_alias_is_rejected(self, capsys):
+        """Chained aliases (A→B where B also has alias_of) must be rejected gracefully.
+
+        Before the fix: code crashes with AttributeError when processing the chain.
+        After the fix: the app is skipped and not present in controller.apps.
+        """
+        chained_config = json.dumps({
+            "settings": {"rotate": ""},
+            "applications": {
+                "_otherwise": {
+                    "0": {"key_sequence": "CMD+C", "color": "#00FF00", "description": "Copy"}
+                },
+                "AppA": {"alias_of": "AppB"},
+                "AppB": {"alias_of": "AppC"},
+                "AppC": {
+                    "0": {"key_sequence": "CMD+V", "color": "#0000FF", "description": "Paste"}
+                }
+            },
+            "folders": {},
+            "urls": {}
+        })
+        with patch('builtins.open', mock_open(read_data=chained_config)):
+            controller = KeyController(verbose=True)
+        # AppA should be rejected — it points to AppB which itself is an alias
+        assert "AppA" not in controller.apps, (
+            "AppA should not be loaded because it uses a chained alias"
+        )
+        # AppC (non-alias) should still load normally
+        assert "AppC" in controller.apps

@@ -32,7 +32,10 @@ class BasePlugin(ABC):
             )
 
     def _log_and_raise(self, msg: str) -> None:
-        import logging
-        logging.error(msg)
+        self._log(msg)
         raise Exception(msg)
+
+    def _log(self, message: str) -> None:
+        if self.verbose:
+            print(message)
 

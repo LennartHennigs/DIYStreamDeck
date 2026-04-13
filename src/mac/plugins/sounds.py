@@ -33,11 +33,6 @@ class SoundsPlugin(BasePlugin):
             'sounds.stop': self.stop,
         }
 
-    def _log_and_raise(self, message: str) -> None:
-        if self.verbose:
-            print(message)
-        raise Exception(message)
-
     def play(self, filename: str) -> None:
         # Security: Validate filename to prevent path traversal and injection attacks
         if (not filename or
