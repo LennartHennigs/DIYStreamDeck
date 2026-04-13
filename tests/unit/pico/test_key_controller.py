@@ -143,9 +143,9 @@ class TestKeyController:
         result = self.controller.color_string_to_tuple("#FF0000")
         assert result == (255, 0, 0)
         
-        # Test invalid color
+        # Test invalid color — must return None, not False
         result = self.controller.color_string_to_tuple("invalid")
-        assert result is False
+        assert result is None
         
     def test_serial_communication(self):
         """Test serial input/output"""

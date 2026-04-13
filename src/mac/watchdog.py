@@ -59,6 +59,7 @@ class WatchDog(Cocoa.NSObject):
         self.ser = ser
         self.args = args
         self.plugins = plugins
+        self._serial_lock = threading.Lock()
         # Add observer for application termination
         Cocoa.NSWorkspace.sharedWorkspace().notificationCenter().addObserver_selector_name_object_(
             self,
@@ -68,13 +69,16 @@ class WatchDog(Cocoa.NSObject):
         )
         return self
 
+    def _get_app_name(self, app) -> str:
+        """Extract a display name from an NSRunningApplication object."""
+        name = app.localizedName() or app.bundleIdentifier() or app.bundleExecutable()
+        return name or "unknown"
+
     # Called when an application is terminated
     @objc.typedSelector(b'v@:@')  # Encoded the signature string as bytes
     def applicationTerminated_(self, notification: Cocoa.NSNotification) -> None:
         app = notification.userInfo()['NSWorkspaceApplicationKey']
-        app_name = app.localizedName()
-        if not app_name:
-            app_name = app.bundleIdentifier() or app.bundleExecutable()
+        app_name = self._get_app_name(app)
         # send the app name to the keypad
         self._serial_write("Terminated: " + app_name + '\n', "Terminated")
 
@@ -83,11 +87,8 @@ class WatchDog(Cocoa.NSObject):
     @objc.typedSelector(b'v@:')  # Encoded the signature string as bytes
     def send_heartbeat(self) -> None:
         while self.running:
-            try:
-                # Send a framed heartbeat message so the keypad can detect liveness
-                self.ser.write(('HB\n').encode('ascii', 'replace'))
-            except (serial.SerialException, UnicodeEncodeError) as e:
-                print(f"Error sending heartbeat to microcontroller: {e}")
+            # Send a framed heartbeat message so the keypad can detect liveness
+            self._serial_write('HB\n', 'HB')
             time.sleep(HEARTBEAT_INTERVAL)
 
 
@@ -95,9 +96,7 @@ class WatchDog(Cocoa.NSObject):
     @objc.typedSelector(b'v@:@')  # Encoded the signature string as bytes
     def applicationActivated_(self, notification: Cocoa.NSNotification) -> None:
         app = notification.userInfo()['NSWorkspaceApplicationKey']
-        app_name = app.localizedName()
-        if not app_name:
-            app_name = app.bundleIdentifier() or app.bundleExecutable()
+        app_name = self._get_app_name(app)
         self.send_app_name_to_microcontroller(app_name)
 
 
@@ -120,6 +119,9 @@ class WatchDog(Cocoa.NSObject):
                 end if
             '''
         }
+        # Only proceed for known-safe app names (prevents AppleScript injection)
+        if app_name not in command_dict:
+            return ""
         script = f'''
             tell application "{app_name}"
                 {command_dict[app_name]}
@@ -137,7 +139,7 @@ class WatchDog(Cocoa.NSObject):
             # If base_url is 'newtab' for Google Chrome or empty for Safari, don't add it in brackets
             if not (app_name == "Google Chrome" and base_url == "newtab") and base_url != "":
                 return " (" + base_url + ")"
-        
+
         return ""
 
 
@@ -154,10 +156,11 @@ class WatchDog(Cocoa.NSObject):
 
     # Send a HELLO or BYE message so the keypad can react to clean startup/shutdown
     def _serial_write(self, message: str, label: str) -> None:
-        try:
-            self.ser.write(message.encode('ascii', 'replace'))
-        except Exception as e:
-            print(f"Error sending {label}: {e}")
+        with self._serial_lock:
+            try:
+                self.ser.write(message.encode('ascii', 'replace'))
+            except Exception as e:
+                print(f"Error sending {label}: {e}")
 
     def send_hello(self) -> None:
         self._serial_write(f"HELLO:{VERSION}\n", "HELLO")
@@ -181,6 +184,11 @@ class WatchDog(Cocoa.NSObject):
     @objc.typedSelector(b'v@:@')
     def launch_app(self, match: re.Match) -> None:
         launch_app_name = match.group(1)
+        # Reject names with path separators or null bytes to prevent unexpected binary execution
+        if '/' in launch_app_name or '\\' in launch_app_name or '\x00' in launch_app_name:
+            if self.args.verbose:
+                print(f"Refused unsafe app name: {launch_app_name!r}")
+            return
         if self.args.verbose:
             print(f"Launching: {launch_app_name}")
         try:
@@ -205,7 +213,8 @@ class WatchDog(Cocoa.NSObject):
         # Check if the plugin command exists
         commands = plugin.commands()
         if command not in commands:
-            print(f"Command {command} not found")
+            if self.args.verbose:
+                print(f"Command {command} not found")
             return
         # Check if the command requires a parameter
         command_func = commands[command]
@@ -229,12 +238,11 @@ class WatchDog(Cocoa.NSObject):
 
     # Check if there's any data in the serial buffer
     def check_serial(self) -> None:
-        # Check if there's any data in the buffer
         command = self.read_serial_data()
         if not command:
             return
 
-        # Support a lightweight echo diagnostic: keypad -> "ECHO" or "ECHO:<token>"
+        # Lightweight echo diagnostic: keypad -> "ECHO" or "ECHO:<token>"
         if command.upper().startswith('ECHO'):
             parts = command.split(':', 1)
             token = parts[1] if len(parts) > 1 else None
@@ -245,15 +253,14 @@ class WatchDog(Cocoa.NSObject):
                 pass
             return
 
-        match = re.match(self.launch_pattern, command)
-        if match:
-            self.launch_app(match)
-            return
-
-        match = re.match(self.run_pattern, command)
-        if match:
-            self.run_plugin_command(match)
-            return
+        for pattern, handler in (
+            (self.launch_pattern, self.launch_app),
+            (self.run_pattern,    self.run_plugin_command),
+        ):
+            match = re.match(pattern, command)
+            if match:
+                handler(match)
+                return
 
 
 # Load all plugins

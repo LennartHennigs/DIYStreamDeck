@@ -1,5 +1,4 @@
 import os
-import json
 from typing import Dict, Callable, Union, List
 from playsound3 import playsound
 from concurrent.futures import ThreadPoolExecutor, Future
@@ -34,17 +33,6 @@ class SoundsPlugin(BasePlugin):
             'sounds.stop': self.stop,
         }
 
-    def _load_config(self, config_file: str) -> Dict[str, Union[str, int]]:
-        try:
-            with open(config_file, 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            self._log_and_raise(f"Config file {config_file} not found.")
-        except json.JSONDecodeError:
-            self._log_and_raise(
-                f"Failed to parse config file {config_file}. Please check if it is a valid JSON file."
-            )
-
     def _log_and_raise(self, message: str) -> None:
         if self.verbose:
             print(message)
@@ -71,7 +59,7 @@ class SoundsPlugin(BasePlugin):
             self._log_and_raise(f"File {filename} not found.")
 
         try:
-            self._futures = [f for f in self._futures if not f.done()]
+            self._futures = [f for f in self._futures if not f.done()][-10:]
             future = self.executor.submit(playsound, resolved_path)
             self._futures.append(future)
             if self.verbose:

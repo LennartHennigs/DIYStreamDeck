@@ -344,6 +344,113 @@ class TestSpotifyPlugin:
         assert messages[0] == "Test message"
 
 
+
+# --- Real-module functional tests ---
+
+def _import_spotify():
+    import sys, types
+    for mod_name in ['spotipy', 'spotipy.oauth2']:
+        if mod_name not in sys.modules:
+            sys.modules[mod_name] = types.ModuleType(mod_name)
+    spotipy_mod = sys.modules['spotipy']
+    if not hasattr(spotipy_mod, 'Spotify'):
+        spotipy_mod.Spotify = type('Spotify', (), {})
+    oauth2_mod = sys.modules['spotipy.oauth2']
+    if not hasattr(oauth2_mod, 'SpotifyOAuth'):
+        oauth2_mod.SpotifyOAuth = type('SpotifyOAuth', (), {})
+    import importlib
+    if 'src.mac.plugins.spotify' in sys.modules:
+        return sys.modules['src.mac.plugins.spotify']
+    import src.mac.plugins.spotify as m
+    return m
+
+
+def _make_spotify_plugin(sp_mock):
+    """Return a SpotifyPlugin with attributes set directly (no real Spotify auth)."""
+    m = _import_spotify()
+    plugin = object.__new__(m.SpotifyPlugin)
+    plugin.sp = sp_mock
+    plugin.verbose = True
+    return plugin
+
+
+def test_play_logs_no_active_device_when_playback_none():
+    """play() must log 'No active device' when current_playback() returns None."""
+    from unittest.mock import MagicMock, patch
+    sp = MagicMock()
+    sp.current_playback.return_value = None
+    plugin = _make_spotify_plugin(sp)
+
+    logs = []
+    with patch.object(plugin, '_log', side_effect=logs.append):
+        plugin.play()
+
+    assert any('no active device' in msg.lower() for msg in logs), (
+        f"Expected 'No active device' log in play() when playback is None, got: {logs}"
+    )
+
+
+def test_adjust_volume_logs_no_active_device_when_playback_none():
+    """_adjust_volume must log 'No active device' when current_playback() returns None."""
+    from unittest.mock import MagicMock, patch
+    sp = MagicMock()
+    sp.current_playback.return_value = None
+    plugin = _make_spotify_plugin(sp)
+
+    logs = []
+    with patch.object(plugin, '_log', side_effect=logs.append):
+        plugin._adjust_volume(10)
+
+    assert any('no active device' in msg.lower() for msg in logs), (
+        f"Expected 'No active device' log, got: {logs}"
+    )
+    sp.volume.assert_not_called()
+
+
+def test_adjust_volume_logs_no_active_device_when_device_key_missing():
+    """_adjust_volume must log 'No active device' when playback has no 'device' key."""
+    from unittest.mock import MagicMock, patch
+    sp = MagicMock()
+    sp.current_playback.return_value = {'is_playing': True}  # no 'device' key
+    plugin = _make_spotify_plugin(sp)
+
+    logs = []
+    with patch.object(plugin, '_log', side_effect=logs.append):
+        plugin._adjust_volume(10)
+
+    assert any('no active device' in msg.lower() for msg in logs), (
+        f"Expected 'No active device' log, got: {logs}"
+    )
+    sp.volume.assert_not_called()
+
+
+# --- play() log message regression test ---
+
+def test_spotify_play_already_playing_message_is_not_misleading():
+    """play() must not log 'No song is currently playing' when is_playing=True."""
+    import sys
+    import types
+
+    for mod_name in ['spotipy', 'spotipy.oauth2']:
+        if mod_name not in sys.modules:
+            sys.modules[mod_name] = types.ModuleType(mod_name)
+    spotipy_mod = sys.modules['spotipy']
+    if not hasattr(spotipy_mod, 'Spotify'):
+        spotipy_mod.Spotify = type('Spotify', (), {})
+    oauth2_mod = sys.modules['spotipy.oauth2']
+    if not hasattr(oauth2_mod, 'SpotifyOAuth'):
+        oauth2_mod.SpotifyOAuth = type('SpotifyOAuth', (), {})
+
+    import src.mac.plugins.spotify as spotify_mod
+    import inspect
+    src_text = inspect.getsource(spotify_mod.SpotifyPlugin.play)
+    # The misleading message must not appear in the play() method
+    assert 'No song is currently playing' not in src_text, (
+        "play() must not log 'No song is currently playing' when is_playing=True — "
+        "that message is only correct when no playback is active."
+    )
+
+
 # --- OAuth scope regression test ---
 
 def test_spotify_scope_has_no_trailing_comma_or_spaces():

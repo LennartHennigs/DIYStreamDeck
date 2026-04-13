@@ -315,14 +315,47 @@ class TestHeartbeatFunctionality:
         # Open folder
         self.controller.open_folder("test_folder")
         assert len(self.controller.folder_stack) == 1
-        
+
         initial_time = self.controller.last_heartbeat
         time.sleep(0.01)
-        
+
         # Send heartbeat while in folder
         self.controller.process_serial_str("HB")
-        
+
         # Should still work
         assert self.controller.last_heartbeat > initial_time
         assert self.controller.unloaded is False
         assert len(self.controller.folder_stack) == 1  # Still in folder
+
+
+class TestUnloadKeypadAtomicity:
+    """Tests that unload_keypad() marks unloaded=True even if clear_keypad() raises."""
+
+    @patch('builtins.open', mock_open(read_data='''{
+        "settings": {"rotate": ""},
+        "applications": {"_otherwise": {}},
+        "folders": {},
+        "urls": {}
+    }'''))
+    def setup_method(self, method):
+        from src.pi_pico.code import KeyController
+        self.controller = KeyController(verbose=False)
+
+    def test_unloaded_set_before_clear_keypad(self):
+        """unloaded must be True even when clear_keypad() raises an exception."""
+        original_clear = self.controller.clear_keypad
+
+        def raising_clear():
+            raise RuntimeError("Hardware failure")
+
+        self.controller.clear_keypad = raising_clear
+
+        try:
+            self.controller.unload_keypad()
+        except RuntimeError:
+            pass
+
+        assert self.controller.unloaded is True, (
+            "unloaded must be set True before clear_keypad() so a failure does not "
+            "allow the timeout to fire again"
+        )

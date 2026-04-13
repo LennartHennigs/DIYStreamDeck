@@ -81,3 +81,35 @@ def test_play_missing_file_raises(sounds_plugin):
 def test_play_empty_filename_raises(sounds_plugin):
     with pytest.raises(Exception):
         sounds_plugin.play("")
+
+
+def test_futures_list_is_capped(sounds_plugin, tmp_path):
+    """After many plays, _futures should not exceed 11 entries (cap of 10 + 1 new)."""
+    import concurrent.futures
+
+    # Create 20 sound files and submit them
+    sounds_dir = tmp_path / "cap_test"
+    sounds_dir.mkdir(parents=True, exist_ok=True)
+
+    for i in range(20):
+        fname = f"sound{i}.mp3"
+        (sounds_dir / fname).write_text('')
+
+    # Re-configure the plugin pointing at our new sound dir
+    import json
+    cfg = tmp_path / "cap_sounds.json"
+    cfg.write_text(json.dumps({"sound_path": str(sounds_dir)}))
+    with patch('src.mac.plugins.sounds.playsound'):
+        plugin = SoundsPlugin(str(cfg), verbose=False)
+
+    # Submit 20 plays with a patched playsound so futures resolve immediately
+    with patch('src.mac.plugins.sounds.playsound', return_value=None):
+        for i in range(20):
+            plugin.play(f"sound{i}.mp3")
+            # Mark all futures done to simulate completed playback
+            for f in list(plugin._futures):
+                f.cancel()  # cancel pending futures (they never started)
+
+    assert len(plugin._futures) <= 11, (
+        f"Expected _futures to be capped at ≤11, got {len(plugin._futures)}"
+    )

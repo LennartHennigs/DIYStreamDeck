@@ -197,7 +197,7 @@
         "key_sequence": "Q",
         "color": "#FFFFFF",
         "description": "rotate left",
-        "pressedUntilReleased": "true"
+        "pressedUntilReleased": true
       },
       "5": {
         "key_sequence": "HOME",
@@ -208,7 +208,7 @@
         "key_sequence": "E",
         "color": "#FFFFFF",
         "description": "rotate right",
-        "pressedUntilReleased": "true"
+        "pressedUntilReleased": true
       },
       "8": {
         "key_sequence": "LEFT_BRACKET",
@@ -414,11 +414,11 @@
     },
 
     "loginwindow": {
-      "ignore_default": "true"
+      "ignore_default": true
     },
 
     "Bildschirmschoner": {
-      "ignore_default": "true"
+      "ignore_default": true
     },
 
     "_otherwise": {
@@ -428,7 +428,7 @@
   "folders": {
 
     "apps_folder": {
-      "ignore_default": "true",
+      "ignore_default": true,
       "0": {
         "application": "zoom.us",
         "color": "#0000FF",
@@ -482,7 +482,7 @@
     },
 
     "controls_folder": {
-      "ignore_default": "true",
+      "ignore_default": true,
       "0": {
         "key_sequence": "F11",
         "color": "#FFFF00",
@@ -536,7 +536,7 @@
     },
 
     "close_app_folder": {
-      "ignore_default": "true",
+      "ignore_default": true,
       "14": {
         "action": "close_folder",
         "color": "#FFFFFF",

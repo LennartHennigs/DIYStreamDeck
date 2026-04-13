@@ -56,7 +56,11 @@ class KeyController:
 
         # rotate the keys if needed (robust to missing settings)
         rotate_setting = self.json.get("settings", {}).get("rotate", "")
-        self.rotate = rotate_setting.upper() if isinstance(rotate_setting, str) else ''
+        rotate_upper = rotate_setting.upper() if isinstance(rotate_setting, str) else ''
+        if rotate_upper not in ("CW", "CCW", ""):
+            print(f"Warning: Invalid rotation setting '{rotate_setting}', ignoring")
+            rotate_upper = ''
+        self.rotate = rotate_upper
         self.current_config = self.rotate_keys_if_needed()
 
         # default settings
@@ -224,23 +228,30 @@ class KeyController:
             if key.upper() == "CMD":
                 key = "GUI"
             if key not in self.KEYCODE_MAPPING:
-                # Try to rebuild KEYCODE_MAPPING if key is missing (for test robustness)
-                try:
-                    self.KEYCODE_MAPPING = {name: getattr(Keycode, name) for name in dir(Keycode) if not name.startswith("__")}
-                    if key not in self.KEYCODE_MAPPING:
-                        raise ValueError(f"Unknown keycode constant: {key} in '{keycode_string}'")
-                except Exception:
-                    raise ValueError(f"Unknown keycode constant: {key} in '{keycode_string}'")
+                raise ValueError(f"Unknown keycode constant: {key} in '{keycode_string}'")
             keycodes.append(self.KEYCODE_MAPPING[key])
         return tuple(keycodes)
 
 
     # convert the color string to a tuple if needed
     def color_string_to_tuple(self, color_string):
+        if not color_string or not isinstance(color_string, str):
+            return None
         if color_string.startswith("#"):
-            return tuple(int(color_string[i:i+2], 16) for i in (1, 3, 5))
-        else:
-            return False
+            try:
+                return tuple(int(color_string[i:i+2], 16) for i in (1, 3, 5))
+            except ValueError:
+                raise ValueError(f"Invalid hex color: {color_string!r}")
+        return None
+
+
+    # parse a bool from a config value that may be a native bool or string "true"/"false"
+    def parse_bool_from_config(self, value, default=False):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.lower() == "true"
+        return default
 
 
     # convert the action string to a tuple
@@ -329,7 +340,7 @@ class KeyController:
             if 'toggleColor' in config_items and config_items['toggleColor']:
                 containsToggle = True
         # add the default config if needed
-        ignore_default = config.get("ignore_default", "false").lower() == "true"
+        ignore_default = self.parse_bool_from_config(config.get("ignore_default", False))
         if not ignore_default:
             self.add_global_config(app_config[app])
         app_config[app]['containsToggle'] = containsToggle
@@ -366,7 +377,7 @@ class KeyController:
         folder_config = {}
         for folder, config in json_data.get("folders", {}).items():
             folder_config[folder] = {}
-            folder_config[folder]['autoclose'] = config.get("autoclose", "true").lower() == "true"
+            folder_config[folder]['autoclose'] = self.parse_bool_from_config(config.get("autoclose", True))
             close_folder_found = False
             for key, value in config.items():
                 if key in ["ignore_default", "autoclose"]:
@@ -377,7 +388,7 @@ class KeyController:
                     close_folder_found = True
             if not close_folder_found and not folder_config[folder]['autoclose']:
                 raise ValueError(f"Error: Folder '{folder}' does not have a 'close_folder' action defined.")
-            ignore_default = config.get("ignore_default", "false").lower() == "true"
+            ignore_default = self.parse_bool_from_config(config.get("ignore_default", False))
             if not ignore_default:
                 self.add_global_config(folder_config[folder])
         return folder_config
@@ -466,8 +477,8 @@ class KeyController:
 
     # Unload the keypad: clear and mark unloaded so timeout actions are idempotent
     def unload_keypad(self):
-        self.clear_keypad()
         self.unloaded = True
+        self.clear_keypad()
 
 
     # process the serial string

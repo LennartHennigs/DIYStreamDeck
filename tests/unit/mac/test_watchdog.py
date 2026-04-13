@@ -95,6 +95,7 @@ def _make_watchdog(serial_mock=None, verbose=False):
     wdog.args = argparse.Namespace(verbose=verbose, rotate=None)
     wdog.plugins = {}
     wdog.running = True
+    wdog._serial_lock = threading.Lock()
     return wdog
 
 
@@ -286,3 +287,187 @@ class TestHeartbeatThreadLifecycle:
         assert not t.is_alive(), "Heartbeat thread did not stop within 1 second"
         assert all(w == b'HB\n' for w in writes), "Unexpected payload in heartbeat writes"
         assert len(writes) > 0, "Expected at least one HB write"
+
+
+class TestSerialWriteThreadSafety:
+
+    def test_heartbeat_routes_through_serial_write(self):
+        """send_heartbeat must call _serial_write, not ser.write directly."""
+        wd = _import_watchdog()
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+
+        serial_write_calls = []
+
+        def recording_serial_write(self_inner, message, label):
+            serial_write_calls.append((message, label))
+            ser.write(message.encode('ascii', 'replace'))
+
+        with patch.object(wd.WatchDog, '_serial_write', recording_serial_write):
+            wdog.running = True
+            def _stop_after_one(interval):
+                wdog.running = False
+            with patch('time.sleep', side_effect=_stop_after_one):
+                wdog.send_heartbeat()
+
+        assert any('HB' in call[0] for call in serial_write_calls), (
+            "send_heartbeat must route through _serial_write, not call ser.write directly"
+        )
+
+    def test_serial_write_uses_lock(self):
+        """_serial_write must acquire _serial_lock before writing."""
+        wd = _import_watchdog()
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+
+        # Replace the real lock with a mock so we can observe acquire/release
+        mock_lock = MagicMock()
+        mock_lock.__enter__ = MagicMock(return_value=None)
+        mock_lock.__exit__ = MagicMock(return_value=False)
+        wdog._serial_lock = mock_lock
+
+        wdog._serial_write("TEST\n", "TEST")
+
+        assert mock_lock.__enter__.call_count == 1, "_serial_write must acquire _serial_lock (context manager)"
+        assert mock_lock.__exit__.call_count == 1, "_serial_write must release _serial_lock on exit"
+
+
+class TestGetAppName:
+
+    def test_get_app_name_returns_localized_name(self):
+        """_get_app_name returns localizedName when available."""
+        wdog = _make_watchdog()
+        app = MagicMock()
+        app.localizedName.return_value = "Spotify"
+        assert wdog._get_app_name(app) == "Spotify"
+
+    def test_get_app_name_falls_back_to_bundle_id(self):
+        """_get_app_name returns bundleIdentifier when localizedName is empty."""
+        wdog = _make_watchdog()
+        app = MagicMock()
+        app.localizedName.return_value = ""
+        app.bundleIdentifier.return_value = "com.spotify.client"
+        app.bundleExecutable.return_value = "Spotify"
+        assert wdog._get_app_name(app) == "com.spotify.client"
+
+    def test_get_app_name_all_none_returns_unknown(self):
+        """_get_app_name must return 'unknown' when all properties are None/empty."""
+        wdog = _make_watchdog()
+        app = MagicMock()
+        app.localizedName.return_value = None
+        app.bundleIdentifier.return_value = None
+        app.bundleExecutable.return_value = None
+        result = wdog._get_app_name(app)
+        assert result == "unknown", f"Expected 'unknown', got {result!r}"
+
+    def test_get_app_name_returns_str_not_none(self):
+        """_get_app_name must never return None."""
+        wdog = _make_watchdog()
+        app = MagicMock()
+        app.localizedName.return_value = None
+        app.bundleIdentifier.return_value = None
+        app.bundleExecutable.return_value = None
+        result = wdog._get_app_name(app)
+        assert isinstance(result, str), f"Expected str, got {type(result)}"
+
+
+class TestRunPluginCommandVerbose:
+
+    def test_command_not_found_respects_verbose_false(self):
+        """'Command not found' must NOT print when verbose=False."""
+        wd = _import_watchdog()
+        ser = MagicMock()
+        wdog = _make_watchdog(ser, verbose=False)
+
+        plugin_mock = MagicMock()
+        plugin_mock.commands.return_value = {}  # no matching command
+        wdog.plugins = {'myplugin': plugin_mock}
+
+        import re
+        match = re.match(r'^Run: (.+)$', 'Run: myplugin.nonexistent')
+        import io
+        with patch('builtins.print') as mock_print:
+            wdog.run_plugin_command(match)
+        # With verbose=False, "Command not found" must not be printed
+        for call_args in mock_print.call_args_list:
+            assert 'not found' not in str(call_args).lower(), (
+                f"'not found' printed with verbose=False: {call_args}"
+            )
+
+    def test_command_not_found_prints_when_verbose_true(self):
+        """'Command not found' must print when verbose=True."""
+        wd = _import_watchdog()
+        ser = MagicMock()
+        wdog = _make_watchdog(ser, verbose=True)
+
+        plugin_mock = MagicMock()
+        plugin_mock.commands.return_value = {}
+        wdog.plugins = {'myplugin': plugin_mock}
+
+        import re
+        match = re.match(r'^Run: (.+)$', 'Run: myplugin.nonexistent')
+        with patch('builtins.print') as mock_print:
+            wdog.run_plugin_command(match)
+        printed = ' '.join(str(c) for c in mock_print.call_args_list)
+        assert 'not found' in printed.lower(), (
+            "Expected 'not found' to be printed with verbose=True"
+        )
+
+
+class TestSecurityGuards:
+
+    def test_launch_app_rejects_path_separator(self):
+        """launch_app must reject names containing '/' to prevent binary path abuse."""
+        wd = _import_watchdog()
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+
+        for bad_name in ['/usr/bin/evil', 'App/Subdir', 'App\\Evil', 'App\x00Null']:
+            mock_match = MagicMock()
+            mock_match.group.return_value = bad_name
+            with patch('subprocess.run') as mock_run:
+                wdog.launch_app(mock_match)
+                assert mock_run.call_count == 0, f"subprocess.run must not be called for unsafe name {bad_name!r}"
+
+    def test_launch_app_allows_normal_names(self):
+        """launch_app must accept normal macOS application names."""
+        wd = _import_watchdog()
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+
+        for good_name in ['Spotify', 'Google Chrome', 'Visual Studio Code', 'zoom.us']:
+            mock_match = MagicMock()
+            mock_match.group.return_value = good_name
+            with patch('subprocess.run') as mock_run:
+                wdog.launch_app(mock_match)
+                assert mock_run.call_count == 1, f"subprocess.run must be called for safe name {good_name!r}"
+
+    def test_get_url_rejects_unknown_app(self):
+        """get_url must return '' for any app not in its known-safe allowlist."""
+        wd = _import_watchdog()
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+
+        # These names must never trigger osascript
+        for unsafe_name in ['"; touch /tmp/pwned; echo "', 'Firefox', 'unknownApp']:
+            with patch('subprocess.Popen') as mock_popen:
+                result = wdog.get_url(unsafe_name)
+                assert result == '', f"get_url must return '' for {unsafe_name!r}"
+                assert mock_popen.call_count == 0, f"osascript must not run for {unsafe_name!r}"
+
+    def test_get_url_allows_known_browsers(self):
+        """get_url must invoke osascript for Google Chrome and Safari."""
+        wd = _import_watchdog()
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = (b'', b'')
+        with patch('subprocess.Popen', return_value=mock_proc) as mock_popen:
+            wdog.get_url('Google Chrome')
+            assert mock_popen.call_count == 1
+
+        with patch('subprocess.Popen', return_value=mock_proc) as mock_popen:
+            wdog.get_url('Safari')
+            assert mock_popen.call_count == 1
+

@@ -1,6 +1,18 @@
 
 # CHANGELOG
 
+## 2026-04-13 (second-pass fixes)
+
+- **Watchdog `_get_app_name`: never returns `None`** — if `localizedName()`, `bundleIdentifier()`, and `bundleExecutable()` all return falsy, callers would receive `None` and crash on string concatenation in `_serial_write`. Added `or "unknown"` final fallback.
+- **Spotify `play()`: log "No active device"** — the `current_playback is None` early-return was silently swallowing the no-device case. Added `self._log("No active device")` to match the behavior of `pause()` and `play_pause()`.
+- **Spotify `_adjust_volume`: explicit `device` key guard** — direct `playback['device']['volume_percent']` access would raise `KeyError` if `playback` is `None` or lacks the `'device'` key. Added explicit guard that logs "No active device" and returns early.
+- **Pi Pico `color_string_to_tuple`: wrap invalid hex in `ValueError`** — a malformed color like `"#GGGGGG"` raised a raw Python `ValueError` with a cryptic message. Now caught and re-raised as `ValueError(f"Invalid hex color: {color_string!r}")`.
+- **Pi Pico rotation: warn and ignore invalid values** — rotation settings like `"northwest"` were silently accepted and stored, causing `rotate_keys_if_needed()` to fall through as a no-op with no feedback. Now prints a warning and resets to `''`.
+- **Watchdog `run_plugin_command`: verbose guard for "Command not found"** — the "Command not found" message always printed regardless of `--verbose`, while all surrounding diagnostics respected it. Added `if self.args.verbose` guard for consistency.
+- **Sounds plugin `_futures`: cap list to 10** — completed futures were filtered on each `play()` call but the list was never capped. After many plays in a session, hundreds of done futures would accumulate. Added `[-10:]` slice after filtering.
+- **Spotify `play()`: add exception handling around `start_playback()`** — the API call was unguarded while `pause()`, `next()`, `prev()`, and `play_pause()` all wrapped their calls in try/except. Now consistent.
+- **Spotify `next()` / `prev()`: remove unused exception variable** — `except Exception as e` had `e` unused; simplified to `except Exception`.
+
 ## 2026-04-13 (cleanup)
 
 - **Hue plugin: eliminate double bridge lookup in `toggle`** — `toggle()` called `_find_light()` then passed the raw identifier to `_change_light_state()`, which called `_find_light()` again. Fixed by widening `_change_light_state` to accept an already-resolved light object; `toggle()` now passes the resolved object directly.

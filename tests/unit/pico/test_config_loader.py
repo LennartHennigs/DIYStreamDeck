@@ -347,3 +347,127 @@ class TestFoldersKeyAccess:
             "TestApp",
             app_config
         )  # ← KeyError before fix
+
+
+class TestParseBoolFromConfig:
+    """Tests for the parse_bool_from_config helper."""
+
+    @patch('builtins.open', mock_open(read_data=MINIMAL_JSON))
+    def setup_method(self, method):
+        self.kc = KeyController(verbose=False)
+
+    def test_string_true_returns_true(self):
+        assert self.kc.parse_bool_from_config("true") is True
+
+    def test_string_true_uppercase_returns_true(self):
+        assert self.kc.parse_bool_from_config("True") is True
+
+    def test_string_false_returns_false(self):
+        assert self.kc.parse_bool_from_config("false") is False
+
+    def test_native_bool_true_returns_true(self):
+        assert self.kc.parse_bool_from_config(True) is True
+
+    def test_native_bool_false_returns_false(self):
+        assert self.kc.parse_bool_from_config(False) is False
+
+    def test_missing_key_returns_default(self):
+        assert self.kc.parse_bool_from_config(None, default=True) is True
+        assert self.kc.parse_bool_from_config(None, default=False) is False
+
+    def test_ignore_default_string_in_config(self):
+        """ignore_default: 'true' must be treated as True, not a string."""
+        config = {"ignore_default": "true"}
+        result = self.kc.parse_bool_from_config(config.get("ignore_default", "false"))
+        assert result is True
+
+    def test_ignore_default_bool_in_config(self):
+        """ignore_default: true (native JSON bool) must be treated as True."""
+        config = {"ignore_default": True}
+        result = self.kc.parse_bool_from_config(config.get("ignore_default", False))
+        assert result is True
+
+
+class TestColorStringToTuple:
+    """Tests for KeyController.color_string_to_tuple()."""
+
+    @patch('builtins.open', mock_open(read_data=MINIMAL_JSON))
+    def setup_method(self, method):
+        self.kc = KeyController(verbose=False)
+
+    def test_valid_hex_returns_tuple(self):
+        """A valid '#RRGGBB' string returns an (R, G, B) tuple."""
+        assert self.kc.color_string_to_tuple("#FF0000") == (255, 0, 0)
+        assert self.kc.color_string_to_tuple("#00FF00") == (0, 255, 0)
+        assert self.kc.color_string_to_tuple("#0000FF") == (0, 0, 255)
+        assert self.kc.color_string_to_tuple("#1A2B3C") == (26, 43, 60)
+
+    def test_non_hash_string_returns_none(self):
+        """Strings not starting with '#' return None."""
+        assert self.kc.color_string_to_tuple("red") is None
+        assert self.kc.color_string_to_tuple("255,0,0") is None
+
+    def test_invalid_hex_raises_valueerror(self):
+        """A '#' string with non-hex digits must raise ValueError, not crash silently."""
+        with pytest.raises(ValueError, match="Invalid hex color"):
+            self.kc.color_string_to_tuple("#GGGGGG")
+
+    def test_another_invalid_hex_raises_valueerror(self):
+        """Invalid hex digits at any position must raise ValueError."""
+        with pytest.raises(ValueError, match="Invalid hex color"):
+            self.kc.color_string_to_tuple("#XY00ZZ")
+
+
+class TestRotationValidation:
+    """Tests for rotation setting validation in KeyController.__init__."""
+
+    def test_valid_cw_rotation(self):
+        """rotate='CW' must be accepted and stored as 'CW'."""
+        json_with_cw = json.dumps({
+            "settings": {"rotate": "CW"},
+            "applications": {"_otherwise": {}},
+            "folders": {},
+            "urls": {}
+        })
+        with patch('builtins.open', mock_open(read_data=json_with_cw)):
+            kc = KeyController(verbose=False)
+        assert kc.rotate == "CW"
+
+    def test_valid_ccw_rotation(self):
+        """rotate='CCW' must be accepted and stored as 'CCW'."""
+        json_with_ccw = json.dumps({
+            "settings": {"rotate": "CCW"},
+            "applications": {"_otherwise": {}},
+            "folders": {},
+            "urls": {}
+        })
+        with patch('builtins.open', mock_open(read_data=json_with_ccw)):
+            kc = KeyController(verbose=False)
+        assert kc.rotate == "CCW"
+
+    def test_invalid_rotation_is_ignored(self):
+        """rotate='northwest' must not raise and must store '' (invalid value ignored)."""
+        json_with_invalid = json.dumps({
+            "settings": {"rotate": "northwest"},
+            "applications": {"_otherwise": {}},
+            "folders": {},
+            "urls": {}
+        })
+        with patch('builtins.open', mock_open(read_data=json_with_invalid)):
+            kc = KeyController(verbose=False)  # must not raise
+        assert kc.rotate == "", f"Expected '' for invalid rotation, got {kc.rotate!r}"
+
+    def test_invalid_rotation_prints_warning(self, capsys):
+        """rotate='diagonal' must print a warning message."""
+        json_with_invalid = json.dumps({
+            "settings": {"rotate": "diagonal"},
+            "applications": {"_otherwise": {}},
+            "folders": {},
+            "urls": {}
+        })
+        with patch('builtins.open', mock_open(read_data=json_with_invalid)):
+            KeyController(verbose=False)
+        captured = capsys.readouterr()
+        assert "diagonal" in captured.out or "diagonal" in captured.err, (
+            "Expected a warning mentioning the invalid rotation value"
+        )

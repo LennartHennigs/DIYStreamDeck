@@ -1,4 +1,3 @@
-import json
 import os
 from typing import Dict, Callable, Union, Optional
 from phue import Bridge, Light
@@ -20,17 +19,6 @@ class HuePlugin(BasePlugin):
             'hue.turn_off': self.turn_off,
             'hue.toggle': self.toggle,
         }
-
-    def _load_config(self, config_file: str) -> Dict[str, Union[str, int]]:
-        try:
-            with open(config_file, 'r') as f:
-                return json.load(f)
-        except FileNotFoundError:
-            self._log_and_raise(f"Config file {config_file} not found.")
-        except json.JSONDecodeError:
-            self._log_and_raise(
-                f"Failed to parse config file {config_file}. Please check if it is a valid JSON file."
-            )
 
     def _connect_to_bridge(self) -> Bridge:
         bridge_ip = self.config.get('bridge_ip')
