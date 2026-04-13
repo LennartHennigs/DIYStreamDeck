@@ -37,9 +37,9 @@ def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Seria
 
 
 def run_loop(observer: 'WatchDog') -> None:
-    run_loop = Cocoa.NSRunLoop.currentRunLoop()
+    ns_run_loop = Cocoa.NSRunLoop.currentRunLoop()
     while True:
-        run_loop.runMode_beforeDate_(
+        ns_run_loop.runMode_beforeDate_(
             Cocoa.NSDefaultRunLoopMode, Cocoa.NSDate.dateWithTimeIntervalSinceNow_(0.1))
         observer.check_serial()
 
@@ -75,8 +75,6 @@ class WatchDog(Cocoa.NSObject):
         app_name = app.localizedName()
         if not app_name:
             app_name = app.bundleIdentifier() or app.bundleExecutable()
-#        if self.args.verbose:
-#            print(f"{app_name} has been terminated")
         # send the app name to the keypad
         try:
             self.ser.write(("Terminated: " + app_name + '\n').encode('ascii', 'replace'))
@@ -161,17 +159,17 @@ class WatchDog(Cocoa.NSObject):
             print(f"Error sending app name to microcontroller: {e}")
 
     # Send a HELLO or BYE message so the keypad can react to clean startup/shutdown
-    def send_hello(self) -> None:
+    def _serial_write(self, message: str, label: str) -> None:
         try:
-            self.ser.write((f"HELLO:{VERSION}\n").encode('ascii', 'replace'))
+            self.ser.write(message.encode('ascii', 'replace'))
         except Exception as e:
-            print(f"Error sending HELLO: {e}")
+            print(f"Error sending {label}: {e}")
+
+    def send_hello(self) -> None:
+        self._serial_write(f"HELLO:{VERSION}\n", "HELLO")
 
     def send_bye(self) -> None:
-        try:
-            self.ser.write(("BYE\n").encode('ascii', 'replace'))
-        except Exception as e:
-            print(f"Error sending BYE: {e}")
+        self._serial_write("BYE\n", "BYE")
 
 
     # Read data from the serial connection from the keypad
@@ -193,9 +191,8 @@ class WatchDog(Cocoa.NSObject):
             print(f"Launching: {launch_app_name}")
         try:
             subprocess.run(["open", "-a", launch_app_name], check=True)
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             pass
-        return
 
 
     # Run a plugin command
@@ -212,11 +209,12 @@ class WatchDog(Cocoa.NSObject):
                 print(f"Plugin {command.split('.')[0]} not found")
             return
         # Check if the plugin command exists
-        if command not in plugin.commands():
+        commands = plugin.commands()
+        if command not in commands:
             print(f"Command {command} not found")
             return
         # Check if the command requires a parameter
-        command_func = plugin.commands()[command]
+        command_func = commands[command]
         if len(signature(command_func).parameters) > 0 and param is None:
             print(f"Parameter missing for command: {command}")
             return
@@ -363,7 +361,7 @@ def main() -> None:
     heartbeat_thread = threading.Thread(target=watchdog.send_heartbeat)
     heartbeat_thread.start()
 
-    if args.rotate :
+    if args.rotate:
         ser.write(f'Rotate: {args.rotate}\n'.encode('ascii', 'replace'))
 
     try:

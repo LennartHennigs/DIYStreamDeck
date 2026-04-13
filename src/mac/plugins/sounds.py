@@ -22,8 +22,10 @@ class SoundsPlugin(BasePlugin):
         self.verbose = verbose
         self.config = self._load_config(config_file)
         self.sound_path = self.config.get('sound_path', '')
+        self._sound_base_dir = os.path.realpath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), self.sound_path)
+        )
         self.executor = ThreadPoolExecutor(max_workers=2)
-        # Keep track of submitted futures so we can cancel them on stop()
         self._futures: List[Future] = []
 
     def commands(self) -> Dict[str, Callable]:
@@ -58,23 +60,18 @@ class SoundsPlugin(BasePlugin):
                 any(ord(c) < 32 and c not in '\t\n\r' for c in filename)):
             self._log_and_raise(f"Invalid filename: {filename}")
 
-        # Use basename to strip any path components
         safe_filename = os.path.basename(filename)
-
-        # Construct and resolve the full path
-        sound_base_dir = os.path.realpath(
-            os.path.join(os.path.dirname(os.path.abspath(__file__)), self.sound_path)
-        )
-        resolved_path = os.path.realpath(os.path.join(sound_base_dir, safe_filename))
+        resolved_path = os.path.realpath(os.path.join(self._sound_base_dir, safe_filename))
 
         # Security: Ensure resolved path stays within the sound directory
-        if not resolved_path.startswith(sound_base_dir):
+        if not resolved_path.startswith(self._sound_base_dir):
             self._log_and_raise(f"Invalid file path: {filename}")
 
         if not os.path.exists(resolved_path):
             self._log_and_raise(f"File {filename} not found.")
 
         try:
+            self._futures = [f for f in self._futures if not f.done()]
             future = self.executor.submit(playsound, resolved_path)
             self._futures.append(future)
             if self.verbose:

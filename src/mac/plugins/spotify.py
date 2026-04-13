@@ -74,29 +74,22 @@ class SpotifyPlugin(BasePlugin):
         if current_playback is None:
             self._log("No active device")
             return False
-        else:
-#            for device in self.sp.devices()['devices']:
-#                if device['is_active']:
-#                    print(device['name'])   
-            return True 
+        return True
 
 
-    def play_pause(self) -> None: 
+    def play_pause(self) -> None:
         if self.has_active_device():
             try:
                 if self.sp.current_playback()['is_playing']:
                     self._log("Pause")
-                    self.pause(False)
+                    self.pause()
                 else:
-                    self.play(False)
-            except Exception as e:
+                    self.play()
+            except Exception:
                 self._log("Error")
-                pass;
-#        devices = self.sp.devices()
-#        self.sp.transfer_playback(devices['devices'][0]['id'])
-    
 
-    def play(self, check_active_device=True) -> None:
+
+    def play(self) -> None:
         if self.has_active_device():
             current_playback = self.sp.current_playback()
             if current_playback is None or not current_playback['is_playing']:
@@ -106,13 +99,12 @@ class SpotifyPlugin(BasePlugin):
                 self._log("No song is currently playing.")
 
 
-    def pause(self, check_active_device=True) -> None:
+    def pause(self) -> None:
         if self.has_active_device():
             try:
                 self.sp.pause_playback()
-            except Exception as e:
+            except Exception:
                 self._log("Error")
-                pass
 
 
     def next(self) -> None:

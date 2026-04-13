@@ -19,6 +19,7 @@ import board
 # the keypad will clear and unload itself.
 PICO_HEARTBEAT_INTERVAL = 2
 PICO_TIMEOUT_MULTIPLIER = 2
+PICO_TIMEOUT_SECONDS = PICO_HEARTBEAT_INTERVAL * PICO_TIMEOUT_MULTIPLIER
 
 
 class KeyController:
@@ -84,8 +85,8 @@ class KeyController:
 
 
     # close the current folder if needed
-    def close_folder_if_needed(self, someAction, action):
-        if (someAction and self.autoclose_current_folder) or action == 'close_folder':
+    def close_folder_if_needed(self, some_action, action):
+        if (some_action and self.autoclose_current_folder) or action == 'close_folder':
             if not self.folder_stack:
                 return
             self.current_config = self.folder_stack.pop()
@@ -103,13 +104,11 @@ class KeyController:
         keys = key_def.get('key_sequences')
         pressedUntilReleased = key_def.get('pressedUntilReleased')
         pressedColor = key_def.get('pressedColor')
-        # turn off the LED
         key.led_off()
-        someAction = True
-        # process the action
+        some_action = True
         if folder:
             self.open_folder(folder)
-            someAction = False
+            some_action = False
         elif isinstance(action, tuple):
             self.send_plugin_command(*action)
         elif app:
@@ -119,7 +118,7 @@ class KeyController:
             if pressedColor:
                 key.set_led(*pressedColor)
         # close the folder if needed
-        self.close_folder_if_needed(someAction, action)
+        self.close_folder_if_needed(some_action, action)
         
 
     # handle the key release
@@ -135,11 +134,11 @@ class KeyController:
         if keys:
             self.keyboard.release_all()
             if toggleColor:
-                temp = color;
-                color = toggleColor;
-                self.current_config[key.number]['color'] = toggleColor;
-                self.current_config[key.number]['toggleColor'] = temp;
-            key.set_led(*color) 
+                temp = color
+                color = toggleColor
+                self.current_config[key.number]['color'] = toggleColor
+                self.current_config[key.number]['toggleColor'] = temp
+            key.set_led(*color)
 
 
     # handle the key sequences
@@ -157,7 +156,7 @@ class KeyController:
                 self.keyboard.press(item)
         # release all keys
         if not pressedUntilReleased:
-            time.sleep(0.025);
+            time.sleep(0.025)
             self.keyboard.release_all()
 
 
@@ -168,7 +167,7 @@ class KeyController:
             if key.number in self.current_config:
                 color = self.current_config[key.number]['color']
                 if color:
-                    key.set_led(*color);
+                    key.set_led(*color)
                 else:
                     raise ValueError(f"Error: Color not defined for key {key.number}.")
                 # set the key press and release handlers
@@ -332,7 +331,7 @@ class KeyController:
         # add the default config if needed
         ignore_default = config.get("ignore_default", "false").lower() == "true"
         if not ignore_default:
-            self.add_global_config(app_config[app]);
+            self.add_global_config(app_config[app])
         app_config[app]['containsToggle'] = containsToggle
         return app_config
 
@@ -380,7 +379,7 @@ class KeyController:
                 raise ValueError(f"Error: Folder '{folder}' does not have a 'close_folder' action defined.")
             ignore_default = config.get("ignore_default", "false").lower() == "true"
             if not ignore_default:
-                self.add_global_config(folder_config[folder]);
+                self.add_global_config(folder_config[folder])
         return folder_config
 
 
@@ -502,9 +501,6 @@ class KeyController:
 
     # main loop
     def run(self):
-        # Timeout configuration - use module-level constants
-        TIMEOUT_SECONDS = PICO_HEARTBEAT_INTERVAL * PICO_TIMEOUT_MULTIPLIER
-
         while True:
             serial_str = self.read_serial_line()
             if serial_str is not None:
@@ -515,9 +511,9 @@ class KeyController:
                 self.keypad.update()
 
             # Check for heartbeat timeout. If we haven't seen a heartbeat (or HELLO)
-            # within TIMEOUT_SECONDS, clear and unload the keypad.
+            # within PICO_TIMEOUT_SECONDS, clear and unload the keypad.
             try:
-                if (not self.unloaded) and (time.time() - self.last_heartbeat > TIMEOUT_SECONDS):
+                if (not self.unloaded) and (time.time() - self.last_heartbeat > PICO_TIMEOUT_SECONDS):
                     # perform unload on timeout
                     self.unload_keypad()
             except Exception:

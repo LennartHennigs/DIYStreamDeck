@@ -54,8 +54,8 @@ class HuePlugin(BasePlugin):
             (light for light in lights if light.name.lower() == lamp_identifier.lower()), None
         )
 
-    def _change_light_state(self, lamp_identifier: Union[int, str], state: bool) -> None:
-        light = self._find_light(lamp_identifier)
+    def _change_light_state(self, lamp_identifier: Union[int, str, Light], state: bool) -> None:
+        light = self._find_light(lamp_identifier) if isinstance(lamp_identifier, (int, str)) else lamp_identifier
         if light is None:
             print(f"Could not find a light with the name or index: {lamp_identifier}")
             return
@@ -74,4 +74,4 @@ class HuePlugin(BasePlugin):
         if light is None:
             print(f"Could not find a light with the name or index: '{lamp_identifier}'")
             return
-        self._change_light_state(lamp_identifier, not light.on)
+        self._change_light_state(light, not light.on)

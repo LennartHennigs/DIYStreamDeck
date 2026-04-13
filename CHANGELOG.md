@@ -1,6 +1,20 @@
 
 # CHANGELOG
 
+## 2026-04-13 (cleanup)
+
+- **Hue plugin: eliminate double bridge lookup in `toggle`** — `toggle()` called `_find_light()` then passed the raw identifier to `_change_light_state()`, which called `_find_light()` again. Fixed by widening `_change_light_state` to accept an already-resolved light object; `toggle()` now passes the resolved object directly.
+- **Sounds plugin: cache `_sound_base_dir`** — `play()` recomputed the base directory path (3 syscalls) on every invocation. Moved the computation to `__init__` as `self._sound_base_dir`.
+- **Sounds plugin: prune completed futures** — `self._futures` grew unbounded between `stop()` calls. Added a prune step in `play()` before appending the new future.
+- **Spotify plugin: remove dead code** — removed unused `check_active_device` parameter from `play()` and `pause()`, removed unnecessary `else` after `return False` in `has_active_device`, removed `pass;` semicolons.
+- **Watchdog: fix `run_loop` local variable shadowing module function** — renamed local `run_loop` variable in `run_loop()` to `ns_run_loop`.
+- **Watchdog: extract `_serial_write` helper** — `send_hello` and `send_bye` had identical try/except structure; extracted to `_serial_write(message, label)`.
+- **Watchdog: capture `plugin.commands()` once** — `run_plugin_command` called `plugin.commands()` twice per invocation; now captured once.
+- **Watchdog: remove commented-out blocks and unreachable code** — removed dead comment block in `applicationTerminated_`, removed unreachable `return` after `pass` in `launch_app`, fixed trailing space in `if args.rotate :`.
+- **Pi Pico: remove trailing semicolons** — removed Python anti-pattern semicolons from `code.py` (lines 138–141, 170, 335, 382).
+- **Pi Pico: rename camelCase `someAction` → `some_action`** — renamed in `key_press_action`, `key_release_action`, and `close_folder_if_needed`.
+- **Pi Pico: promote derived constant to module level** — `TIMEOUT_SECONDS` was recomputed inside `run()` on every call; replaced with module-level `PICO_TIMEOUT_SECONDS = PICO_HEARTBEAT_INTERVAL * PICO_TIMEOUT_MULTIPLIER`.
+
 ## 2026-04-13
 
 - **Hue plugin: `_find_light()` int logic fixed** — integer lamp identifiers previously matched every light in the list because the bounds check `lamp_identifier < len(lights)` is true for all indices. Replaced three methods (`_find_light`, `_get_lights`, `_is_matching_light`) with a single correct implementation that looks up the light at the specified list index.
