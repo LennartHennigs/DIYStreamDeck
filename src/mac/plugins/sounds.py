@@ -1,7 +1,7 @@
 import os
 import json
 from typing import Dict, Callable, Union, List
-from playsound import playsound
+from playsound3 import playsound
 from concurrent.futures import ThreadPoolExecutor, Future
 from src.mac.plugins.base_plugin import BasePlugin
 

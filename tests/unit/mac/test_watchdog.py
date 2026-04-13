@@ -65,13 +65,14 @@ def _stub_cocoa_modules():
         appkit_mod.NSWorkspaceDidTerminateApplicationNotification = MagicMock()
         sys.modules['AppKit'] = appkit_mod
 
-    # objc — typedSelector must be a pass-through decorator
-    if 'objc' not in sys.modules:
-        sys.modules['objc'] = MagicMock()
-    objc_mod = sys.modules['objc']
-    objc_mod.typedSelector = lambda sig: (lambda f: f)
-    objc_mod.selector.return_value = MagicMock()
-    objc_mod.super = MagicMock()
+    # objc — always replace with a plain stub so we're never touching the real
+    # C extension (pyobjc >= 10 makes objc.selector an immutable C type that
+    # rejects attribute assignment).
+    objc_stub = MagicMock()
+    objc_stub.typedSelector = lambda sig: (lambda f: f)
+    objc_stub.selector = MagicMock()
+    objc_stub.super = MagicMock()
+    sys.modules['objc'] = objc_stub
 
     for name in ('termios', 'tty'):
         sys.modules.setdefault(name, MagicMock())
