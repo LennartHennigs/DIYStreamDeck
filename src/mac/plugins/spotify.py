@@ -13,8 +13,7 @@ from src.mac.plugins.base_plugin import BasePlugin
 class SpotifyPlugin(BasePlugin):
 
     def __init__(self, config_file: str, verbose: bool) -> None:
-        self.verbose = verbose
-        self.config = self._load_config(config_file)
+        super().__init__(config_file, verbose)
         self.sp = self._authenticate()
 
     def commands(self):
@@ -63,8 +62,8 @@ class SpotifyPlugin(BasePlugin):
             else:
                 self.sp.start_playback()
                 self._log(self.get_current_song_info())
-        except Exception:
-            self._log("Error")
+        except Exception as e:
+            self._log(f"Error: {e}")
 
 
     def play(self) -> None:
@@ -76,8 +75,8 @@ class SpotifyPlugin(BasePlugin):
             try:
                 self.sp.start_playback()
                 self._log(self.get_current_song_info())
-            except Exception:
-                self._log("Error")
+            except Exception as e:
+                self._log(f"Error: {e}")
         else:
             self._log("Already playing.")
 
@@ -86,8 +85,8 @@ class SpotifyPlugin(BasePlugin):
         if self.has_active_device():
             try:
                 self.sp.pause_playback()
-            except Exception:
-                self._log("Error")
+            except Exception as e:
+                self._log(f"Error: {e}")
 
 
     def next(self) -> None:
@@ -95,8 +94,8 @@ class SpotifyPlugin(BasePlugin):
             try:
                 self.sp.next_track()
                 self._log(self.get_current_song_info())
-            except Exception:
-                self._log("Error")
+            except Exception as e:
+                self._log(f"Error: {e}")
 
 
     def prev(self) -> None:
@@ -104,8 +103,8 @@ class SpotifyPlugin(BasePlugin):
             try:
                 self.sp.previous_track()
                 self._log(self.get_current_song_info())
-            except Exception:
-                self._log("Error")
+            except Exception as e:
+                self._log(f"Error: {e}")
 
 
     def volume_up(self, volume_change: int = 10) -> None:
@@ -126,8 +125,8 @@ class SpotifyPlugin(BasePlugin):
             new_volume = max(min(current_volume + volume_change, 100), 0)
             self.sp.volume(new_volume)
             self._log(f"Volume {'increased' if volume_change > 0 else 'decreased'} to {new_volume}%")
-        except Exception:
-            self._log(f"Failed to {'increase' if volume_change > 0 else 'decrease'} volume")
+        except Exception as e:
+            self._log(f"Failed to {'increase' if volume_change > 0 else 'decrease'} volume: {e}")
 
 
     def get_current_song_info(self) -> Optional[str]:

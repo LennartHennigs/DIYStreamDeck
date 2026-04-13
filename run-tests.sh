@@ -55,7 +55,7 @@ case "${1:-all}" in
         pytest tests/unit/pico/test_heartbeat_functionality.py -v
         ;;
     "all")
-        echo -e "${BLUE}🚀 Running ALL tests (~125 tests)...${NC}"
+        echo -e "${BLUE}🚀 Running ALL tests (201 tests)...${NC}"
         pytest tests/ -v
         ;;
     *)

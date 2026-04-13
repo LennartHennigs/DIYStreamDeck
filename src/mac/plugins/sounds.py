@@ -18,8 +18,7 @@ class SoundsPlugin(BasePlugin):
     sound_path: str
 
     def __init__(self, config_file: str, verbose: bool) -> None:
-        self.verbose = verbose
-        self.config = self._load_config(config_file)
+        super().__init__(config_file, verbose)
         self.sound_path = self.config.get('sound_path', '')
         self._sound_base_dir = os.path.realpath(
             os.path.join(os.path.dirname(os.path.abspath(__file__)), self.sound_path)

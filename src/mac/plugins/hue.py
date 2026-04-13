@@ -9,8 +9,7 @@ class HuePlugin(BasePlugin):
     bridge: Bridge
 
     def __init__(self, config_file: str, verbose: bool) -> None:
-        self.verbose = verbose
-        self.config = self._load_config(config_file)
+        super().__init__(config_file, verbose)
         self.bridge = self._connect_to_bridge()
 
     def commands(self) -> Dict[str, Callable]:

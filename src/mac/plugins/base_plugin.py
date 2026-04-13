@@ -15,6 +15,10 @@ class BasePlugin(ABC):
     names to callables.
     """
 
+    def __init__(self, config_file: str, verbose: bool = False) -> None:
+        self.verbose = verbose
+        self.config = self._load_config(config_file)
+
     @abstractmethod
     def commands(self) -> Dict[str, Callable]:
         """Return a dict mapping command names to callables."""

@@ -7,8 +7,6 @@ import sys
 import Cocoa
 import serial
 import objc
-import termios
-import tty
 import argparse
 import re
 import subprocess
@@ -20,7 +18,6 @@ import importlib.util
 import os
 from src.mac.plugins.base_plugin import BasePlugin
 import threading
-import time
 from AppKit import NSWorkspaceDidTerminateApplicationNotification
 
 VERSION = "1.2.1"
@@ -50,7 +47,6 @@ class WatchDog(Cocoa.NSObject):
     launch_pattern = re.compile(r"^Launch: (.+)$")
     run_pattern = re.compile(r"^Run: (.+)$")
     unsafe_app_name_pattern = re.compile(r"^-|[/\\\x00]")  # leading dash → flag injection; / \ \x00 → path traversal
-    running: bool = True
 
     # Initializer
     def initWithSerial_args_plugins_(self, ser: serial.Serial, args: argparse.Namespace, plugins: Dict[str, Any]) -> Optional['WatchDog']:
@@ -61,6 +57,7 @@ class WatchDog(Cocoa.NSObject):
         self.args = args
         self.plugins = plugins
         self._serial_lock = threading.Lock()
+        self._stop_event = threading.Event()
         # Add observer for application termination
         Cocoa.NSWorkspace.sharedWorkspace().notificationCenter().addObserver_selector_name_object_(
             self,
@@ -87,10 +84,9 @@ class WatchDog(Cocoa.NSObject):
     # Called every HEARTBEAT_INTERVAL seconds
     @objc.typedSelector(b'v@:')  # Encoded the signature string as bytes
     def send_heartbeat(self) -> None:
-        while self.running:
+        while not self._stop_event.wait(HEARTBEAT_INTERVAL):
             # Send a framed heartbeat message so the keypad can detect liveness
             self._serial_write('HB\n', 'HB')
-            time.sleep(HEARTBEAT_INTERVAL)
 
 
     # Called when the active application changes
@@ -373,7 +369,7 @@ def main() -> None:
         print(f"An error occurred during the execution: {e}")
     finally:
         notification_center.removeObserver_(watchdog)
-        watchdog.running = False
+        watchdog._stop_event.set()
         # send a clean BYE
         watchdog.send_bye()
         heartbeat_thread.join()

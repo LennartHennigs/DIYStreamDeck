@@ -1,6 +1,20 @@
 
 # CHANGELOG
 
+## 2026-04-13 (code review + simplify)
+
+- **Pi Pico `parse_json`: fix CircuitPython incompatibility** — `.with_traceback(e.__traceback__)` is not supported in CircuitPython; removed it. Exception type is still preserved via `raise type(e)(...)`.
+- **Pi Pico `process_rotate`: validate serial input** — runtime `Rotate:` commands from the watchdog were stored without validation, unlike the `__init__` path. Added the same `("CW", "CCW", "")` guard with a warning print so invalid values are ignored.
+- **`BasePlugin`: add `__init__`** — subclasses had to set `self.verbose` before calling `self._load_config()`; if a future plugin got the order wrong, `_log()` would crash with `AttributeError`. `BasePlugin.__init__` now guarantees the correct order.
+- **`SpotifyPlugin`, `SoundsPlugin`, `HuePlugin`: use `super().__init__()`** — all three plugins previously duplicated `self.verbose = verbose; self.config = self._load_config(config_file)`. Now delegate to the base class.
+- **`SpotifyPlugin`: log exception details** — six bare `except Exception` blocks logged only `"Error"`. Changed to `except Exception as e: self._log(f"Error: {e}")` so failures are diagnosable.
+- **Watchdog: remove unused imports** — `termios`, `tty`, and `time` were imported but never referenced; removed.
+- **Watchdog `send_heartbeat`: use `threading.Event` for clean shutdown** — replaced `while self.running: time.sleep(HEARTBEAT_INTERVAL)` with `while not self._stop_event.wait(HEARTBEAT_INTERVAL)`. The thread now wakes immediately on shutdown instead of waiting up to 2 seconds for a sleep to expire.
+- **Watchdog: remove dead `running` class attribute** — `WatchDog.running = True` was the old stop mechanism, superseded by `_stop_event`.
+- **Tests: delete orphaned `tests/unit/pi_pico/` directory** — 3 tests superseded by the 17-test `tests/unit/pico/test_heartbeat_functionality.py`; no `__init__.py` existed so they weren't being collected.
+- **Tests: update watchdog heartbeat tests** — updated 7 tests to use `patch.object(wdog._stop_event, 'wait', ...)` instead of the removed `running`/`time.sleep` interface.
+- Updated test count to 201 in `README.md` and `run-tests.sh`.
+
 ## 2026-04-13 (simplify pass)
 
 - **Watchdog `check_serial` ECHO reply: use `_serial_write`** — ECHO response wrote directly to `self.ser` bypassing the serial lock, creating a race with the heartbeat thread. Replaced with `self._serial_write()`.

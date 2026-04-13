@@ -9,7 +9,6 @@ Two categories:
 import re
 import os
 import sys
-import time
 import types
 import threading
 import argparse
@@ -94,8 +93,8 @@ def _make_watchdog(serial_mock=None, verbose=False):
     wdog.ser = serial_mock or MagicMock()
     wdog.args = argparse.Namespace(verbose=verbose, rotate=None)
     wdog.plugins = {}
-    wdog.running = True
     wdog._serial_lock = threading.Lock()
+    wdog._stop_event = threading.Event()
     return wdog
 
 
@@ -139,64 +138,53 @@ class TestSendHeartbeat:
         ser = MagicMock()
         wdog = _make_watchdog(ser)
 
-        # Run one iteration then stop
-        wdog.running = True
-        def _stop_after_one(interval):
-            wdog.running = False
-        with patch('time.sleep', side_effect=_stop_after_one):
+        # wait() returns False once (run body), then True (stop loop)
+        with patch.object(wdog._stop_event, 'wait', side_effect=[False, True]):
             wdog.send_heartbeat()
 
         ser.write.assert_called_once_with(b'HB\n')
 
     def test_send_heartbeat_uses_heartbeat_interval(self):
-        """send_heartbeat() must sleep for HEARTBEAT_INTERVAL between sends."""
+        """send_heartbeat() must call event.wait with HEARTBEAT_INTERVAL."""
         wd = _import_watchdog()
         ser = MagicMock()
         wdog = _make_watchdog(ser)
 
-        sleep_calls = []
+        wait_calls = []
         def _record_and_stop(interval):
-            sleep_calls.append(interval)
-            wdog.running = False
+            wait_calls.append(interval)
+            return True  # stop immediately after first call
 
-        with patch('time.sleep', side_effect=_record_and_stop):
+        with patch.object(wdog._stop_event, 'wait', side_effect=_record_and_stop):
             wdog.send_heartbeat()
 
-        assert sleep_calls == [wd.HEARTBEAT_INTERVAL]
+        assert wait_calls == [wd.HEARTBEAT_INTERVAL]
 
     def test_send_heartbeat_sends_multiple_times(self):
         """send_heartbeat() must keep sending HB on each loop iteration."""
         ser = MagicMock()
         wdog = _make_watchdog(ser)
 
-        iteration = [0]
-        def _stop_after_three(interval):
-            iteration[0] += 1
-            if iteration[0] >= 3:
-                wdog.running = False
-
-        with patch('time.sleep', side_effect=_stop_after_three):
+        # False × 3 → 3 sends; True → stop
+        with patch.object(wdog._stop_event, 'wait', side_effect=[False, False, False, True]):
             wdog.send_heartbeat()
 
         assert ser.write.call_count == 3
         ser.write.assert_called_with(b'HB\n')
 
     def test_send_heartbeat_stops_when_running_false(self):
-        """Setting running=False stops the heartbeat loop without another write."""
+        """Setting _stop_event stops the heartbeat loop without any write."""
         ser = MagicMock()
         wdog = _make_watchdog(ser)
-        wdog.running = False   # already stopped before the loop body runs
+        wdog._stop_event.set()  # already stopped before the loop body runs
 
-        with patch('time.sleep'):
-            wdog.send_heartbeat()
+        wdog.send_heartbeat()
 
         ser.write.assert_not_called()
 
     def test_send_heartbeat_handles_serial_exception(self):
         """A SerialException on write must be caught — loop must continue, not crash."""
         wd = _import_watchdog()
-        # Construct an exception that is caught by watchdog's `except serial.SerialException`.
-        # The watchdog module binds `serial` at import time, so we use that reference.
         serial_mod = sys.modules[wd.serial.__name__]
         if not hasattr(serial_mod, 'SerialException'):
             serial_mod.SerialException = type('SerialException', (OSError,), {})
@@ -206,15 +194,9 @@ class TestSendHeartbeat:
         ser.write.side_effect = SerialException("port closed")
         wdog = _make_watchdog(ser)
 
-        iteration = [0]
-        def _stop_after_one(interval):
-            iteration[0] += 1
-            wdog.running = False
-
-        with patch('time.sleep', side_effect=_stop_after_one):
+        # False once (loop runs, exception caught internally), True next (stop)
+        with patch.object(wdog._stop_event, 'wait', side_effect=[False, True]):
             wdog.send_heartbeat()   # must not raise
-
-        assert iteration[0] == 1   # loop ran, sleep was called
 
 
 class TestSendHelloBye:
@@ -263,8 +245,7 @@ class TestSendHelloBye:
 class TestHeartbeatThreadLifecycle:
 
     def test_heartbeat_thread_runs_and_stops(self):
-        """send_heartbeat() run in a real thread stops cleanly after running=False."""
-        wd = _import_watchdog()
+        """send_heartbeat() run in a real thread stops cleanly after _stop_event is set."""
         ser = MagicMock()
         wdog = _make_watchdog(ser)
 
@@ -275,13 +256,10 @@ class TestHeartbeatThreadLifecycle:
 
         ser.write.side_effect = _counted_write
 
-        # Patch time.sleep in the watchdog module so the loop doesn't actually wait
-        with patch.object(wd.time, 'sleep', return_value=None):
+        # Let the loop run a few times quickly, then stop
+        with patch.object(wdog._stop_event, 'wait', side_effect=[False, False, False, True]):
             t = threading.Thread(target=wdog.send_heartbeat)
             t.start()
-            # Give the thread a moment to run a few iterations
-            time.sleep(0.05)
-            wdog.running = False
             t.join(timeout=1.0)
 
         assert not t.is_alive(), "Heartbeat thread did not stop within 1 second"
@@ -304,10 +282,8 @@ class TestSerialWriteThreadSafety:
             ser.write(message.encode('ascii', 'replace'))
 
         with patch.object(wd.WatchDog, '_serial_write', recording_serial_write):
-            wdog.running = True
-            def _stop_after_one(interval):
-                wdog.running = False
-            with patch('time.sleep', side_effect=_stop_after_one):
+            # wait() returns False once (send HB), then True (stop)
+            with patch.object(wdog._stop_event, 'wait', side_effect=[False, True]):
                 wdog.send_heartbeat()
 
         assert any('HB' in call[0] for call in serial_write_calls), (

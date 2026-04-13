@@ -415,13 +415,17 @@ class KeyController:
             with open(json_filename, 'r') as json_file:
                 return json.load(json_file)
         except OSError as e:
-            raise type(e)(f"Config file '{json_filename}' not found: {e}").with_traceback(e.__traceback__) from None
+            raise type(e)(f"Config file '{json_filename}' not found") from None
         # json.JSONDecodeError (a ValueError subclass) propagates unchanged
 
 
     # process the rotate serial command
     def process_rotate(self, serial_str):
-        self.rotate = serial_str[8:]
+        value = serial_str[8:].upper()
+        if value not in ("CW", "CCW", ""):
+            print(f"Warning: Invalid rotation value '{value}', ignoring")
+            return
+        self.rotate = value
         self.current_config = self.rotate_keys_if_needed()
         self.update_keys()
 
