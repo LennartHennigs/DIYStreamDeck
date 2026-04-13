@@ -1,6 +1,19 @@
 
 # CHANGELOG
 
+## 2026-04-14 (third-pass fixes)
+
+- **Watchdog `main()` Rotate command: route through `_serial_write`** — `Rotate:` was written directly to `ser` bypassing `_serial_lock`, creating a race with the heartbeat thread. Replaced bare `ser.write(...)` with `watchdog._serial_write(...)`.
+- **Watchdog `main()`: close serial port in `finally`** — `ser` was never closed on exit; the port remained locked until the OS reclaimed it. Added `ser.close()` after `heartbeat_thread.join()`.
+- **Watchdog `launch_app`: security rejection always prints** — "Refused unsafe app name" was gated behind `if self.args.verbose`, silently swallowing potential attack attempts in non-verbose mode. Removed the verbose guard so rejections always print.
+- **Watchdog `run_plugin_command`: verbose-gate parameter error messages** — "Parameter missing" and "Invalid parameter" always printed regardless of `--verbose`, inconsistent with surrounding diagnostics. Added `if self.args.verbose:` guards.
+- **Pi Pico `parse_json` comment: fix `JSONDecodeError` reference** — comment said `json.JSONDecodeError` propagates; CircuitPython raises plain `ValueError` (`JSONDecodeError` doesn't exist there). Updated comment to say `ValueError`.
+- **Pi Pico `process_config`: remove dead `key_sequences = ()` line** — the line set `config_items['key_sequences'] = ()` inside the invalid-folder branch, but `config_items` was never added to `app_config` in that branch anyway. Dead line with no effect; removed.
+- **`CLAUDE.md`: document CircuitPython constraints** — added explicit note that `code.py` runs on CircuitPython (no `threading`, no `.with_traceback()`, no `json.JSONDecodeError`, no `errno`, ~200 KB heap).
+- **Tests: `TestSelfReferenceAlias`** — 2 tests documenting that `load_single_app_config` with `alias_of == app` already returns `None` via the existing chaining guard.
+- **Tests: `TestRotateSerialWrite`** — 1 source-inspection test verifying the Rotate block uses `_serial_write`, not bare `ser.write`.
+- Updated test count to 204 in `README.md`, `CLAUDE.md`, and `run-tests.sh`.
+
 ## 2026-04-13 (code review + simplify)
 
 - **Pi Pico `parse_json`: fix CircuitPython incompatibility** — `.with_traceback(e.__traceback__)` is not supported in CircuitPython; removed it. Exception type is still preserved via `raise type(e)(...)`.

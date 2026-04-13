@@ -335,7 +335,6 @@ class KeyController:
             # check if the folder exists
             if config_items['folder'] and config_items['folder'] not in json_data.get("folders", {}):
                 print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
-                config_items['key_sequences'] = ()
             else:                     
                 app_config[app][int(key)] = config_items
             # check if toggleColor is set
@@ -416,7 +415,7 @@ class KeyController:
                 return json.load(json_file)
         except OSError as e:
             raise type(e)(f"Config file '{json_filename}' not found") from None
-        # json.JSONDecodeError (a ValueError subclass) propagates unchanged
+        # ValueError (malformed JSON) propagates unchanged
 
 
     # process the rotate serial command

@@ -497,3 +497,28 @@ class TestGetUrlAppleScriptEscaping:
             "get_url must call .replace() to escape double-quotes in the app name"
         )
 
+
+class TestRotateSerialWrite:
+
+    def test_rotate_uses_serial_write_not_ser_write(self):
+        """The Rotate command in main() must go through _serial_write, not ser.write directly.
+
+        Before the fix: main() calls ser.write(...) directly, bypassing the serial lock.
+        After the fix: the call uses watchdog._serial_write(...) which acquires _serial_lock.
+        """
+        src = _read_source()
+        # Find the rotate block in main()
+        rotate_idx = src.find("args.rotate")
+        assert rotate_idx != -1, "Could not find args.rotate usage in source"
+
+        # Search for the line that actually sends the rotate command
+        # It must NOT be a bare ser.write call — it must go through _serial_write
+        rotate_section = src[rotate_idx - 50 : rotate_idx + 200]
+        assert 'ser.write' not in rotate_section, (
+            "The Rotate command must not call ser.write() directly — "
+            "use _serial_write() to acquire the serial lock and avoid a race with the heartbeat thread"
+        )
+        assert '_serial_write' in rotate_section, (
+            "The Rotate command must route through _serial_write() to hold the serial lock"
+        )
+

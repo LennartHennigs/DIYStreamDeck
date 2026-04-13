@@ -184,8 +184,7 @@ class WatchDog(Cocoa.NSObject):
         launch_app_name = match.group(1)
         # Leading dash injects flags into `open -a`; / \ \x00 are path traversal / null injection
         if self.unsafe_app_name_pattern.search(launch_app_name):
-            if self.args.verbose:
-                print(f"Refused unsafe app name: {launch_app_name!r}")
+            print(f"Refused unsafe app name: {launch_app_name!r}")
             return
         if self.args.verbose:
             print(f"Launching: {launch_app_name}")
@@ -218,7 +217,8 @@ class WatchDog(Cocoa.NSObject):
         # Check if the command requires a parameter
         command_func = commands[command]
         if len(signature(command_func).parameters) > 0 and param is None:
-            print(f"Parameter missing for command: {command}")
+            if self.args.verbose:
+                print(f"Parameter missing for command: {command}")
             return
         # Parse parameter
         if param is not None:
@@ -228,7 +228,8 @@ class WatchDog(Cocoa.NSObject):
                 try:
                     param = int(param)
                 except ValueError:
-                    print(f"Invalid parameter: {param}")
+                    if self.args.verbose:
+                        print(f"Invalid parameter: {param}")
                     return
         if self.args.verbose:
             print(f"Executing: {command}")  # Echo when a command is detected
@@ -359,7 +360,7 @@ def main() -> None:
     heartbeat_thread.start()
 
     if args.rotate:
-        ser.write(f'Rotate: {args.rotate}\n'.encode('ascii', 'replace'))
+        watchdog._serial_write(f'Rotate: {args.rotate}\n', 'Rotate')
 
     try:
         run_loop(watchdog)
@@ -373,6 +374,7 @@ def main() -> None:
         # send a clean BYE
         watchdog.send_bye()
         heartbeat_thread.join()
+        ser.close()
 
 
 # Entry point for the script

@@ -501,3 +501,49 @@ class TestRotationValidation:
         )
         # AppC (non-alias) should still load normally
         assert "AppC" in controller.apps
+
+
+class TestSelfReferenceAlias:
+    """load_single_app_config must reject self-referencing aliases (alias_of == app)."""
+
+    @patch('builtins.open', mock_open(read_data=MINIMAL_JSON))
+    def setup_method(self, method):
+        self.kc = KeyController(verbose=False)
+
+    def test_self_alias_returns_none(self):
+        """alias_of pointing to the same app name must return None, not silently load itself."""
+        json_data = {
+            "applications": {
+                "Zoom": {"alias_of": "Zoom"},   # self-reference
+                "_otherwise": {}
+            },
+            "folders": {}
+        }
+        result = self.kc.load_single_app_config(
+            "Zoom",
+            json_data["applications"]["Zoom"],
+            json_data,
+        )
+        assert result is None, (
+            "load_single_app_config must return None for a self-referencing alias, "
+            "currently it silently resolves the alias to itself"
+        )
+
+    def test_self_alias_prints_error(self, capsys):
+        """alias_of == app must print an error message."""
+        json_data = {
+            "applications": {
+                "Zoom": {"alias_of": "Zoom"},
+                "_otherwise": {}
+            },
+            "folders": {}
+        }
+        self.kc.load_single_app_config(
+            "Zoom",
+            json_data["applications"]["Zoom"],
+            json_data,
+        )
+        captured = capsys.readouterr()
+        assert "Zoom" in captured.out, (
+            "Expected an error message mentioning the app name for a self-referencing alias"
+        )
