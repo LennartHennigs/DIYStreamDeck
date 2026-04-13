@@ -1,133 +1,99 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
 ## Project Overview
 
-This is a DIY StreamDeck project that uses a Raspberry Pi Pico and Pimoroni RGB Keypad to create dynamic app-specific shortcut keys. The system consists of two main components:
+DIY StreamDeck using a Raspberry Pi Pico + Pimoroni RGB Keypad. Two components:
 
-1. **Pi Pico Controller** (`src/pi_pico/`): CircuitPython code that runs on the hardware
-2. **Mac Watchdog** (`src/mac/`): Python script that monitors active applications and sends commands to the Pi Pico
-
-## Architecture
-
-### Hardware Components
-- **Pi Pico** runs `code.py` (CircuitPython) with the `KeyController` class
-- **RGB Keypad** provides 16 programmable keys with LED feedback
-- **USB Serial** connection between Pi Pico and Mac for communication
-
-### Software Flow
-1. **Watchdog** (`watchdog.py`) monitors active Mac applications using Cocoa frameworks
-2. **Application Detection**: Sends app names to Pi Pico via serial when apps change focus
-3. **Key Configuration**: Pi Pico loads appropriate key mappings from `key_def.json`
-4. **Plugin System**: Watchdog handles plugin commands (Spotify, Hue lights, sound playback)
+- **Pi Pico** (`src/pi_pico/`): CircuitPython (`code.py`, `KeyController` class) — reads `key_def.json`, drives LEDs, sends HID events
+- **Mac Watchdog** (`src/mac/`): Python (`watchdog.py`, `WatchDog` class) — detects active app via Cocoa/NSWorkspace, sends app name to Pico over USB serial, executes plugin commands
 
 ### Communication Protocol
-- **HELLO/BYE Messages**: Startup and shutdown handshake with version information
-- **Heartbeat System**: Regular "HB" messages to detect connection status
-- **Echo Diagnostics**: Lightweight connection testing with ECHO commands
-- **Timeout Detection**: Pi Pico automatically unloads keypad if host disconnects
 
-### Key Architecture Components
+| Message | Direction | Purpose |
+| --- | --- | --- |
+| `HELLO` / `BYE` | Mac → Pico | Startup/shutdown handshake |
+| `HB` | Mac → Pico | Heartbeat (connection keepalive) |
+| `App:<name>` | Mac → Pico | Active application changed |
+| `ECHO` | Mac → Pico | Lightweight connection test |
 
-#### Pi Pico (`src/pi_pico/code.py`)
-- `KeyController` class manages all keypad functionality
-- Loads configuration from `key_def.json`
-- Handles key press/release events and LED management
-- Supports key rotation (CW/CCW) for different orientations
-- Manages folder navigation and hierarchical key layouts
+Pico unloads the keypad if heartbeats stop (host disconnected).
 
-#### Mac Watchdog (`src/mac/watchdog.py`)
-- `WatchDog` class extends `Cocoa.NSObject` for system integration
-- Monitors application focus changes using NSWorkspace notifications
-- Handles plugin command execution through modular plugin system
-- Supports URL detection for browser-specific shortcuts
+## Key Configuration (`key_def.json`)
 
-## Configuration System
+Four top-level sections: `settings`, `applications`, `folders`, `urls`.
 
-### Key Definition Structure (`key_def.json`)
-- **Applications**: App-specific key mappings
-- **Folders**: Hierarchical key groupings
-- **URLs**: Browser URL-specific shortcuts
-- **Settings**: Global configuration (rotation, etc.)
+Key types: **shortcut** (`key_sequence`), **app launch** (`application`), **folder** (`folder`), **action** (`action`).
 
-### Key Types
-- **Shortcut Keys**: Execute keyboard combinations
-- **Application Keys**: Launch/focus applications
-- **Folder Keys**: Navigate to sub-menus
-- **Action Keys**: Trigger plugin commands or special actions
+Special app entries: `_default` (merged into every layout), `_otherwise` (fallback for unknown apps).
+
+## File Locations
+
+| Path | Purpose |
+| --- | --- |
+| `src/pi_pico/key_def.json` | Key layout configuration |
+| `src/mac/watchdog.py` | Mac watchdog entry point |
+| `src/mac/plugins/` | Plugin implementations |
+| `src/mac/plugins_config/` | Plugin credentials (git-ignored; copy from `*.json.example`) |
+| `src/mac/sounds/` | Audio files for sounds plugin |
+| `requirements/requirements_mac.txt` | Mac Python dependencies |
 
 ## Development Commands
 
-### Mac Development
 ```bash
-# Install Python dependencies
+# Install dependencies
 pip install -r requirements/requirements_mac.txt
 
-# Run watchdog script using the launcher (recommended)
+# Run watchdog (launcher sets PYTHONPATH automatically)
 ./run-mac-watchdog.sh --port /dev/cu.usbmodem2101 --verbose
 
-# Run directly with Python
+# Run directly
 python3 src/mac/watchdog.py --port /dev/cu.usbmodem2101 --verbose
-
-# Run with rotation support
-python3 src/mac/watchdog.py --port /dev/cu.usbmodem2101 --rotate CCW --verbose
 ```
 
 ### Testing
 
 ```bash
-./run-tests.sh all        # All tests (150+ tests)
-./run-tests.sh pico       # Pi Pico tests only
-./run-tests.sh mac        # Mac watchdog tests
-./run-tests.sh security   # Security vulnerability tests
-./run-tests.sh quick      # Fast subset
-
-# Setup test environment (first time)
-python -m venv test_venv
-source test_venv/bin/activate
+# First-time setup
+python -m venv test_venv && source test_venv/bin/activate
 pip install -r tests/requirements_test.txt
+
+# Run tests
+./run-tests.sh all       # everything (195 tests)
+./run-tests.sh pico      # Pi Pico only
+./run-tests.sh mac       # Mac/watchdog only
+./run-tests.sh security  # security tests only
 ```
 
-See `tests/CLAUDE.md` for full test category details and mock framework documentation.
-
-### Pi Pico Development
-- Install CircuitPython on Pi Pico
-- Copy `src/pi_pico/` contents to Pi Pico root
-- Edit `key_def.json` to configure key layouts
-- Use Thonny IDE for CircuitPython development
+See [`tests/CLAUDE.md`](tests/CLAUDE.md) for mock framework details.
 
 ## Plugin System
 
-Plugins are located in `src/mac/plugins/` and extend `BasePlugin`:
+Plugins extend `BasePlugin` in `src/mac/plugins/`. Config templates in `src/mac/plugins_config/*.json.example`.
 
-- **Spotify**: Music control — credentials in `src/mac/plugins_config/spotify.json` (copy from `spotify.json.example`)
-- **Hue**: Philips Hue light control — bridge IP in `src/mac/plugins_config/hue.json` (copy from `hue.json.example`)
-- **Sounds**: Audio playback for `.wav` and `.mp3` files
-
-Plugin command format: `plugin_name.command [parameter]`
+Command format: `plugin_name.command [parameter]`
 Examples: `spotify.next`, `hue.toggle 'Lamp Name'`, `sounds.play 'file.mp3'`
 
-## Important File Locations
-
-- **Main Config**: `src/pi_pico/key_def.json` — Primary key layout configuration
-- **Mac Dependencies**: `requirements/requirements_mac.txt` — Python package requirements
-- **Plugin Configs**: `src/mac/plugins_config/` — Individual plugin configuration files (git-ignored; use `*.json.example` templates)
-- **Sounds**: `src/mac/sounds/` — Audio files for sound plugin
+| Plugin | Config file | Notes |
+| --- | --- | --- |
+| Spotify | `spotify.json` | Requires Premium account |
+| Hue | `hue.json` | Press bridge button on first run |
+| Sounds | `sounds.json` | `.wav` / `.mp3` files in `sounds/` |
 
 ## TDD Workflow
 
 For every bug fix or new feature:
 
-1. **Write a failing test first** targeting the exact behaviour to fix
-2. **Confirm it fails**: `./run-tests.sh all`
-3. **Apply the minimal fix**
-4. **Confirm all tests pass**: `./run-tests.sh all`
-5. **Update CHANGELOG.md** with a brief entry
+1. Write a failing test targeting the exact behaviour
+2. Confirm it fails: `./run-tests.sh all`
+3. Apply the minimal fix
+4. Confirm all tests pass: `./run-tests.sh all`
+5. Update `CHANGELOG.md`
 
-New tests go in the matching location:
+Test locations:
 
-| Change area | Test location |
+| Change area | Test file |
 | --- | --- |
 | Pi Pico / `code.py` | `tests/unit/pico/` |
 | Mac plugin | `tests/unit/mac/plugins/test_<plugin>.py` |
@@ -136,15 +102,14 @@ New tests go in the matching location:
 
 ## Development Principles
 
-- **KISS**: Favor simple, straightforward solutions over complex abstractions
-- **YAGNI**: Don't add features or complexity until actually needed
-- **DRY**: Eliminate duplication through reusable functions and shared configuration
-- **Security First**: All user inputs and file operations must be validated and secured
+- **KISS** — simple over clever
+- **YAGNI** — no speculative features
+- **DRY** — shared helpers over duplication
+- **Security first** — validate all inputs and file paths at system boundaries
 
-## Development Notes
+## Notes
 
-- The watchdog script requires macOS-specific Cocoa frameworks
-- Serial port typically appears as `/dev/cu.usbmodem*` on macOS
-- Key rotation settings accommodate different physical orientations
-- Global `_default` key definitions apply to all applications unless `ignore_default: true`
-- The `_otherwise` section provides fallback keys for undefined applications
+- Watchdog requires macOS (Cocoa frameworks)
+- Serial port is typically `/dev/cu.usbmodem*`
+- `_default` keys merge into every app layout unless `ignore_default: true`
+- `_otherwise` is the fallback layout for apps with no explicit definition

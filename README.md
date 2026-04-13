@@ -1,374 +1,222 @@
-
 # DIY Streamdeck with the Pimoroni RGB Keypad
 
-This project uses a Raspberry Pi Pico micro controller and an [Pimoroni RGB Keypad](https://shop.pimoroni.com/products/pico-rgb-keypad-base) to provide dynamic app-specific shortcut keys. This will streamline your workflow and increase productivity.
+A Raspberry Pi Pico + [Pimoroni RGB Keypad](https://shop.pimoroni.com/products/pico-rgb-keypad-base) that provides dynamic, app-specific shortcut keys driven by a Mac watchdog script.
 
 ![Keypad with Zoom Shortcuts](images/keypad.png)
 
+If you find this useful, consider giving it a ⭐️ on [GitHub](https://github.com/LennartHennigs/DIYStreamDeck) or [buying me a ☕️](https://ko-fi.com/lennart0815).
+
+---
+
 ## Features
 
-- Assign actions and colors to the keypad keys
-- Actions can be...
-  - keyboard shortcuts
-  - open a folder (= a new page of key definitions)
-- There is a Mac script called `watchdog.py` to enable more actions...
-  - Determine the active application, to load and show app-specific shortcuts
-  - Launch a Mac application
-  - Launch a plugin command
-- Plugins are included for...
-  - Audio playback (to act as a sound board)
-  - Spotify playback
-  - Philips Hue control
-- All key definitions are defined in a [JSON file](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json), stored on the Pi Pico
-- Define global shortcuts in a `_default` section for both, folders and apps
-- Use the `_otherwise` section to assign shortcuts for non-defined apps (with `watchdog.py` running on a Mac)
-- Rotate the keyboard layout clockwise or counter-clockwise (for 3d printed cases) 🆕
-- Create your own plugin with the simple plugins system
+- App-specific key layouts that switch automatically when you change applications
+- Four key types: **shortcut**, **application launch**, **folder** (sub-pages), and **action** (plugin commands)
+- Global `_default` keys added to every app/folder, with per-entry opt-out via `ignore_default`
+- Fallback `_otherwise` layout for apps without a specific definition
+- Plugins for Spotify, Philips Hue, and audio playback
+- Rotate the layout CW or CCW for 3D-printed cases
+- All configuration lives in a single [`key_def.json`](src/pi_pico/key_def.json) on the Pico
 
-If you find this project helpful please consider giving it a ⭐️ at [GitHub](https://github.com/LennartHennigs/ESPTelnet) and/or [buy me a ☕️](https://ko-fi.com/lennart0815). Thanks!
+---
 
-### Notes
-
-This is an ongoing project. To see the latest changes please take a look at the [Changelog](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/CHANGELOG.md).
-
-It is (still)) a very successful experiment in programming with ChatGPT-4 and Copilot. 🤖 I built this without any knowledge of Python or CircuitPython. The goal was to not program it myself but tell ChatGPT-4 what I wanted. This is the result so far. GPT wrote the code and this README as well. This paragraph here is the only piece I am writing myself (and about twenty lines in the CircuitPython code).
-
-**Update**: I recently started to refactor some code myself now but still use GPT for new features
-
-## Hardware Requirements
+## Hardware
 
 - Raspberry Pi Pico
 - Pimoroni RGB Keypad for Raspberry Pi Pico
-- Micro-USB cable to connect the Pi Pico to your computer
-- Optional (but strongly suggested): a Mac running the Watchdog script
+- Micro-USB cable
+- A Mac running `watchdog.py` (required for app detection and plugins)
 
-## How it Works
+---
 
-The [`code.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/code.py) script reads key definitions from a JSON file and maps them to specific key sequences and LED colors. It listens for the currently active application on the host computer and updates the keypad based on the key mappings for the active application.
+## How It Works
 
-The [`watchdog.py`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/watchdog.py) script monitors the currently active application on the host computer and sends its name to the microcontroller connected to the RGB keypad. It also receives `action` commands for plugin events. You can use the pad it without, but then you lose the application-specific launch feature. It is currently only available for a Mac.
+**`code.py`** (CircuitPython, runs on the Pico) reads `key_def.json` and maps keys to sequences and LED colors. It listens over USB serial for the active app name and updates the layout accordingly.
+
+**`watchdog.py`** (Python, runs on Mac) monitors the active application using Cocoa notifications and sends it to the Pico. It also handles plugin commands. Without it, the keypad works as a static shortcut pad only.
+
+---
 
 ## Getting Started
 
-- Download this repository.
+### Pi Pico
 
-- On the Pi Pico
-  - Install CircuitPython on your Raspberry Pi Pico following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython).
-  - Install the required CircuitPython libraries by following the instructions [here](https://learn.adafruit.com/welcome-to-circuitpython/circuitpython-libraries) ([download](https://circuitpython.org/libraries)). You definatetly need `adafruit_dotstar.mpy`, and `adafruit_hid` files/folders in your `lib\`folder.
-  - Add the library [rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython) to your `lib` folder.
-  - Copy the contents of the `src/pico` folder to your Raspberry Pi Pico. 
+1. [Install CircuitPython](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython) on the Pico.
+2. Install required libraries into `lib/`: `adafruit_dotstar.mpy`, `adafruit_hid`, and [rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython).
+3. Copy `src/pi_pico/` to the Pico root.
+4. Edit `key_def.json` to set up your layouts. Key `0` is top-left, `15` is bottom-right. [Thonny](https://thonny.org/) makes this easy.
 
-- On the Mac (for running `watchdog.py`)
-  - Install [Python3 on your Mac](https://www.freecodecamp.org/news/python-version-on-mac-update/), e.g. [via `brew`](https://brew.sh/).
-  - Copy the contents of `src/mac` and its sub-folders to your Mac (best in a separate folder).
-  - **Set up a Python virtual environment** (recommended to avoid conflicts):
+### Mac Watchdog
 
-    ``` bash
-    # Navigate to the Mac source directory
-    cd src/mac
-    
-    # Create virtual environment
-    python3 -m venv venv
-    
-    # Activate virtual environment
-    source venv/bin/activate
-    
-    # Install dependencies
-    pip install -r requirements.txt
-    ```
+```bash
+cd src/mac
+python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
 
-  - If you want to use the plugins, edit the config files in the `src/mac/plugins_config/` directory.
-  - Run `watchdog.py` (make sure virtual environment is activated):
+# Run (use your actual port)
+python3 watchdog.py --port /dev/cu.usbmodem2101 --verbose
+```
 
-    ``` bash
-    # Make sure venv is activated (you should see (venv) in your prompt)
-    source venv/bin/activate
-    
-    # Run the watchdog script
-    python3 watchdog.py --port /dev/cu.usbmodem2101 --verbose
-    ```
+Or use the launcher script from the repo root:
 
-- Defining keyboard layout
-  - Edit the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file to configure the shortcut keys and colors for your desired apps.
-  - Note: The first key (top left) has the number `0` and the last one (bottom right) has the number `15`.
-  - Install [Thonny](https://thonny.org/) on your Mac– this IDE makes starting and stopping the Pi Pico easier, as well as editing the `key_def.json` file.
-  
-## Configuration
+```bash
+./run-mac-watchdog.sh --port /dev/cu.usbmodem2101 --verbose
+```
 
-### Sections
+**Watchdog flags:**
 
-In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) configuration file, each app is defined as a JSON object with key-value pairs, with four possible entries: `settings`, `applications`, `folders`, and `urls`.
+| Flag | Description |
+| --- | --- |
+| `--port` | Serial port for the Pico (required) |
+| `--speed` | Baud rate (default: `9600`) |
+| `--verbose` | Print active app name to console |
+| `--rotate` | Rotate layout: `CW` or `CCW` |
 
-- For details on the `settings` section look [here](https://github.com/LennartHennigs/DIYStreamDeck?tab=readme-ov-file#settings).
-- In the `applications` section the different keys for various apps are defined with the key numbers (`0`-`15`).
-- The `folders` section defines key sets that can be assigned to a single key.
-- The `urls` section contains keyboard definitions for Safari and Chrome URls.
+---
 
-Applications and URLs are similar in their content. They usually contain *shortcut keys* for an app or a web site.
+## Configuration (`key_def.json`)
 
-*Note*: The `watchdog.py` script cannot detect tab changes in a browser. The current browser tab URL is only detected when Chrome/Firefox becomes active.
+The file has four top-level sections: `settings`, `applications`, `folders`, `urls`.
 
-### Key Definitions
+### Settings
 
-You can define four types of keys: `shortcut`, `application launch`, `folder`, and `action`, keys.
+```json
+{ "settings": { "rotate": "CCW" } }
+```
 
-- *Shortcut keys* have a `key_sequence` field which specifies the key combination to be executed when the key is pressed.
-- *Application keys* have an `application` field which opens or brings the specified application to front when the key is pressed.
-- *Folder keys* have an `folder` key. When the key is pressed it will "open" the folder and display its key definitions.
-- *Action keys* have an `action` key. They are used to trigger event of plugins or are needed to provide a `close_folder` action for folders
+`rotate` accepts `CW`, `CCW`, or omit for no rotation.
 
-### Shortcut key fields
+### Key Types
 
-- `key_sequence`: This field specifies the key combination to be executed when the key is pressed. You can use either a string or an array [to specify the key sequence](https://docs.circuitpython.org/projects/hid/en/latest/_modules/adafruit_hid/keycode.html). If a string is provided, it should contain the keycodes separated by '+' (e.g., `CTRL+ALT+T`). If an array is provided, it should contain the keycodes as separate elements (e.g., `["CTRL", "ALT", "T"]`). You can also add delays between key presses within a shortcut by including a floating-point number in the list of keys for a specific shortcut in the `key_def.json` file. This number represents the delay in seconds between key presses. You can find a list of possible keycodes here.
-- `pressedUntilReleased`: Tells the keypad to keep the button pressed until manually released. 🆕
+| Type | Field | Behaviour |
+| --- | --- | --- |
+| Shortcut | `key_sequence` | Sends a key combination |
+| App launch | `application` | Opens or focuses an app |
+| Folder | `folder` | Opens a sub-page of keys |
+| Action | `action` | Runs a plugin command or `close_folder` |
 
-### Application key fields
+**Common fields** (any key type):
 
-- `application`: This field is used to specify the application to be launched when an application key is pressed.
-- `alias_of`: Only for application entries. This field will tell the keypad to use another applications key definition. All other keys will be ignored. 🆕
+- `color` — LED color as `#RRGGBB`
+- `pressedColor` — color while held
+- `toggleColor` — color for toggled/active state
+- `description` — label printed in `--verbose` output
 
-### Folder key fields
+**Shortcut-specific:**
 
-- `folder`: This field allows you assign a folder (a set of key definitions) to be opened. A folder will auto-close per default, ohter actions has been triggered inside. Folders can also be nested.
-- `"autoclose": "false"` will keep a folder active after a key has been pressed. 🆕
-- `action`: It is mandatory inside a folder definition without the `autoclose` setting.
+- `key_sequence` — keycode string `"CTRL+ALT+T"`, array `["CTRL","ALT","T"]`, or array with float delays between presses
+- `pressedUntilReleased: true` — holds the key until physically released
 
-- `ignore_default": "true"` will don't ignore the global definitions and don't add them to a folder or an application.
+**App-specific:**
 
-### Action key fields
+- `alias_of` — copy another app's layout instead of defining keys
 
-- `action`: This field can have the values `close_folder` or an plugin command, e.g. `spotify.next`. 
-- `ignore_default": "true"` will don't ignore the global definitions and don't add them to a folder or an application.
+**Folder-specific:**
 
-### Fields for any key type
+- `autoclose: false` — keep folder open after a key press (default: auto-closes)
+- Folders without `autoclose` must include a `close_folder` action key
 
-- `color`: This field specifies the color of the key, in RGB format. You can specify the color of the key using an RGB string (e.g., `#FF0000` for red, `#00FF00` for green, `#0000FF` for blue).
-- `pressedColor` allows you to define a color for while the button is pressed 🆕
-- `toggleColor` allows you to define a color to show an active state 🆕
-- `description`: This optional field provides a description of the function of the key, which is useful for understanding the purpose of each key when printed in the console.
+**App/folder:**
 
-Here is an example configuration file:
+- `ignore_default: true` — skip global `_default` keys for this entry
 
-``` json
+### Example
+
+```json
 {
- "settings": {
-  "rotate": "CCW"
- },
+  "settings": { "rotate": "CCW" },
 
-"applications": {
-   "_default": {
-   "15": {
-    "key_sequence": "GUI+Q",
-    "color": "#FF0000",
-    "description": "Close App"
-   }
+  "applications": {
+    "_default": {
+      "15": { "key_sequence": "GUI+Q", "color": "#FF0000", "description": "Close App" }
+    },
+
+    "zoom.us": {
+      "0":  { "key_sequence": "GUI+SHIFT+A", "color": "#FFFF00", "description": "Mute/Unmute" },
+      "1":  { "key_sequence": "GUI+SHIFT+V", "color": "#FFFF00", "description": "Start/Stop Video" },
+      "15": { "key_sequence": ["GUI+W", 0.1, "RETURN"], "color": "#FF0000", "description": "End Meeting" }
+    },
+
+    "_otherwise": {
+      "0":  { "key_sequence": "GUI+SPACE",       "color": "#FFFFFF", "description": "Spotlight" },
+      "4":  { "action": "spotify.prev",           "color": "#00FF00", "description": "Previous" },
+      "5":  { "action": "spotify.playpause",      "color": "#00FF00", "description": "Play/Pause" },
+      "6":  { "action": "spotify.next",           "color": "#00FF00", "description": "Next" },
+      "13": { "folder": "apps",                   "color": "#FFFFFF", "description": "Apps" }
+    }
   },
 
-  "zoom.us": {
-   "0": {
-    "key_sequence": [
-     "GUI+SHIFT+A"
-    ],
-    "color": "#FFFF00",
-    "description": "Mute/Unmute Audio"
-   },
-   "1": {
-    "key_sequence": [
-     "GUI+SHIFT+V"
-    ],
-    "color": "#FFFF00",
-    "description": "Start/Stop Video"
-   },
-   "15": {
-    "key_sequence": [
-     "GUI+W",
-     0.1,
-     "RETURN"
-    ],
-    "color": "#FF0000",
-    "description": "End Meeting"
-   }
-  },
-
-  "_otherwise": {
-   "0": {
-    "key_sequence": [
-     "GUI+SPACE"
-    ],
-    "color": "#FFFFFF",
-    "description": "Open Spotlight Search"
-   },
-   "4": {
-    "action": "spotify.prev",
-    "color": "#00FF00",
-    "description": "Spotify - Previous Song"
-   },
-   "5": {
-    "action": "spotify.playpause",
-    "color": "#00FF00",
-    "description": "Spotify - Play or Pause"
-   },
-   "6": {
-    "action": "spotify.next",
-    "color": "#00FF00",
-    "description": "Spotify - Next Song"
-   },
-   "13": {
-    "folder": "apps",
-    "color": "#FFFFFF",
-    "description": "Apps Folder"
-   }
+  "folders": {
+    "apps": {
+      "0":  { "action": "close_folder",  "color": "#FFFFFF", "description": "Close" },
+      "12": { "application": "zoom.us",  "color": "#0000FF", "description": "Zoom" },
+      "13": { "application": "Slack",    "color": "#FF0000", "description": "Slack" }
+    }
   }
- },
-
- "folders": {
-  "apps": {
-   "0": {
-    "action": "close_folder",
-    "color": "#FFFFFF",
-    "description": "Close"
-   },
-   "12": {
-    "application": "zoom.us",
-    "color": "#0000FF",
-    "description": "Launch Zoom"
-   },
-   "13": {
-    "application": "Slack",
-    "color": "#FF0000",
-    "description": "Launch Slack"
-   }
-  }
- }
 }
 ```
 
-In the [`key_def.json`](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/pi_pico/key_def.json) file, you will find a special app key called `_otherwise`. This key is used to define shortcut keys that are not specific to any particular app. When the Python script is running, it constantly monitors the active application on your computer, and if the active application matches any of the keys in the JSON file, it will load the relevant shortcut keys onto the keypad. If the active application does not match any of the defined keys, the `_otherwise` key is used as a fallback, and the shortcut keys defined under this key are loaded onto the keypad. This means that you can define a set of general-purpose shortcut keys that are always available, regardless of which application is currently active.
+> **Note:** `watchdog.py` detects URL changes only when Chrome or Safari *becomes active*, not on tab switches.
 
-In addition you can define a `_default` application. These key definitions will be added to all apps and folders. They can be "overwritten" via specific folder or app definition. You can set `"ignore_default": "true"` for folders and apps where they should not be used.
-
-## Settings
-
-The `key_def.json` File can also contain a `settings` section. There you can define the `rotate` parameter (`CW` or `CCW` – clockwise or counter-clockwise). This will rotate the keyboard layout. This is useful when using the keypad in some 3D printed cases. 🆕
+---
 
 ## Plugins
 
-You can build your own plugins for the keypad. They are stored in the `plugins/` folder. A plugin defines set of commands that can be used in the `action` key in the JSON config. In the JSON above you can see three commands being called in the `_otherwise` section. If needed, the plugin can have a config file to load settings.
+Plugins live in `src/mac/plugins/` and extend `BasePlugin`. Config files go in `src/mac/plugins_config/` (git-ignored — copy from the `.json.example` templates).
 
-### Spotify Plugin
+### Spotify
 
-As an example I included a Spotify plugin called [spotify.py](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins/spotify.py).
-The Spotify plugin has the following commands:
+Requires a Spotify Premium account. Add credentials to `plugins_config/spotify.json`.
 
-- `spotify.play`
-- `spotify.pause`
-- `spotify.playpause`
-- `spotify.next`
-- `spotify.prev`
-- `spotify.volume_up`
-- `spotify.volume_down`
+| Command | Description |
+| --- | --- |
+| `spotify.play` | Resume playback |
+| `spotify.pause` | Pause |
+| `spotify.playpause` | Toggle play/pause |
+| `spotify.next` | Next track |
+| `spotify.prev` | Previous track |
+| `spotify.volume_up` | Volume +10% |
+| `spotify.volume_down` | Volume −10% |
 
-To use it you need to have a Spotify premium account and need to add your API credentials to the [spotify.json](https://github.com/LennartHennigs/DIYStreamDeck/blob/main/src/mac/plugins_config/spotify.json) config file.
+### Philips Hue
 
-### Hue Plugin
+Set the bridge IP in `plugins_config/hue.json` and press the bridge button on first run. Lamp identifier can be a name in single quotes or a numeric index.
 
-- `hue.turn_off [Lamp ID | 'Lamp Name']`
-- `hue.turn_on [Lamp ID | 'Lamp Name']`
-- `hue.turn_toggle [Lamp ID | 'Lamp Name']`
+| Command | Description |
+| --- | --- |
+| `hue.turn_on 'Lamp Name'` | Turn on a light |
+| `hue.turn_off 'Lamp Name'` | Turn off a light |
+| `hue.toggle 'Lamp Name'` | Toggle a light |
 
-You need to define the IP address of your hue bridge in the config JSON and press its connect button on first run. Provide the ID of your lamp or its name enclosed in single quotes.
+### Sounds
 
-### Audio Playback Plugin
+Place `.wav` or `.mp3` files in `src/mac/sounds/` (configure path in `plugins_config/sounds.json`).
 
-- `sounds.play ['File Name']`
-- `sounds.stop`
+| Command | Description |
+| --- | --- |
+| `sounds.play 'file.mp3'` | Play a sound file |
+| `sounds.stop` | Stop playback |
 
-The plugin can playback `.wav` and `.mp3` files.
-
-## Mac Watchdog Script
-
-To enable the dynamic detection of the active app, you need to run the watchdog script on your computer that sends the active app's name to the Pi Pico via USB serial. This project includes a Python watchdog script **for Mac OS**.
-
-To run the watchdog script, navigate to the directory containing the `watchdog.py` file and execute the following command, e.g.:
-
-``` bash
-python3 watchdog.py --port /dev/cu.usbmodem2101 --speed 9600 --verbose
-```
-
-- The `--port` parameter needs to be set to the USB serial port corresponding to your Raspberry Pi Pico (e.g., `/dev/cu.usbmodem2101`).
-- The optional `--speed` parameter should be set to the desired baud rate for the serial communication (default: `9600`).
-- If the optional `--verbose` parameter is set, the current app will be printed to the console.
-- With the optional `--rotate` parameter you can rotate the keypad layout clockwise (`CW`) or counter-clockwise (`CCW`). 🆕
-
-When the watchdog script detects a change in the active app, it sends the app's name as a single line over the USB serial connection. The Pi Pico then reads this information, loads the corresponding shortcuts from the `key_def.json` file, and updates the keypad accordingly.
-
-## 3D Printed Case
-
-- As you can see in the picture above I use [a 3d printed case](https://www.printables.com/model/80088-pimoroni-keypad-case/). You can get it [here](https://www.printables.com/model/80088-pimoroni-keypad-case/).
-- Since the case rotates the keypad, I added a `settings` section and a `rotate` option for the keyboard layout.
+---
 
 ## Testing
 
-This project includes a comprehensive test suite to ensure code quality and security. The tests cover both Pi Pico and macOS components.
-
-### Running Tests
-
-**Set up the test environment** (one-time setup):
 ```bash
-# Create test virtual environment
-python3 -m venv test_venv
-
-# Activate virtual environment  
-source test_venv/bin/activate
-
-# Install test dependencies
+# First-time setup
+python3 -m venv test_venv && source test_venv/bin/activate
 pip install -r tests/requirements_test.txt
+
+# Run tests
+./run-tests.sh all       # everything (195 tests)
+./run-tests.sh pico      # Pi Pico only
+./run-tests.sh mac       # Mac/watchdog only
+./run-tests.sh security  # security tests only
 ```
 
-**Run tests** (activate virtual environment first):
-```bash
-# Activate test environment
-source test_venv/bin/activate
+See [`tests/CLAUDE.md`](tests/CLAUDE.md) for full details.
 
-# Quick unit tests (recommended for development)
-pytest tests/unit/ -m "not slow" --tb=line -q
+---
 
-# Full unit tests with verbose output
-pytest tests/unit/ -v
+## 3D Printed Case
 
-# Security vulnerability tests
-pytest tests/security/ -m security -v
-
-# All tests with verbose output
-pytest tests/ -v
-```
-
-### Test Categories
-
-- **Unit Tests** (31 tests): Test individual components in isolation
-  - Pi Pico configuration loading and JSON parsing
-  - macOS plugin functionality (Spotify, Hue, Sounds)
-  - Mock-based testing for hardware independence
-
-- **Security Tests** (9 tests): Validate security measures  
-  - Command injection vulnerability detection
-  - Path traversal protection testing
-  - Input validation and sanitization checks
-  - *Note: Some "failures" are intentional - they demonstrate actual vulnerabilities in the current code that need fixing*
-
-### Test Files Structure
-```
-tests/
-├── conftest.py              # Shared test fixtures
-├── pytest.ini             # Test configuration
-├── requirements_test.txt   # Test dependencies
-├── security/               # Security tests
-│   └── test_command_injection.py
-└── unit/                   # Unit tests
-    ├── mac/plugins/        # macOS plugin tests
-    │   └── test_spotify.py
-    └── pico/              # Pi Pico tests
-        └── test_config_loader.py
-```
-
-For detailed testing information, see [`tests/CLAUDE.md`](tests/CLAUDE.md).
+The case in the photo is [this Printables model](https://www.printables.com/model/80088-pimoroni-keypad-case/). It rotates the keypad — use `"rotate": "CCW"` (or `"CW"`) in `settings` to compensate.
