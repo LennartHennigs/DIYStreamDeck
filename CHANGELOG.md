@@ -1,179 +1,139 @@
 
 # CHANGELOG
 
+## 2026-04-13
+
+- **Hue plugin: `_find_light()` int logic fixed** — integer lamp identifiers previously matched every light in the list because the bounds check `lamp_identifier < len(lights)` is true for all indices. Replaced three methods (`_find_light`, `_get_lights`, `_is_matching_light`) with a single correct implementation that looks up the light at the specified list index.
+- **Sounds plugin: executor permanently killed by `stop()`** — `stop()` called `executor.shutdown()`, making the executor unusable for subsequent `play()` calls. Fixed by shutting down the old executor and replacing it with a fresh one so subsequent `play()` calls succeed.
+- **Sounds plugin: security exceptions double-wrapped** — path traversal and other validation errors raised inside the outer `try` block were caught and re-raised as `"Failed to play … : Invalid filename …"`. Moved security validation above the `try` block so errors surface cleanly.
+- **Pi Pico `parse_json()`: no error handling** — missing or malformed config files crashed the controller with a bare exception. Added `try/except` that preserves the original exception type and adds the filename to the message.
+- **Pi Pico: `KeyError` when config has no `folders` key** — three `json_data["folders"]` accesses raised `KeyError` for configs that omit the `folders` section. Changed to `json_data.get("folders", {})`.
+- **Watchdog: `VERSION` not interpolated in startup print** — missing f-string prefix meant the version literal `{VERSION}` was printed instead of the value.
+- **Watchdog: dead variable `running = [True]`** — unused variable removed.
+- **Watchdog: wrong return type annotation** — `send_app_name_to_microcontroller` annotated `-> str`; corrected to `-> None`.
+- **Spotify: trailing comma in OAuth scope** — `scope` string ended with a comma, producing an empty scope element. Removed commas (Spotify scope is space-delimited).
+- **Spotify credentials purged from git history** — client ID and secret were committed in `src/mac/plugins_config/spotify.json`. Rewrote all history blobs with `git filter-repo`; file now contains placeholder values.
+- **Plugin config files excluded from git** — added `src/mac/plugins_config/*.json` to `.gitignore`. Example templates (`*.json.example`) remain tracked.
+- Added `src/mac/plugins_config/spotify.json.example`, `hue.json.example`, and `sounds.json.example` as credential/config templates.
+- Added `tests/unit/mac/plugins/test_hue_plugin.py` (16 tests): turn on/off/toggle by name and index, unknown lights, verbose output, config errors.
+- Extended `tests/unit/mac/plugins/test_sounds_plugin.py` with 6 tests: stop-then-play, multiple stops, security message format, missing file, empty filename.
+- Extended `tests/unit/pico/test_config_loader.py` with 4 tests: `parse_json` error handling, `process_global_section`/`process_config` with no `folders` key.
+- Added `tests/unit/mac/test_watchdog.py` (14 tests): source-inspection (VERSION f-string, dead variable, return type), functional heartbeat send/stop/exception-handling, HELLO/BYE message format, and heartbeat thread lifecycle.
+
 ## 2025-09-08
 
 ### Bug Fixes
 
-- **Fixed Hue plugin initialization error** - Removed obsolete `_ping` method call from HuePlugin that was causing initialization failure after recent heartbeat system updates
+- **Fixed Hue plugin initialization error** — removed obsolete `_ping` method call from `HuePlugin` that was causing initialization failure after heartbeat system updates.
 
 ## 2025-09-02
 
-### Major Testing Infrastructure Overhaul
+- **Comprehensive Pi Pico test suite** — 85+ new tests covering all Pi Pico functionality:
+  - Configuration loading (14 tests) — JSON parsing, validation, keycodes
+  - Core controller (14 tests) — initialization, serial commands, basic functionality
+  - Keypad functionality (20 tests) — key press/release, LEDs, folders, plugins
+  - Heartbeat system (18 tests) — timeout detection, recovery, edge cases
+  - JSON corruption (19 tests) — malformed JSON handling and error recovery
+- **Mock CircuitPython framework** — complete hardware simulation for testing without physical device.
+- **Test runner script** (`run-tests.sh`) — convenient script for running test categories.
+- **Security vulnerability tests** — path traversal and injection attack tests.
+- **Improved heartbeat** — watchdog sends "HB" instead of "." for protocol clarity.
+- **HELLO/BYE handshake** — startup/shutdown messages with version information.
+- **Echo diagnostics** — lightweight echo command for connection testing.
+- **Heartbeat timeout detection** — Pi Pico unloads keypad on host disconnection.
 
-- **Comprehensive Pi Pico test suite added** - 85+ new tests covering all Pi Pico functionality:
-  - **Configuration loading tests** (14 tests) - JSON parsing, validation, keycodes
-  - **Core controller tests** (14 tests) - Initialization, serial commands, basic functionality  
-  - **Keypad functionality tests** (20 tests) - Key press/release, LEDs, folders, plugins
-  - **Heartbeat system tests** (18 tests) - Timeout detection, recovery, edge cases
-  - **JSON corruption tests** (19 tests) - Malformed JSON handling, error recovery
-- **Mock CircuitPython framework** - Complete testing framework allowing Pi Pico code testing without physical hardware
-- **CircuitPython compliance verified** - All Pi Pico code confirmed compatible with CircuitPython
+## 2025-09-01
 
-### Enhanced Communication Protocol
-
-- **Improved heartbeat system** - Watchdog now sends "HB" messages instead of "." for better protocol clarity
-- **HELLO/BYE protocol** - Added startup/shutdown handshake messages with version information
-- **Echo diagnostic support** - Added lightweight echo command for connection diagnostics
-- **Heartbeat timeout detection** - Pi Pico now detects host disconnection and automatically unloads keypad
-
-### Development & Testing Tools
-
-- **Test runner script** (`run-tests.sh`) - Convenient script for running different test categories
-- **Enhanced test configuration** - Improved pytest configuration and CircuitPython mocking
-- **Plugin configuration tests** - Verified centralized vs plugin-local config file precedence
-- **Security vulnerability tests** - Added real security tests for path traversal and injection attacks
-
-### Development
-
-- **Enhanced test infrastructure** - Test coverage now includes 85+ Pi Pico tests + existing Mac/security tests (~125+ total)
-- **Mock hardware simulation** - RGB keypad, keyboard HID, USB CDC, and all CircuitPython dependencies mocked for testing
-- **Over 3,400 lines of test code** - Comprehensive testing framework ensuring code quality and reliability
-
-## 2025-09-01 - Original
-
-### Security
-
-- Replaced unsafe shell-based ping with a validated subprocess-based `_ping` (in
-  `src/mac/plugins/base_plugin.py`) to prevent command injection and validate IPs.
-
-### Fixes
-
-- `SoundsPlugin` now tracks ThreadPool futures and implements a robust `stop()`
-  that cancels outstanding futures and shuts down the executor
-  (`src/mac/plugins/sounds.py`).
-
-### Tests
-
-- Added unit tests and security tests. New tests include:
-  - `tests/unit/mac/plugins/test_base_plugin_ping.py`
-  - `tests/unit/mac/plugins/test_sounds_plugin.py`
-  - additional unit and security tests under `tests/` (pytest config and test
-    requirements added).
-  - Added `tests/unit/mac/plugins/test_load_plugins_config.py` to assert that
-    the plugin loader prefers the centralized `src/mac/plugins_config/<name>.json`,
-    falls back to `src/mac/plugins/config/<name>.json` when necessary, and skips
-    plugins with no configuration file.
-
-### Packaging & imports
-
-- Made `src` a proper package and migrated plugin imports to package-absolute
-  imports (e.g. `from src.mac.plugins.base_plugin import BasePlugin`). Added
-  `__init__.py` in `src/`, `src/mac/`, and `src/mac/plugins/`.
-
-### Tooling
-
-- Added `run-mac-watchdog.sh` launcher that respects a local `.venv` and sets
-  `PYTHONPATH`, and added `README-run-mac-watchdog.md` with bootstrap/run
-  instructions.
-
-### Repo hygiene & misc
-
+- Replaced unsafe shell-based ping with a validated subprocess-based `_ping` (in `src/mac/plugins/base_plugin.py`) to prevent command injection and validate IPs.
+- Made `src` a proper package; migrated plugin imports to package-absolute imports.
+- Added `__init__.py` in `src/`, `src/mac/`, and `src/mac/plugins/`.
+- Added `run-mac-watchdog.sh` launcher with `PYTHONPATH` setup.
 - Updated `.gitignore` with common ignores (`test_venv/`, `.coverage`, `.claude`).
-- Added CLAUDE-related metadata files and restructured `src/` layout with
-  per-component requirement files (`src/mac/requirements.txt`,
-  `src/pi_pico/requirements.txt`).
+- Added per-component requirement files (`src/mac/requirements.txt`, `src/pi_pico/requirements.txt`).
 
 ## 2024-01-31
 
-- some refactoring
+- Refactored plugin loading and error handling.
 
 ## 2024-01-27
 
-- Made plugins more robust
-  - `spotify.py` now checks if credentials work
-  - `hue.py` checks if IP of bridge exists and verifies connection
-- `watchdog.py` has new Cocoa signature encoding
+- `spotify.py`: added credential validation on startup.
+- `hue.py`: verifies bridge IP and connection on startup.
+- `watchdog.py`: new Cocoa selector signature encoding.
 
 ## 2024-01-19
 
-- `code.py` and `watchdog.py`: added detection of app termination to reset `toggleColor` settings
+- `code.py` / `watchdog.py`: detect app termination and reset `toggleColor` state.
 
 ## 2024-01-15
 
-- `code.py`: added `pressedColor` and `toggleColor` parameters for key definitions.
+- `code.py`: added `pressedColor` and `toggleColor` parameters.
 
 ## 2024-01-12
 
-- `watchdog.py`: detects if localized app name is empty and uses different strings to identify the app
-- `code.py`: added `pressedUntilReleased` parameter to key definition
+- `watchdog.py`: handle empty localized app names.
+- `code.py`: added `pressedUntilReleased` parameter.
 
 ## 2024-01-03
 
-- `code.py`: added `alias_of` parameter for applications to reuse key definitions
-- `code.py`: moved the `global` section inside the `applications` section and renamed it to `_default`
-- `code.py`: renamed `ignore_globals` to `ignore_default`
+- `code.py`: added `alias_of` parameter for applications.
+- `code.py`: moved `global` section inside `applications` as `_default`.
+- `code.py`: renamed `ignore_globals` → `ignore_default`.
 
 ## 2023-12-12
 
-- added `settings` section to JSON file. You can now define the `rotate` parameter there.
-- added `--rotate` parameter (`CW` or `CCW`) to `watchdog.py`
-- added heartbeat to `watchdog.py` (code for it still missing on client)
-- refactored the code of `watchdog.py`
-- added error handling to `load_plugins()`
-- added version number display to `watchdog.py`
-- fixed verbose output for commands and apps
-- added `App:` prefix to serial command from `watchdog.py` to the keypad
-- fixed: button color is now properly reset after a key sequence
+- Added `settings` section to JSON config with `rotate` parameter.
+- Added `--rotate` parameter (`CW`/`CCW`) to `watchdog.py`.
+- Added heartbeat to `watchdog.py`.
+- Refactored `watchdog.py` and added error handling to `load_plugins()`.
+- Added `App:` prefix to serial commands from watchdog.
+- Fixed: button color now properly resets after a key sequence.
 
-## 11-02-2023 - 11-05-2023
+## 2023-11-02 – 2023-11-05
 
-- It is now possible to use `CMD` instead of `GUI` in the JSON key definition (to make my life easier).
-- Added `autoclose` key for folders (default = `true``). Allows to specify whether a folder should be kept open after an action.
-- Keys are now only triggered on release – no more multiple shortcuts are being triggered
-- Refactored functions that deal with loading and parsing of the JSON
-- Simplified the `key_action` and `handle_key_sequences` functions
+- Added `CMD` as alias for `GUI` in key definitions.
+- Added `autoclose` key for folders (default `true`).
+- Keys now trigger on release only.
+- Refactored JSON loading and parsing functions.
 
-## 06-29-2023
+## 2023-06-29
 
-- Fixed a bug that Safari and Chrome reported an error when there are no open windows an thus no URLS
-- "Empty" tabs are also no longer reported as url
+- Fixed Safari/Chrome error when no windows are open.
 
-## 06-03-2023
+## 2023-06-03
 
-- You can now define keys for Safari and Chrome URLs via the `urls` section in the JSON
-- There is now a `global` section for default key definitions
-- You can define `"ignore_globals": "true"` for folders and apps where `global` keys should not be used
-- You can now nest folders
+- Added `urls` section for Safari/Chrome URL-specific keys.
+- Added `global` section for default key definitions.
+- Added `"ignore_globals": "true"` flag.
+- Added nested folder support.
 
-## 05-22-2023
+## 2023-05-22
 
-- Added a Audio playback plugin
+- Added audio playback plugin.
 
-## 05-20-2023
+## 2023-05-20
 
-- Added a Hue plugin
+- Added Philips Hue plugin.
 
-## 05-18-2023
+## 2023-05-18
 
-- Added a Spotify plugin
-- Added Plugin capabilities to the Streamdeck
+- Added Spotify plugin and plugin system.
 
-## 05-12-2023
+## 2023-05-12
 
-- Safari and Chrome now also return the URL of the active tab
+- Safari and Chrome return the URL of the active tab.
 
-## 05-11-2023
+## 2023-05-11
 
-- Stopping the code will turn off the keypad
-- Fixed a bug - the active app is now "remembered"
-- Removed unneeded `action: open_folder` in JSON and code
+- Stopping the code turns off the keypad.
+- Fixed: active app is now remembered correctly.
+- Removed unneeded `action: open_folder`.
 
-## 05-06-2023
+## 2023-05-06
 
-- Added folder definitions in JSON and code
-- Buttons can now launch applications, introduced `application` key to JSON
+- Added folder definitions.
+- Added `application` key type for launching apps.
 
-## 04-23-2023
+## 2023-04-23
 
-- Initial version
+- Initial version.

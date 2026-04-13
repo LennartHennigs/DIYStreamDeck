@@ -306,7 +306,7 @@ class KeyController:
         if "applications" in json_data and "_default" in json_data["applications"]:
             for key, config in json_data["applications"]["_default"].items():
                 config_items = self.get_config_items(config)
-                if config_items['folder'] and config_items['folder'] not in json_data["folders"]:
+                if config_items['folder'] and config_items['folder'] not in json_data.get("folders", {}):
                     print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
                 else:                 
                     global_config[int(key)] = config_items
@@ -321,7 +321,7 @@ class KeyController:
                 continue
             config_items = self.get_config_items(value)
             # check if the folder exists
-            if config_items['folder'] and config_items['folder'] not in json_data["folders"]:
+            if config_items['folder'] and config_items['folder'] not in json_data.get("folders", {}):
                 print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
                 config_items['key_sequences'] = ()
             else:                     
@@ -365,7 +365,7 @@ class KeyController:
     # load the config for all folders
     def process_folder_section(self, json_data):
         folder_config = {}
-        for folder, config in json_data["folders"].items():
+        for folder, config in json_data.get("folders", {}).items():
             folder_config[folder] = {}
             folder_config[folder]['autoclose'] = config.get("autoclose", "true").lower() == "true"
             close_folder_found = False
@@ -392,9 +392,13 @@ class KeyController:
 
 
     # parse the json file
-    def parse_json(self, json_filename): 
-        with open(json_filename, 'r') as json_file:
-            return json.load(json_file)
+    def parse_json(self, json_filename):
+        try:
+            with open(json_filename, 'r') as json_file:
+                return json.load(json_file)
+        except OSError as e:
+            raise type(e)(f"Config file '{json_filename}' not found: {e}").with_traceback(e.__traceback__) from None
+        # json.JSONDecodeError (a ValueError subclass) propagates unchanged
 
 
     # process the rotate serial command

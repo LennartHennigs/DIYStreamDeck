@@ -49,31 +49,32 @@ class SoundsPlugin(BasePlugin):
         raise Exception(message)
 
     def play(self, filename: str) -> None:
-        try:
-            # Security: Validate filename to prevent path traversal and injection attacks
-            if (not filename or 
-                '..' in filename or 
-                filename.startswith('/') or 
+        # Security: Validate filename to prevent path traversal and injection attacks
+        if (not filename or
+                '..' in filename or
+                filename.startswith('/') or
                 '\\' in filename or
-                '\x00' in filename or  # Null byte injection
-                any(ord(c) < 32 and c not in '\t\n\r' for c in filename)):  # Control characters
-                self._log_and_raise(f"Invalid filename: {filename}")
-            
-            # Use basename to strip any path components
-            safe_filename = os.path.basename(filename)
-            
-            # Construct the full path
-            sound_base_dir = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), self.sound_path))
-            full_path = os.path.join(sound_base_dir, safe_filename)
-            
-            # Security: Ensure resolved path is within the sound directory
-            resolved_path = os.path.realpath(full_path)
-            if not resolved_path.startswith(sound_base_dir):
-                self._log_and_raise(f"Invalid file path: {filename}")
-            
-            if not os.path.exists(resolved_path):
-                self._log_and_raise(f"File {filename} not found.")
-                
+                '\x00' in filename or
+                any(ord(c) < 32 and c not in '\t\n\r' for c in filename)):
+            self._log_and_raise(f"Invalid filename: {filename}")
+
+        # Use basename to strip any path components
+        safe_filename = os.path.basename(filename)
+
+        # Construct and resolve the full path
+        sound_base_dir = os.path.realpath(
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), self.sound_path)
+        )
+        resolved_path = os.path.realpath(os.path.join(sound_base_dir, safe_filename))
+
+        # Security: Ensure resolved path stays within the sound directory
+        if not resolved_path.startswith(sound_base_dir):
+            self._log_and_raise(f"Invalid file path: {filename}")
+
+        if not os.path.exists(resolved_path):
+            self._log_and_raise(f"File {filename} not found.")
+
+        try:
             future = self.executor.submit(playsound, resolved_path)
             self._futures.append(future)
             if self.verbose:
@@ -82,22 +83,13 @@ class SoundsPlugin(BasePlugin):
             self._log_and_raise(f"Failed to play '{filename}': {e}")
 
     def stop(self) -> None:
-        try:
-            # Attempt to cancel all submitted futures
-            for future in list(self._futures):
-                try:
-                    future.cancel()
-                except Exception:
-                    pass
-            # Stop accepting new tasks
+        for future in list(self._futures):
             try:
-                self.executor.shutdown(wait=False)
+                future.cancel()
             except Exception:
-                # Best-effort shutdown
                 pass
-            # clear tracked futures
-            self._futures.clear()
-            if self.verbose:
-                print("Stopped playback and shutdown executor")
-        except Exception as e:
-            self._log_and_raise(f"Failed to stop playback: {e}")
+        self._futures.clear()
+        self.executor.shutdown(wait=False)
+        self.executor = ThreadPoolExecutor(max_workers=2)
+        if self.verbose:
+            print("Stopped playback")

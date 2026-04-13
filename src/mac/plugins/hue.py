@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, Callable, Union, List, Optional
+from typing import Dict, Callable, Union, Optional
 from phue import Bridge, Light
 from src.mac.plugins.base_plugin import BasePlugin
 
@@ -46,20 +46,12 @@ class HuePlugin(BasePlugin):
 
 
     def _find_light(self, lamp_identifier: Union[int, str]) -> Optional[Light]:
-            lights = self._get_lights(lamp_identifier)
-            if lights:
-                return lights[0]
-        
-    def _get_lights(self, lamp_identifier: Union[int, str]) -> List[Light]:
-        return [
-            light for light in self.bridge.lights
-            if self._is_matching_light(light, lamp_identifier)
-        ]
-
-    def _is_matching_light(self, light: Light, lamp_identifier: Union[int, str]) -> bool:
-        return (
-            (isinstance(lamp_identifier, int) and lamp_identifier < len(self.bridge.lights))
-            or (isinstance(lamp_identifier, str) and light.name.lower() == lamp_identifier.lower())
+        lights = list(self.bridge.lights)
+        if isinstance(lamp_identifier, int):
+            idx = lamp_identifier
+            return lights[idx] if 0 <= idx < len(lights) else None
+        return next(
+            (light for light in lights if light.name.lower() == lamp_identifier.lower()), None
         )
 
     def _change_light_state(self, lamp_identifier: Union[int, str], state: bool) -> None:

@@ -30,3 +30,6 @@ Thumbs.db
 .idea/
 .env
 
+# Plugin credentials (use *.example files as templates)
+src/mac/plugins_config/*.json
+

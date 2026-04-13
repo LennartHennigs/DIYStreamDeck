@@ -149,7 +149,7 @@ class WatchDog(Cocoa.NSObject):
 
     # Send the name of the active application to the keypad via serial
     @objc.typedSelector(b'v@:@')
-    def send_app_name_to_microcontroller(self, app_name: str) -> str:
+    def send_app_name_to_microcontroller(self, app_name: str) -> None:
         if app_name in ["Safari", "Google Chrome"]:
             app_name = app_name + self.get_url(app_name)
 
@@ -346,7 +346,7 @@ def main() -> None:
         print("Error: No serial connection.")
         return
 
-    print('\nKeypad watchdog {VERSION} is running...'.format(VERSION=VERSION))
+    print(f'\nKeypad watchdog {VERSION} is running...')
 
     plugins = load_plugins(verbose=args.verbose)
     watchdog = WatchDog.alloc().initWithSerial_args_plugins_(ser, args, plugins)
@@ -360,7 +360,6 @@ def main() -> None:
     )
     # send HELLO so the keypad can know we started
     watchdog.send_hello()
-    running = [True]
     heartbeat_thread = threading.Thread(target=watchdog.send_heartbeat)
     heartbeat_thread.start()
 

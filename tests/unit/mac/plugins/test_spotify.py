@@ -332,13 +332,47 @@ class TestSpotifyPlugin:
     def test_verbose_logging(self):
         """Test verbose logging functionality"""
         messages = []
-        
+
         def mock_log(message, verbose=True):
             if verbose:
                 messages.append(message)
-        
+
         mock_log("Test message", verbose=True)
         mock_log("Silent message", verbose=False)
-        
+
         assert len(messages) == 1
         assert messages[0] == "Test message"
+
+
+# --- OAuth scope regression test ---
+
+def test_spotify_scope_has_no_trailing_comma_or_spaces():
+    """Spotify OAuth scope must not contain commas or end with whitespace/comma."""
+    import inspect
+    import importlib
+    import sys
+    import types
+
+    # Stub out heavy dependencies before importing the real module
+    for mod_name in ['spotipy', 'spotipy.oauth2']:
+        if mod_name not in sys.modules:
+            sys.modules[mod_name] = types.ModuleType(mod_name)
+
+    # Provide minimal stubs needed by the module
+    spotipy_mod = sys.modules['spotipy']
+    if not hasattr(spotipy_mod, 'Spotify'):
+        spotipy_mod.Spotify = type('Spotify', (), {})
+    oauth2_mod = sys.modules['spotipy.oauth2']
+    if not hasattr(oauth2_mod, 'SpotifyOAuth'):
+        oauth2_mod.SpotifyOAuth = type('SpotifyOAuth', (), {})
+
+    # Force re-import so we get the real source
+    import src.mac.plugins.spotify as spotify_mod
+    src_text = inspect.getsource(spotify_mod.SpotifyPlugin._authenticate)
+    # Extract the scope string value from source
+    import re
+    match = re.search(r'scope\s*=\s*"([^"]*)"', src_text)
+    assert match, "Could not find scope string in _authenticate source"
+    scope_value = match.group(1)
+    assert not scope_value.endswith(','), f"Scope ends with comma: {scope_value!r}"
+    assert ',' not in scope_value, f"Scope contains comma: {scope_value!r}"

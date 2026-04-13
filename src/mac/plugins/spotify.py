@@ -38,7 +38,7 @@ class SpotifyPlugin(BasePlugin):
 
 
     def _authenticate(self) -> Spotify:
-        scope = "user-read-playback-state, user-modify-playback-state,"
+        scope = "user-read-playback-state user-modify-playback-state"
         auth_manager = SpotifyOAuth(
             client_id=self.config['client_id'],
             client_secret=self.config['client_secret'],

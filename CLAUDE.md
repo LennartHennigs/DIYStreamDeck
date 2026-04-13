@@ -20,7 +20,7 @@ This is a DIY StreamDeck project that uses a Raspberry Pi Pico and Pimoroni RGB 
 1. **Watchdog** (`watchdog.py`) monitors active Mac applications using Cocoa frameworks
 2. **Application Detection**: Sends app names to Pi Pico via serial when apps change focus
 3. **Key Configuration**: Pi Pico loads appropriate key mappings from `key_def.json`
-4. **Plugin System**: Watchdog handles plugin commands (Spotify, Hue lights, sound playbook)
+4. **Plugin System**: Watchdog handles plugin commands (Spotify, Hue lights, sound playback)
 
 ### Communication Protocol
 - **HELLO/BYE Messages**: Startup and shutdown handshake with version information
@@ -74,26 +74,22 @@ python3 src/mac/watchdog.py --port /dev/cu.usbmodem2101 --verbose
 python3 src/mac/watchdog.py --port /dev/cu.usbmodem2101 --rotate CCW --verbose
 ```
 
-### Testing Infrastructure
+### Testing
+
 ```bash
-# Run all tests (125+ tests)
-./run-tests.sh all
-
-# Run specific test categories
-./run-tests.sh pico        # Pi Pico tests only (85+ tests)
-./run-tests.sh mac         # Mac watchdog tests
-./run-tests.sh security    # Security vulnerability tests
-./run-tests.sh corruption  # JSON corruption tests
-./run-tests.sh heartbeat   # Heartbeat functionality tests
-
-# Quick test run
-./run-tests.sh quick
+./run-tests.sh all        # All tests (150+ tests)
+./run-tests.sh pico       # Pi Pico tests only
+./run-tests.sh mac        # Mac watchdog tests
+./run-tests.sh security   # Security vulnerability tests
+./run-tests.sh quick      # Fast subset
 
 # Setup test environment (first time)
 python -m venv test_venv
 source test_venv/bin/activate
 pip install -r tests/requirements_test.txt
 ```
+
+See `tests/CLAUDE.md` for full test category details and mock framework documentation.
 
 ### Pi Pico Development
 - Install CircuitPython on Pi Pico
@@ -105,52 +101,44 @@ pip install -r tests/requirements_test.txt
 
 Plugins are located in `src/mac/plugins/` and extend `BasePlugin`:
 
-### Available Plugins
-- **Spotify**: Music control (requires API credentials in `config/spotify.json`)
-- **Hue**: Philips Hue light control (requires bridge IP in `config/hue.json`)
+- **Spotify**: Music control — credentials in `src/mac/plugins_config/spotify.json` (copy from `spotify.json.example`)
+- **Hue**: Philips Hue light control — bridge IP in `src/mac/plugins_config/hue.json` (copy from `hue.json.example`)
 - **Sounds**: Audio playback for `.wav` and `.mp3` files
 
-### Plugin Commands
-- Format: `plugin_name.command [parameter]`
-- Examples: `spotify.next`, `hue.toggle 'Lamp Name'`, `sounds.play 'file.mp3'`
+Plugin command format: `plugin_name.command [parameter]`
+Examples: `spotify.next`, `hue.toggle 'Lamp Name'`, `sounds.play 'file.mp3'`
 
 ## Important File Locations
 
-- **Main Config**: `src/pi_pico/key_def.json` - Primary key layout configuration
-- **Mac Dependencies**: `requirements/requirements_mac.txt` - Python package requirements
-- **Plugin Configs**: `src/mac/plugins_config/` - Individual plugin configuration files
-- **Sounds**: `src/mac/sounds/` - Audio files for sound plugin
+- **Main Config**: `src/pi_pico/key_def.json` — Primary key layout configuration
+- **Mac Dependencies**: `requirements/requirements_mac.txt` — Python package requirements
+- **Plugin Configs**: `src/mac/plugins_config/` — Individual plugin configuration files (git-ignored; use `*.json.example` templates)
+- **Sounds**: `src/mac/sounds/` — Audio files for sound plugin
 
-## Testing Framework
+## TDD Workflow
 
-The project includes a comprehensive testing suite with over 3,400 lines of test code:
+For every bug fix or new feature:
 
-### Test Categories
+1. **Write a failing test first** targeting the exact behaviour to fix
+2. **Confirm it fails**: `./run-tests.sh all`
+3. **Apply the minimal fix**
+4. **Confirm all tests pass**: `./run-tests.sh all`
+5. **Update CHANGELOG.md** with a brief entry
 
-- **Pi Pico Tests** (85+ tests): Complete coverage of CircuitPython keypad functionality
-- **Mac Tests**: Watchdog system, plugin loading, and integration tests
-- **Security Tests**: Path traversal, injection attacks, and vulnerability testing
-- **JSON Corruption Tests**: Malformed configuration handling and error recovery
-- **Heartbeat Tests**: Connection monitoring and timeout behavior
+New tests go in the matching location:
 
-### Mock Framework
-
-- **CircuitPython Mocking**: Complete simulation of hardware dependencies
-- **USB CDC/HID Simulation**: Serial communication and keyboard emulation
-- **RGB Keypad Mocking**: Key press/release events and LED control
-
-### Test Execution
-
-Use `./run-tests.sh [category]` to run different test suites. The framework provides realistic testing without requiring physical hardware.
+| Change area | Test location |
+| --- | --- |
+| Pi Pico / `code.py` | `tests/unit/pico/` |
+| Mac plugin | `tests/unit/mac/plugins/test_<plugin>.py` |
+| Watchdog | `tests/unit/mac/test_watchdog.py` |
+| Security | `tests/security/` |
 
 ## Development Principles
 
-When working with this codebase, follow these core principles:
-
-- **KISS (Keep It Simple, Stupid)**: Favor simple, straightforward solutions over complex abstractions
-- **YAGNI (You Aren't Gonna Need It)**: Don't add features or complexity until they are actually needed
-- **DRY (Don't Repeat Yourself)**: Eliminate code duplication through reusable functions and shared configuration
-- **Test-Driven Development**: Use the comprehensive test suite to validate changes
+- **KISS**: Favor simple, straightforward solutions over complex abstractions
+- **YAGNI**: Don't add features or complexity until actually needed
+- **DRY**: Eliminate duplication through reusable functions and shared configuration
 - **Security First**: All user inputs and file operations must be validated and secured
 
 ## Development Notes

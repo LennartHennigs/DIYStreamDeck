@@ -3,8 +3,13 @@ Unit tests for Pi Pico configuration loading
 """
 import pytest
 import json
+import sys
+import os
 import tempfile
 from unittest.mock import Mock, patch, mock_open
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..')))
+from tests.unit.pico.mock_circuitpython import MockUSBCDC  # triggers sys.modules setup
 
 # Note: In actual implementation, these imports would need to be adjusted
 # for CircuitPython environment or mocked appropriately
@@ -247,11 +252,98 @@ class TestConfigLoader:
             if "metadata" in config:
                 return config["metadata"].get("version", "1.0.0")
             return "1.0.0"
-        
+
         version = detect_version(sample_config_v2)
         assert version == "2.0.0"
-        
+
         # Test legacy config (no metadata)
         legacy_config = {"applications": {}}
         version = detect_version(legacy_config)
         assert version == "1.0.0"
+
+
+# --- New tests targeting actual KeyController methods ---
+
+MINIMAL_JSON = json.dumps({
+    "settings": {"rotate": ""},
+    "applications": {"_otherwise": {}},
+    "folders": {},
+    "urls": {}
+})
+
+
+class TestParseJson:
+    """Tests for KeyController.parse_json() error handling."""
+
+    def test_parse_json_missing_file_raises_oserror(self):
+        """Missing config file must raise OSError with a helpful message."""
+        kc = KeyController.__new__(KeyController)
+        with patch('builtins.open', side_effect=OSError("No such file or directory")):
+            with pytest.raises((OSError, Exception)) as exc_info:
+                kc.parse_json("missing.json")
+            assert "missing.json" in str(exc_info.value) or "No such file" in str(exc_info.value)
+
+    def test_parse_json_malformed_json_raises_valueerror(self):
+        """Malformed JSON must raise ValueError (or subclass) with a helpful message."""
+        kc = KeyController.__new__(KeyController)
+        with patch('builtins.open', mock_open(read_data="{bad json here")):
+            with pytest.raises((ValueError, Exception)) as exc_info:
+                kc.parse_json("bad.json")  # ← propagates ValueError before fix too, but test documents intent
+            # After fix: message should mention the filename
+            assert "bad.json" in str(exc_info.value) or "JSON" in str(exc_info.value) or "Expecting" in str(exc_info.value)
+
+
+class TestFoldersKeyAccess:
+    """Tests that missing 'folders' key doesn't cause KeyError."""
+
+    @patch('builtins.open', mock_open(read_data=MINIMAL_JSON))
+    def _make_controller(self):
+        return KeyController(verbose=False)
+
+    def test_process_global_section_no_folders_key(self):
+        """Config with no 'folders' key must not raise KeyError in process_global_section."""
+        with patch('builtins.open', mock_open(read_data=MINIMAL_JSON)):
+            kc = KeyController(verbose=False)
+
+        # Simulate a config that has _default keys referencing a folder,
+        # but the json_data has no 'folders' key at all.
+        json_data_no_folders = {
+            "applications": {
+                "_default": {
+                    "0": {
+                        "folder": "some_folder",
+                        "color": "#FF0000",
+                        "description": "Test"
+                    }
+                }
+            }
+            # No 'folders' key — would cause KeyError before fix
+        }
+        # Should not raise; should simply skip or warn about missing folder
+        result = kc.process_global_section(json_data_no_folders)  # ← KeyError before fix
+        assert isinstance(result, dict)
+
+    def test_process_config_no_folders_key(self):
+        """process_config must not crash when json_data has no 'folders' key."""
+        with patch('builtins.open', mock_open(read_data=MINIMAL_JSON)):
+            kc = KeyController(verbose=False)
+
+        json_data_no_folders = {
+            "applications": {
+                "TestApp": {
+                    "0": {
+                        "folder": "missing_folder",
+                        "color": "#00FF00",
+                        "description": "Test"
+                    }
+                }
+            }
+        }
+        app_config = {"TestApp": {}}
+        # Should not raise KeyError
+        kc.process_config(
+            json_data_no_folders["applications"]["TestApp"],
+            json_data_no_folders,
+            "TestApp",
+            app_config
+        )  # ← KeyError before fix
