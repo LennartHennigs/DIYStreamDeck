@@ -430,3 +430,95 @@ class TestPressedColorForAllActions:
         assert key_3.led_color != (255, 0, 0), (
             "pressedColor should NOT be applied when opening a folder"
         )
+
+
+# Config used by TestSendOutput and TestStringKeyType
+MOCK_STRING_CONFIG = '''{
+    "settings": {"rotate": ""},
+    "applications": {
+        "_otherwise": {
+            "5": {
+                "string": "Hi!",
+                "string_delay": 0.1,
+                "color": "#0000FF",
+                "description": "Type greeting"
+            },
+            "6": {
+                "string": "abc",
+                "string_delay": 0,
+                "color": "#FFFFFF",
+                "description": "Type abc no delay"
+            }
+        }
+    },
+    "folders": {}
+}'''
+
+
+class TestSendOutput:
+    """Tests for issue #6: send_output() serial protocol message."""
+
+    @patch('builtins.open', mock_open(read_data=MOCK_STRING_CONFIG))
+    def setup_method(self, method):
+        import sys
+        from src.pi_pico.code import KeyController
+        self.cdc = sys.modules['usb_cdc'].console
+        self.cdc.output_buffer = ""
+        self.controller = KeyController(verbose=True)
+
+    def test_send_output_writes_correct_bytes(self):
+        """send_output() must write 'Output: <text>\\n' to USB CDC console."""
+        self.cdc.output_buffer = ""
+        self.controller.send_output("hello world")
+        assert self.cdc.output_buffer == "Output: hello world\n"
+
+    def test_send_output_multiple_calls(self):
+        """send_output() can be called multiple times sequentially."""
+        self.cdc.output_buffer = ""
+        self.controller.send_output("first")
+        self.controller.send_output("second")
+        assert "Output: first\n" in self.cdc.output_buffer
+        assert "Output: second\n" in self.cdc.output_buffer
+
+
+class TestStringKeyType:
+    """Tests for issue #5: string key type with per-character delay."""
+
+    @patch('builtins.open', mock_open(read_data=MOCK_STRING_CONFIG))
+    def setup_method(self, method):
+        from src.pi_pico.code import KeyController
+        self.controller = KeyController(verbose=True)
+
+    def test_string_key_types_each_character(self):
+        """Pressing a string key calls layout.write() once per character."""
+        key_5 = self.controller.keypad.keys[5]
+        with patch('time.sleep'):
+            self.controller.key_press_action(key_5)
+        assert self.controller.layout.typed_chars == list("Hi!")
+
+    def test_string_key_uses_configured_delay(self):
+        """time.sleep is called once per character with the configured delay."""
+        key_5 = self.controller.keypad.keys[5]
+        with patch('time.sleep') as mock_sleep:
+            self.controller.key_press_action(key_5)
+        assert mock_sleep.call_count == len("Hi!")
+        mock_sleep.assert_called_with(0.1)
+
+    def test_string_key_zero_delay_skips_sleep(self):
+        """string_delay: 0 must not call time.sleep and writes the whole string at once."""
+        key_6 = self.controller.keypad.keys[6]
+        with patch('time.sleep') as mock_sleep:
+            self.controller.key_press_action(key_6)
+        mock_sleep.assert_not_called()
+        # Fast path: whole string passed in one write() call
+        assert self.controller.layout.typed_chars == ["abc"]
+
+    def test_string_key_release_does_not_release_keyboard(self):
+        """key_release_action on a string key must not call keyboard.release_all."""
+        key_5 = self.controller.keypad.keys[5]
+        with patch('time.sleep'):
+            self.controller.key_press_action(key_5)
+        self.controller.keyboard.pressed_keys = [42]  # simulate something pressed
+        self.controller.key_release_action(key_5)
+        # release_all clears pressed_keys; string key has no key_sequences so it must not fire
+        assert self.controller.keyboard.pressed_keys == [42]

@@ -107,6 +107,8 @@ class KeyController:
         folder = key_def.get('folder')
         app = key_def.get('application')
         keys = key_def.get('key_sequences')
+        text = key_def.get('string')
+        string_delay = key_def.get('string_delay', 0.05)
         pressedUntilReleased = key_def.get('pressedUntilReleased')
         pressedColor = key_def.get('pressedColor')
         key.led_off()
@@ -120,6 +122,8 @@ class KeyController:
             self.send_application_name(app)
         elif keys:
             self.handle_key_sequences(keys, pressedUntilReleased)
+        elif text:
+            self.handle_string_key(text, string_delay)
         if pressedColor and not folder:
             key.set_led(*pressedColor)
         # close the folder if needed
@@ -165,6 +169,16 @@ class KeyController:
             self.keyboard.release_all()
 
 
+    # type a string with an optional per-character delay for slow apps
+    def handle_string_key(self, text, delay=0.05):
+        if not delay:
+            self.layout.write(text)
+        else:
+            for char in text:
+                self.layout.write(char)
+                time.sleep(delay)
+
+
     # update the key layout
     def update_keys(self):
         for key in self.keys:
@@ -196,23 +210,29 @@ class KeyController:
         return None
 
 
-    # send the application name via serial
-    def send_application_name(self, app_name):
+    # write a prefixed message to the Mac watchdog over serial
+    def _serial_write(self, prefix, text):
         try:
-            usb_cdc.console.write(f"Launch: {app_name}\n".encode('utf-8'))
+            usb_cdc.console.write(f"{prefix}: {text}\n".encode('utf-8'))
         except Exception as e:
             if self.verbose:
                 print(f"Serial write error: {e}")
+
+
+    # send the application name via serial
+    def send_application_name(self, app_name):
+        self._serial_write("Launch", app_name)
 
 
     # send the plugin command via serial
     def send_plugin_command(self, plugin, command):
         # command may include a parameter, e.g. "toggle 'Lamp Name'" — intentional, matches Mac parser
-        try:
-            usb_cdc.console.write(f"Run: {plugin}.{command}\n".encode('utf-8'))
-        except Exception as e:
-            if self.verbose:
-                print(f"Serial write error: {e}")
+        self._serial_write("Run", f"{plugin}.{command}")
+
+
+    # forward a message to the Mac watchdog console
+    def send_output(self, text):
+        self._serial_write("Output", text)
 
 
     # rotate the keys if needed
@@ -293,6 +313,9 @@ class KeyController:
             'toggleColor': self.color_string_to_tuple(config.get('toggleColor', '')),
             'pressedColor': self.color_string_to_tuple(config.get('pressedColor', '')),
 
+            'string': config.get('string', ''),
+            'string_delay': config.get('string_delay', 0.05),
+
             'description': config.get('description', ''),
             'pressedUntilReleased': config.get('pressedUntilReleased', False)
         }
@@ -305,7 +328,11 @@ class KeyController:
             for url, configs in json_data["urls"].items():
                 urls[url] = {}
                 for key, config in configs.items():
-                    config_items = self.get_config_items(config)
+                    try:
+                        config_items = self.get_config_items(config)
+                    except ValueError as e:
+                        self.send_output(f"Config error key {key}: {e}")
+                        continue
                     key_num = self._validate_key_number(key)
                     if key_num is not None:
                         urls[url][key_num] = config_items
@@ -318,7 +345,11 @@ class KeyController:
         global_config = {}
         if "applications" in json_data and "_default" in json_data["applications"]:
             for key, config in json_data["applications"]["_default"].items():
-                config_items = self.get_config_items(config)
+                try:
+                    config_items = self.get_config_items(config)
+                except ValueError as e:
+                    self.send_output(f"Config error key {key}: {e}")
+                    continue
                 if config_items['folder'] and config_items['folder'] not in json_data.get("folders", {}):
                     folder_name = config_items['folder']
                     print(f"Error: Folder '{folder_name}' not found. Disabling key binding.")
@@ -335,7 +366,11 @@ class KeyController:
         for key, value in config.items():
             if key == "ignore_default":
                 continue
-            config_items = self.get_config_items(value)
+            try:
+                config_items = self.get_config_items(value)
+            except ValueError as e:
+                self.send_output(f"Config error key {key}: {e}")
+                continue
             # check if the folder exists
             if config_items['folder'] and config_items['folder'] not in json_data.get("folders", {}):
                 folder_name = config_items['folder']
@@ -396,7 +431,11 @@ class KeyController:
             for key, value in config.items():
                 if key in ["ignore_default", "autoclose"]:
                     continue
-                config_items = self.get_config_items(value)
+                try:
+                    config_items = self.get_config_items(value)
+                except ValueError as e:
+                    self.send_output(f"Config error key {key}: {e}")
+                    continue
                 key_num = self._validate_key_number(key)
                 if key_num is not None:
                     folder_config[folder][key_num] = config_items

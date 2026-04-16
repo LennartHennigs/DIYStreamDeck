@@ -113,6 +113,10 @@ class MockKeyboardLayoutUS:
     """Mock US keyboard layout"""
     def __init__(self, keyboard):
         self.keyboard = keyboard
+        self.typed_chars = []
+
+    def write(self, char):
+        self.typed_chars.append(char)
 
 
 class MockUSBCDC:

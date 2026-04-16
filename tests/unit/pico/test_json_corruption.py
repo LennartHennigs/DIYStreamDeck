@@ -128,7 +128,7 @@ class TestJSONCorruption:
                 )
                 
     def test_invalid_color_values(self):
-        """Test behavior with malformed color values"""
+        """Invalid hex colors are skipped gracefully — KeyController must not raise."""
         invalid_colors_json = '''{
             "settings": {
                 "rotate": ""
@@ -152,16 +152,17 @@ class TestJSONCorruption:
             "folders": {},
             "urls": {}
         }'''
-        
+
         with patch('builtins.open', mock_open(read_data=invalid_colors_json)):
             from src.pi_pico.code import KeyController
-            
-            # Should raise ValueError due to invalid hex characters
-            with pytest.raises(ValueError):
-                KeyController(verbose=True)
+            # Invalid keys are now skipped with send_output(); no raise expected.
+            kc = KeyController(verbose=True)
+            # Bad keys must not be in global_config
+            assert 1 not in kc.global_config, "Key with '#GGGGGG' must be skipped"
+            assert 2 not in kc.global_config, "Key with '#FF' must be skipped"
             
     def test_invalid_keycode_sequences(self):
-        """Test behavior with invalid keycode sequences"""
+        """Invalid keycodes are skipped gracefully — KeyController must not raise."""
         invalid_keycodes_json = '''{
             "settings": {
                 "rotate": ""
@@ -177,12 +178,12 @@ class TestJSONCorruption:
             "folders": {},
             "urls": {}
         }'''
-        
+
         with patch('builtins.open', mock_open(read_data=invalid_keycodes_json)):
             from src.pi_pico.code import KeyController
-            
-            with pytest.raises(ValueError, match="Unknown keycode constant"):
-                KeyController(verbose=True)
+            # Invalid keycode is caught and skipped; no raise expected.
+            kc = KeyController(verbose=True)
+            assert 0 not in kc.global_config, "Key with 'INVALID_KEY' must be skipped"
                 
     def test_circular_alias_references(self):
         """Test behavior with circular alias references"""
@@ -292,7 +293,7 @@ class TestJSONCorruption:
             assert controller is not None
             
     def test_extremely_large_json_values(self):
-        """Test behavior with extremely large values"""
+        """Extremely large / out-of-range key values are skipped gracefully."""
         large_values_json = '''{
             "settings": {
                 "rotate": ""
@@ -308,13 +309,13 @@ class TestJSONCorruption:
             "folders": {},
             "urls": {}
         }'''
-        
+
         with patch('builtins.open', mock_open(read_data=large_values_json)):
             from src.pi_pico.code import KeyController
-            
-            # Should raise ValueError due to extremely long keycode string
-            with pytest.raises(ValueError):
-                KeyController(verbose=True)
+            # Oversized keycode → ValueError caught and skipped; no raise expected.
+            kc = KeyController(verbose=True)
+            # Key "999999" is out of range (0–15), must not appear in global_config
+            assert len(kc.global_config) == 0, "Out-of-range key must not be loaded"
             
     def test_unicode_and_special_characters(self):
         """Test behavior with Unicode and special characters"""

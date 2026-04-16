@@ -1,12 +1,13 @@
 
 # CHANGELOG
 
+## 2026-04-16 (Output protocol + eager config validation + string key type)
+
+- **Pico/Mac: `Output:` serial protocol message (issue #6)** — Pico can now forward text to the Mac watchdog console via `send_output(text)`, which writes `Output: <text>\n` over serial. The watchdog receives it with a new `handle_output()` handler that always prints `[Pico] <text>` to stdout regardless of the verbose flag. Useful for debugging and for surfacing config errors at load time.
+- **Pico: eager config validation with error forwarding (issue #9)** — invalid key definitions (unknown keycode constants, malformed hex colors) previously propagated as unhandled exceptions and crashed the controller. All four config-loading paths (`process_global_section`, `process_config`, `process_folder_section`, `process_url_section`) now wrap `get_config_items()` in try-except; bad keys are skipped and the error is forwarded to the Mac console via `send_output()`. Other valid keys in the same config still load normally.
+- **Pico: `string` key type with per-character typing delay (issue #5)** — keys can now be configured with `"string": "text to type"` to have the Pico type literal text on press using `KeyboardLayoutUS.write()`. An optional `"string_delay": 0.05` (seconds, default 0.05) adds a delay between characters for compatibility with slow apps and terminals. Set to `0` for no delay. Added a `"TODO: "` snippet example to `key_def.json`.
+
 ## 2026-04-16 (startup app detection + clean shutdown)
-
-- **Watchdog: detect and send frontmost app at startup** — previously the Pico remained on the default key layout until the first app switch. The watchdog now queries `NSWorkspace.sharedWorkspace().frontmostApplication()` immediately after sending `HELLO` and sends the active app name, so the correct layout loads without any manual app switch. Uses existing `_get_app_name()` helper for consistent name extraction with bundle ID fallback.
-- **Watchdog: fix clean shutdown — keypad now clears on Ctrl-C** — three bugs combined to prevent `BYE` from reaching the Pico: (1) heartbeat thread was joined *after* `send_bye()`, causing a deadlock if the thread held the serial lock; (2) no `ser.flush()` meant bytes could be lost in the OS buffer; (3) the port closed before the Pico's 0.1s loop had time to read `BYE`. Fixed by joining the heartbeat thread first, then `send_bye()` → `flush()` → `sleep(SERIAL_CLOSE_GRACE_PERIOD)` → `close()`.
-
-## 2026-04-16 (code review fixes)
 
 - **Pi Pico `get_config_items`: fix `pressedUntilReleased` default** — defaulted to empty string `''` instead of `False`, causing semantic type mismatch. Changed to `False`.
 - **Pi Pico `key_press_action`: fix `pressedColor` for all action types** — `pressedColor` LED was only applied inside the `elif keys:` branch; plugin commands and app launches never showed the pressed color. Moved after the full if/elif chain, guarded against folders.

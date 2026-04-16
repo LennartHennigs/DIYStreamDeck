@@ -772,3 +772,34 @@ class TestFindPicoPort:
                 result = self.wd.find_pico_port(9600)
         assert result is None
 
+
+class TestOutputMessage:
+    """Tests for issue #6: Output: serial message (Pico -> Mac)."""
+
+    def setup_method(self, method):
+        self.wdog = _make_watchdog(verbose=False)
+
+    def test_handle_output_prints_with_pico_prefix(self):
+        """handle_output() must print '[Pico] <text>' to stdout."""
+        match = re.match(r'^Output: (.+)$', 'Output: hello world')
+        with patch('builtins.print') as mock_print:
+            self.wdog.handle_output(match)
+        mock_print.assert_called_once_with('[Pico] hello world')
+
+    def test_handle_output_not_gated_on_verbose(self):
+        """handle_output() must always print, regardless of verbose flag."""
+        wdog_quiet = _make_watchdog(verbose=False)
+        match = re.match(r'^Output: (.+)$', 'Output: test')
+        with patch('builtins.print') as mock_print:
+            wdog_quiet.handle_output(match)
+        mock_print.assert_called_once()
+
+    def test_check_serial_routes_output_message(self):
+        """check_serial() must route 'Output: ...' lines to handle_output."""
+        ser = MagicMock()
+        wdog = _make_watchdog(ser, verbose=False)
+        wdog.read_serial_data = MagicMock(return_value='Output: hello')
+        with patch.object(wdog, 'handle_output') as mock_handler:
+            wdog.check_serial()
+        mock_handler.assert_called_once()
+

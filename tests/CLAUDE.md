@@ -59,7 +59,7 @@ The testing framework uses mocking within individual test files for isolation:
 
 ### Unit Tests (218 tests passing)
 
-- **Pi Pico Tests** (85+ tests): Configuration loading, JSON parsing, keypad setup, heartbeat, key rotation, folder navigation, JSON corruption handling
+- **Pi Pico Tests** (85+ tests): Configuration loading, JSON parsing, keypad setup, heartbeat, key rotation, folder navigation, JSON corruption handling, string key type, eager config validation
 - **Mac Plugin Tests**: Hue light control, Spotify integration, sounds playback, command handling, error scenarios
 - **Watchdog Tests**: Source-level checks for VERSION interpolation, dead code, and type annotations
 - **Mock-based**: Complete isolation from hardware dependencies

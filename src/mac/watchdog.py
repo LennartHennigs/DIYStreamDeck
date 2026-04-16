@@ -72,6 +72,7 @@ class WatchDog(Cocoa.NSObject):
     plugins: Dict[str, BasePlugin]
     launch_pattern = re.compile(r"^Launch: (.+)$")
     run_pattern = re.compile(r"^Run: (.+)$")
+    output_pattern = re.compile(r"^Output: (.+)$")
     unsafe_app_name_pattern = re.compile(r"^-|[/\\\x00]")  # leading dash → flag injection; / \ \x00 → path traversal
 
     # Initializer
@@ -290,11 +291,17 @@ class WatchDog(Cocoa.NSObject):
         for pattern, handler in (
             (self.launch_pattern, self.launch_app),
             (self.run_pattern,    self.run_plugin_command),
+            (self.output_pattern, self.handle_output),
         ):
             match = re.match(pattern, command)
             if match:
                 handler(match)
                 return
+
+
+    # Print a message forwarded from the Pico
+    def handle_output(self, match: re.Match) -> None:
+        print(f"[Pico] {match.group(1)}")
 
 
 # Load all plugins

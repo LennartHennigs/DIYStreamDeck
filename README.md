@@ -98,6 +98,7 @@ The file has four top-level sections: `settings`, `applications`, `folders`, `ur
 | Type | Field | Behaviour |
 | --- | --- | --- |
 | Shortcut | `key_sequence` | Sends a key combination |
+| String | `string` | Types literal text character-by-character |
 | App launch | `application` | Opens or focuses an app |
 | Folder | `folder` | Opens a sub-page of keys |
 | Action | `action` | Runs a plugin command or `close_folder` |
@@ -113,6 +114,11 @@ The file has four top-level sections: `settings`, `applications`, `folders`, `ur
 
 - `key_sequence` — keycode string `"CTRL+ALT+T"`, array `["CTRL","ALT","T"]`, or array with float delays between presses
 - `pressedUntilReleased: true` — holds the key until physically released
+
+**String-specific:**
+
+- `string` — literal text to type (e.g. `"TODO: "`)
+- `string_delay` — delay in seconds between characters (default: `0.05`; `0` to type instantly)
 
 **App-specific:**
 
@@ -214,7 +220,7 @@ python3 -m venv test_venv && source test_venv/bin/activate
 pip install -r tests/requirements_test.txt
 
 # Run tests
-./run-tests.sh all       # everything (218 tests)
+./run-tests.sh all       # everything (255 tests)
 ./run-tests.sh pico      # Pi Pico only
 ./run-tests.sh mac       # Mac/watchdog only
 ./run-tests.sh security  # security tests only

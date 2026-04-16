@@ -622,3 +622,91 @@ class TestSelfReferenceAlias:
         assert "Zoom" in captured.out, (
             "Expected an error message mentioning the app name for a self-referencing alias"
         )
+
+
+class TestEagerConfigValidation:
+    """Tests for issue #9: invalid key configs are skipped at load time via send_output."""
+
+    @patch('builtins.open', mock_open(read_data='{}'))
+    def setup_method(self, method):
+        from src.pi_pico.code import KeyController
+        import sys
+        # Use a minimal config to create the controller
+        minimal = '{"settings": {}, "applications": {"_otherwise": {}}, "folders": {}}'
+        with patch('builtins.open', mock_open(read_data=minimal)):
+            self.kc = KeyController(verbose=False)
+        self.cdc = sys.modules['usb_cdc'].console
+
+    def _make_json(self, key_entry):
+        """Build a minimal json_data dict with one app key entry."""
+        return {
+            "applications": {
+                "_default": {},
+                "TestApp": {"0": key_entry},
+                "_otherwise": {},
+            },
+            "folders": {},
+        }
+
+    def test_invalid_keycode_in_app_skips_key(self):
+        """An invalid keycode in an app section must not raise; bad key is skipped."""
+        json_data = self._make_json({"key_sequence": "BADKEY", "color": "#FF0000", "description": "bad"})
+        result = self.kc.load_single_app_config("TestApp", json_data["applications"]["TestApp"], json_data)
+        assert result is not None, "load_single_app_config must not return None for one bad key"
+        assert 0 not in result, "Bad key must be skipped, not added to config"
+
+    def test_invalid_keycode_sends_output_message(self):
+        """An invalid keycode must call send_output with a 'Config error' message."""
+        import sys
+        self.cdc.output_buffer = ""
+        json_data = self._make_json({"key_sequence": "BADKEY", "color": "#FF0000", "description": "bad"})
+        self.kc.load_single_app_config("TestApp", json_data["applications"]["TestApp"], json_data)
+        assert "Output: Config error" in self.cdc.output_buffer, (
+            f"Expected 'Output: Config error' in serial output, got: {self.cdc.output_buffer!r}"
+        )
+
+    def test_invalid_keycode_in_default_skips_key(self):
+        """An invalid keycode in _default section must not raise; bad key is skipped."""
+        json_data = {
+            "applications": {
+                "_default": {"3": {"key_sequence": "NOTAKEY", "color": "#FF0000", "description": "x"}},
+                "_otherwise": {},
+            },
+            "folders": {},
+        }
+        # Should not raise
+        global_cfg = self.kc.process_global_section(json_data)
+        assert 3 not in global_cfg, "Bad key in _default must be skipped"
+
+    def test_invalid_keycode_in_folder_skips_key(self):
+        """An invalid keycode in a folder section must not raise; bad key is skipped."""
+        json_data = {
+            "applications": {"_otherwise": {}},
+            "folders": {
+                "myfolder": {
+                    "autoclose": "true",
+                    "0": {"key_sequence": "INVALID", "color": "#FF0000", "description": "x"},
+                    "1": {"action": "close_folder", "color": "#808080", "description": "back"},
+                }
+            },
+        }
+        # Should not raise
+        folders = self.kc.process_folder_section(json_data)
+        assert 0 not in folders["myfolder"], "Bad key in folder must be skipped"
+
+    def test_valid_keys_still_load_alongside_bad_key(self):
+        """Other valid keys in the same app must still load when one key is bad."""
+        json_data = {
+            "applications": {
+                "_default": {},
+                "TestApp": {
+                    "0": {"key_sequence": "BADKEY", "color": "#FF0000", "description": "bad"},
+                    "1": {"key_sequence": "CMD+A", "color": "#00FF00", "description": "good"},
+                },
+                "_otherwise": {},
+            },
+            "folders": {},
+        }
+        result = self.kc.load_single_app_config("TestApp", json_data["applications"]["TestApp"], json_data)
+        assert 0 not in result, "Bad key must be skipped"
+        assert 1 in result, "Good key must still be loaded"
