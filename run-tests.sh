@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # StreamDeck Test Runner
 # Activates test environment and runs tests with proper PYTHONPATH
@@ -55,7 +56,7 @@ case "${1:-all}" in
         pytest tests/unit/pico/test_heartbeat_functionality.py -v
         ;;
     "all")
-        echo -e "${BLUE}🚀 Running ALL tests (204 tests)...${NC}"
+        echo -e "${BLUE}🚀 Running ALL tests (218 tests)...${NC}"
         pytest tests/ -v
         ;;
     *)

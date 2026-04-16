@@ -116,7 +116,7 @@ The file has four top-level sections: `settings`, `applications`, `folders`, `ur
 - `autoclose: false` — keep folder open after a key press (default: auto-closes)
 - Folders without `autoclose` must include a `close_folder` action key
 
-**App/folder:**
+**App/folder/URL:**
 
 - `ignore_default: true` — skip global `_default` keys for this entry
 
@@ -207,7 +207,7 @@ python3 -m venv test_venv && source test_venv/bin/activate
 pip install -r tests/requirements_test.txt
 
 # Run tests
-./run-tests.sh all       # everything (204 tests)
+./run-tests.sh all       # everything (218 tests)
 ./run-tests.sh pico      # Pi Pico only
 ./run-tests.sh mac       # Mac/watchdog only
 ./run-tests.sh security  # security tests only

@@ -21,7 +21,7 @@ class TestJSONCorruption:
         with patch('builtins.open', mock_open(read_data=invalid_json)):
             from src.pi_pico.code import KeyController
             
-            with pytest.raises(json.JSONDecodeError):
+            with pytest.raises(ValueError):
                 KeyController(verbose=True)
                 
     def test_truncated_json(self):
@@ -39,7 +39,7 @@ class TestJSONCorruption:
         with patch('builtins.open', mock_open(read_data=truncated_json)):
             from src.pi_pico.code import KeyController
             
-            with pytest.raises(json.JSONDecodeError):
+            with pytest.raises(ValueError):
                 KeyController(verbose=True)
                 
     def test_json_with_trailing_comma(self):
@@ -63,7 +63,7 @@ class TestJSONCorruption:
         with patch('builtins.open', mock_open(read_data=trailing_comma_json)):
             from src.pi_pico.code import KeyController
             
-            with pytest.raises(json.JSONDecodeError):
+            with pytest.raises(ValueError):
                 KeyController(verbose=True)
                 
     def test_missing_required_sections(self):
@@ -118,9 +118,14 @@ class TestJSONCorruption:
         
         with patch('builtins.open', mock_open(read_data=invalid_keys_json)):
             from src.pi_pico.code import KeyController
-            
-            with pytest.raises(ValueError):
-                KeyController(verbose=True)
+
+            # Invalid key numbers should be silently dropped with warnings, not crash
+            kc = KeyController(verbose=True)
+            # Neither invalid key should be in the config
+            for key_num in kc.global_config:
+                assert isinstance(key_num, int) and 0 <= key_num <= 15, (
+                    f"Invalid key number {key_num} should have been dropped"
+                )
                 
     def test_invalid_color_values(self):
         """Test behavior with malformed color values"""
@@ -396,7 +401,7 @@ class TestJSONCorruption:
         with patch('builtins.open', mock_open(read_data=empty_json)):
             from src.pi_pico.code import KeyController
             
-            with pytest.raises(json.JSONDecodeError):
+            with pytest.raises(ValueError):
                 KeyController(verbose=True)
                 
     def test_only_whitespace_file(self):
@@ -406,5 +411,5 @@ class TestJSONCorruption:
         with patch('builtins.open', mock_open(read_data=whitespace_json)):
             from src.pi_pico.code import KeyController
             
-            with pytest.raises(json.JSONDecodeError):
+            with pytest.raises(ValueError):
                 KeyController(verbose=True)

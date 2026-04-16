@@ -1,6 +1,35 @@
 
 # CHANGELOG
 
+## 2026-04-16 (code review fixes)
+
+- **Pi Pico `get_config_items`: fix `pressedUntilReleased` default** — defaulted to empty string `''` instead of `False`, causing semantic type mismatch. Changed to `False`.
+- **Pi Pico `key_press_action`: fix `pressedColor` for all action types** — `pressedColor` LED was only applied inside the `elif keys:` branch; plugin commands and app launches never showed the pressed color. Moved after the full if/elif chain, guarded against folders.
+- **Pi Pico `keycode_string_to_tuple`: reject empty keycode strings** — empty or whitespace-only strings split to `['']` and gave an unhelpful "Unknown keycode" error. Added early guard raising `ValueError("Empty key_sequence string")`.
+- **Pi Pico: validate key numbers are in 0-15 range** — out-of-range keys like `"999"` or `"-1"` were silently accepted, creating dead config entries wasting heap. Added `_validate_key_number()` helper; out-of-range keys are now dropped with a warning.
+- **Pi Pico `parse_json`: include filename in ValueError** — CircuitPython raises `ValueError` for malformed JSON (not `JSONDecodeError`). The error now wraps the original message with the filename for easier debugging. Updated corruption tests to expect `ValueError` instead of `json.JSONDecodeError`.
+- **Pi Pico `__init__`: guard KEYCODE_MAPPING against redundant rebuild** — `KEYCODE_MAPPING` dict comprehension ran on every `KeyController()` instantiation. Added `if ... is None` guard so it's built once and shared across instances.
+- **Pi Pico `run()`: log heartbeat check errors when verbose** — broad `except Exception: pass` in the heartbeat timeout check now logs the error when `verbose=True`.
+- **Watchdog `_serial_write`: use UTF-8 encoding** — was encoding with `'ascii', 'replace'`, silently corrupting non-ASCII app names (e.g. accented characters became `?`). Changed to UTF-8, matching the Pico's `decode("utf-8")`.
+- **Watchdog: rename `send_heartbeat` to `_run_heartbeat_loop`** — name suggested a one-time send; it's actually a blocking loop for a thread.
+- **Spotify plugin: guard against logging None song info** — `get_current_song_info()` returns `None` when no track is playing; `_log(None)` printed literal "None". Added guard to only log when song info is available.
+- **`run-tests.sh`: add `set -e` for fail-fast** — script continued after failures (e.g. venv activation fails).
+- **Docs: fix stale test counts, wrong file references** — updated "208 tests" → 218 in `README.md`, `CLAUDE.md`, `run-tests.sh`. Fixed `requirements/requirements_mac.txt` → `src/mac/requirements.txt` in `CLAUDE.md`. Fixed wrong test filenames in `tests/CLAUDE.md` (`test_core_controller.py` → `test_key_controller.py`, `test_heartbeat.py` → `test_heartbeat_functionality.py`). Added missing `test_actual_vulnerabilities.py` to directory tree. Updated "150+" → 218 test count.
+- **CLAUDE.md: remove README duplication, fix protocol table** — removed Key Configuration and Plugin System sections that duplicated README content. Fixed Communication Protocol table: added 5 missing messages (`Rotate:`, `Terminated:`, `Launch:`, `Run:`, `ECHO`), corrected `ECHO` direction (Pico→Mac, not Mac→Pico), added `HELLO:<version>` format. Removed Notes section (items already covered elsewhere). Added `code.py`, `tests/`, `CHANGELOG.md` to File Locations. Added cross-reference to README for user-facing docs.
+
+## 2026-04-16 (quality fixes + refactors)
+
+- **Watchdog: remove unused imports** — `contextmanager` and `List` (from `typing`) were imported but never used; removed both. `Tuple` was also removed after `load_plugin_module` was inlined.
+- **Watchdog: move `run_loop()` onto `WatchDog`** — standalone `run_loop(observer)` function refactored into `WatchDog.run_loop(self)` for cleaner encapsulation.
+- **Watchdog: inline `load_plugin_module` into `load_plugins`** — `load_plugin_module` was a thin helper called once, returning a `(None, None)` sentinel on error. Inlined with clear stage comments (load module → find config → instantiate), eliminating the sentinel pattern.
+- **Watchdog `get_url`: log `osascript` stderr when verbose** — `error` from `osa.communicate()` was captured but never used. Added `stderr=subprocess.PIPE` and a verbose-gated print for the error output.
+- **`base_plugin._log_and_raise`: always print errors** — error messages (config not found, invalid filename, etc.) were gated behind `verbose`. Replaced `self._log(msg)` with `print(msg)` so failures are always visible.
+- **Pi Pico `get_config_items`: remove alias dead code** — two unreachable `alias_of` checks inside `get_config_items` (lines 277–286) were removed. Aliases are fully resolved by `load_single_app_config` before this method is called; the checks were dead and the first one replaced the dict with a string, which would have crashed on the subsequent `.get()` calls.
+- **Pi Pico `run()`: call `keypad.update()` unconditionally** — `keypad.update()` was only called in the `else` (idle-serial) branch. During a burst of serial messages, physical key presses were silently dropped. Moved `keypad.update()` outside the `else` branch so it runs every loop iteration.
+- **Pi Pico `process_url_section`: apply global config to URL contexts** — `add_global_config()` was called for app and folder sections but not for URL sections, causing `_default` keys (e.g. folder shortcuts) to disappear when a browser URL was active. Added `self.add_global_config(urls[url])` at the end of each URL entry.
+- **Pi Pico `send_plugin_command`: document parameter behaviour** — added a comment clarifying that `command` may include a parameter (e.g., `"toggle 'Lamp Name'"`), matching the Mac parser's expected format.
+- Updated test count to 208 in `README.md`, `CLAUDE.md`, and `run-tests.sh`.
+
 ## 2026-04-14 (third-pass fixes)
 
 - **Watchdog `main()` Rotate command: route through `_serial_write`** — `Rotate:` was written directly to `ser` bypassing `_serial_lock`, creating a race with the heartbeat thread. Replaced bare `ser.write(...)` with `watchdog._serial_write(...)`.

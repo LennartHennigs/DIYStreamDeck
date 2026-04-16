@@ -11,8 +11,7 @@ import argparse
 import re
 import subprocess
 from inspect import signature
-from typing import Optional, Dict, Any, List, Tuple
-from contextlib import contextmanager
+from typing import Optional, Dict, Any
 from urllib.parse import urlparse
 import importlib.util
 import os
@@ -32,13 +31,6 @@ def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Seria
     except serial.SerialException:
         return None
 
-
-def run_loop(observer: 'WatchDog') -> None:
-    ns_run_loop = Cocoa.NSRunLoop.currentRunLoop()
-    while True:
-        ns_run_loop.runMode_beforeDate_(
-            Cocoa.NSDefaultRunLoopMode, Cocoa.NSDate.dateWithTimeIntervalSinceNow_(0.1))
-        observer.check_serial()
 
 class WatchDog(Cocoa.NSObject):
     ser: serial.Serial
@@ -83,7 +75,7 @@ class WatchDog(Cocoa.NSObject):
 
     # Called every HEARTBEAT_INTERVAL seconds
     @objc.typedSelector(b'v@:')  # Encoded the signature string as bytes
-    def send_heartbeat(self) -> None:
+    def _run_heartbeat_loop(self) -> None:
         while not self._stop_event.wait(HEARTBEAT_INTERVAL):
             # Send a framed heartbeat message so the keypad can detect liveness
             self._serial_write('HB\n', 'HB')
@@ -126,8 +118,10 @@ class WatchDog(Cocoa.NSObject):
             end tell
         '''
         osa = subprocess.Popen(
-            ['osascript', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            ['osascript', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, error = osa.communicate(script.encode())
+        if error and self.args.verbose:
+            print(f"osascript error: {error.decode().strip()}")
         full_url = output.decode().strip()
 
         if full_url:
@@ -156,7 +150,7 @@ class WatchDog(Cocoa.NSObject):
     def _serial_write(self, message: str, label: str) -> None:
         with self._serial_lock:
             try:
-                self.ser.write(message.encode('ascii', 'replace'))
+                self.ser.write(message.encode('utf-8'))
             except Exception as e:
                 print(f"Error sending {label}: {e}")
 
@@ -236,6 +230,15 @@ class WatchDog(Cocoa.NSObject):
         command_func(param) if param is not None else command_func()
 
 
+    # Run the NSRunLoop, polling serial each iteration
+    def run_loop(self) -> None:
+        ns_run_loop = Cocoa.NSRunLoop.currentRunLoop()
+        while True:
+            ns_run_loop.runMode_beforeDate_(
+                Cocoa.NSDefaultRunLoopMode, Cocoa.NSDate.dateWithTimeIntervalSinceNow_(0.1))
+            self.check_serial()
+
+
     # Check if there's any data in the serial buffer
     def check_serial(self) -> None:
         command = self.read_serial_data()
@@ -273,54 +276,43 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
                     and f.name not in ('base_plugin.py', '__init__.py')
                     and not f.name.startswith('.')]
     for plugin_file in plugin_files:
-        plugin_name, plugin_module = load_plugin_module(plugin_file, full_path)
-        if plugin_module is None:
+        plugin_name = os.path.splitext(plugin_file.name)[0]
+        abs_path = os.path.join(full_path, plugin_file.name)
+
+        # Stage 1: load the module
+        try:
+            spec = importlib.util.spec_from_file_location(plugin_name, abs_path)
+            plugin_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(plugin_module)
+        except Exception as e:
+            print(f"Error loading plugin module {plugin_name}: {e}")
             continue
 
+        # Stage 2: locate config file
+        central = os.path.join(base_path, 'plugins_config', f'{plugin_name}.json')
+        fallback = os.path.join(full_path, 'config', f'{plugin_name}.json')
+        if os.path.exists(central):
+            config_path = central
+            source = 'central'
+        elif os.path.exists(fallback):
+            config_path = fallback
+            source = 'plugin-local'
+        else:
+            print(f"Skipping plugin '{plugin_name}': no config found at {central} or {fallback}")
+            continue
+
+        if verbose:
+            print(f"Using {source} config for plugin '{plugin_name}': {config_path}")
+
+        # Stage 3: instantiate
         try:
             plugin_class = getattr(plugin_module, f'{plugin_name.capitalize()}Plugin')
-            # Prefer centralized config in src/mac/plugins_config if present
-            # base_path is already the absolute path to src/mac
-            central = os.path.join(base_path, 'plugins_config', f'{plugin_name}.json')
-            fallback = os.path.join(full_path, 'config', f'{plugin_name}.json')
-
-            # Choose which config to use, if any
-            if os.path.exists(central):
-                config_path = central
-                source = 'central'
-            elif os.path.exists(fallback):
-                config_path = fallback
-                source = 'plugin-local'
-            else:
-                # Neither config exists; skip loading this plugin and log a helpful message
-                print(f"Skipping plugin '{plugin_name}': no config found at {central} or {fallback}")
-                continue
-
-            # Log the config path being used for easier debugging
-            if verbose:
-                print(f"Using {source} config for plugin '{plugin_name}': {config_path}")
-
             plugins[plugin_name] = plugin_class(config_path, verbose)
             print(f"Loaded plugin: {plugin_name}")
         except Exception as e:
             print(f"Error initializing plugin {plugin_name} (file={plugin_file.name}): {e}")
     print()
     return plugins
-
-
-# Load a plugin module
-def load_plugin_module(plugin_file: str, full_path: str) -> Tuple[str, Any]:
-    plugin_name = os.path.splitext(plugin_file.name)[0]
-    abs_path = os.path.join(full_path, plugin_file.name)
-    try:
-        spec = importlib.util.spec_from_file_location(plugin_name, abs_path)
-        plugin_module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(plugin_module)
-    except Exception as e:
-        print(f"Error loading plugin module {plugin_name}: {e}")
-        return None, None
-
-    return plugin_name, plugin_module
 
 
 # Main function
@@ -356,14 +348,14 @@ def main() -> None:
     )
     # send HELLO so the keypad can know we started
     watchdog.send_hello()
-    heartbeat_thread = threading.Thread(target=watchdog.send_heartbeat)
+    heartbeat_thread = threading.Thread(target=watchdog._run_heartbeat_loop)
     heartbeat_thread.start()
 
     if args.rotate:
         watchdog._serial_write(f'Rotate: {args.rotate}\n', 'Rotate')
 
     try:
-        run_loop(watchdog)
+        watchdog.run_loop()
     except KeyboardInterrupt:
         pass  # User pressed CTRL-C to exit
     except Exception as e:

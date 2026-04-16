@@ -356,9 +356,77 @@ class TestKeypadFunctionality:
         """Test application termination handling"""
         # Switch to TestApp with toggle color
         self.controller.process_serial_str("App: TestApp")
-        
+
         # Simulate app termination (should reload config)
         self.controller.process_serial_str("Terminated: TestApp")
-        
+
         # Config should be reloaded (no exception means success)
         assert self.controller.apps.get("TestApp") is not None
+
+    def test_url_context_inherits_global_default_keys(self):
+        """URL contexts must include keys from _default, just like app and folder contexts.
+
+        Before the fix: process_url_section() never called add_global_config(), so
+        _default keys (e.g., key 0 = CMD+A, key 1 = CMD+C) were absent when a URL
+        was active, breaking any globally-defined shortcuts.
+        After the fix: URL configs inherit _default keys that don't conflict.
+        """
+        # Activate the URL context — example.com only defines key 0 explicitly
+        self.controller.process_serial_str("App: Safari (example.com)")
+
+        # Key 0 is defined by the URL config itself
+        assert 0 in self.controller.current_config, (
+            "Key 0 (from URL-specific config) must be present"
+        )
+        # Key 1 comes from _default (CMD+C) — must now be inherited by URL context
+        assert 1 in self.controller.current_config, (
+            "Key 1 (from _default) must be present in URL context; "
+            "URL sections must call add_global_config() just like app and folder sections do"
+        )
+
+
+class TestPressedColorForAllActions:
+    """pressedColor must apply to plugin commands and app launches, not just key_sequences."""
+
+    @patch('builtins.open', mock_open(read_data=MOCK_KEYPAD_CONFIG))
+    def setup_method(self, method):
+        from src.pi_pico.code import KeyController
+        self.controller = KeyController(verbose=True)
+
+    def test_pressed_color_applied_for_plugin_action(self):
+        """A key with action='spotify.play' and pressedColor must show the pressed LED color."""
+        # Manually set up a key with a plugin action + pressedColor
+        self.controller.current_config[5] = {
+            'key_sequences': (),
+            'application': '',
+            'action': ('spotify', 'play'),
+            'folder': '',
+            'color': (0, 255, 0),
+            'toggleColor': None,
+            'pressedColor': (255, 0, 0),
+            'description': 'Play',
+            'pressedUntilReleased': False,
+        }
+        self.controller.update_keys()
+
+        key_5 = self.controller.keypad.keys[5]
+        self.controller.key_press_action(key_5)
+
+        # pressedColor should be applied
+        assert key_5.led_color == (255, 0, 0), (
+            f"Expected pressedColor (255,0,0) for plugin action, got {key_5.led_color}"
+        )
+
+    def test_pressed_color_not_applied_for_folder(self):
+        """A key with folder and pressedColor must NOT show pressedColor (folder opens new layout)."""
+        key_3 = self.controller.keypad.keys[3]
+        # Key 3 has folder: "media_controls" — add pressedColor for this test
+        self.controller.current_config[3]['pressedColor'] = (255, 0, 0)
+
+        self.controller.key_press_action(key_3)
+
+        # After opening folder, key colors update to folder contents, NOT pressedColor
+        # Key 3 should NOT be (255, 0, 0)
+        assert key_3.led_color != (255, 0, 0), (
+            "pressedColor should NOT be applied when opening a folder"
+        )

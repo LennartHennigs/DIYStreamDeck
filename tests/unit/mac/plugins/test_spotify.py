@@ -451,6 +451,24 @@ def test_spotify_play_already_playing_message_is_not_misleading():
     )
 
 
+def test_spotify_play_does_not_log_none_when_no_track_info():
+    """play() must not log None when get_current_song_info() returns None."""
+    from unittest.mock import MagicMock, patch
+    sp = MagicMock()
+    sp.current_playback.return_value = {'is_playing': False, 'device': {'volume_percent': 50}}
+    sp.current_user_playing_track.return_value = None  # no track info after start
+    plugin = _make_spotify_plugin(sp)
+
+    logs = []
+    with patch.object(plugin, '_log', side_effect=logs.append):
+        plugin.play()
+
+    # None must not appear in any log message
+    assert not any(msg is None for msg in logs), (
+        f"play() logged None — expected only string messages, got: {logs}"
+    )
+
+
 # --- OAuth scope regression test ---
 
 def test_spotify_scope_has_no_trailing_comma_or_spaces():

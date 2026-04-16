@@ -227,3 +227,54 @@ class TestKeyController:
         assert captured.out.strip(), "Expected an error message when verbose=True"
         assert self.controller.unloaded is False
         assert len(self.controller.current_config) > 0
+
+    def test_keypad_update_called_when_serial_data_present(self):
+        """keypad.update() must be called even when serial data is being processed.
+
+        Before the fix: keypad.update() only ran in the else branch (idle serial).
+        During a burst of serial messages key presses were silently dropped.
+        After the fix: keypad.update() runs unconditionally every iteration.
+        """
+        update_calls = []
+
+        def _fake_update():
+            update_calls.append(1)
+
+        # Return serial data on the ONLY iteration, then stop — never enter the else branch.
+        serial_iter = iter(["HB"])
+
+        def _fake_read():
+            try:
+                val = next(serial_iter)
+                return val
+            except StopIteration:
+                raise KeyboardInterrupt  # stop loop after the one serial-data iteration
+
+        self.controller.keypad.update = _fake_update
+
+        with patch.object(self.controller, 'read_serial_line', side_effect=_fake_read):
+            try:
+                self.controller.run()
+            except KeyboardInterrupt:
+                pass
+
+        assert len(update_calls) >= 1, (
+            "keypad.update() must be called even when serial data was received in that iteration; "
+            "currently it is only called in the else (idle) branch, so key presses are dropped "
+            "during serial bursts"
+        )
+
+
+class TestKeycodeMappingSharing:
+    """KEYCODE_MAPPING must be built once and shared across instances."""
+
+    @patch('builtins.open', mock_open(read_data=MOCK_JSON_CONFIG))
+    def test_second_instance_reuses_mapping(self):
+        """Instantiating KeyController twice must reuse the same KEYCODE_MAPPING object."""
+        from src.pi_pico.code import KeyController
+        kc1 = KeyController(verbose=False)
+        kc2 = KeyController(verbose=False)
+        assert KeyController.KEYCODE_MAPPING is not None
+        assert kc1.KEYCODE_MAPPING is kc2.KEYCODE_MAPPING, (
+            "KEYCODE_MAPPING should be the same object (class-level), not rebuilt per instance"
+        )

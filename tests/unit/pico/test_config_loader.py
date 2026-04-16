@@ -284,13 +284,14 @@ class TestParseJson:
             assert "missing.json" in str(exc_info.value) or "No such file" in str(exc_info.value)
 
     def test_parse_json_malformed_json_raises_valueerror(self):
-        """Malformed JSON must raise ValueError (or subclass) with a helpful message."""
+        """Malformed JSON must raise ValueError with the filename in the message."""
         kc = KeyController.__new__(KeyController)
         with patch('builtins.open', mock_open(read_data="{bad json here")):
             with pytest.raises((ValueError, Exception)) as exc_info:
-                kc.parse_json("bad.json")  # ← propagates ValueError before fix too, but test documents intent
-            # After fix: message should mention the filename
-            assert "bad.json" in str(exc_info.value) or "JSON" in str(exc_info.value) or "Expecting" in str(exc_info.value)
+                kc.parse_json("bad.json")
+            assert "bad.json" in str(exc_info.value), (
+                f"ValueError must mention the filename, got: {exc_info.value}"
+            )
 
 
 class TestFoldersKeyAccess:
@@ -501,6 +502,80 @@ class TestRotationValidation:
         )
         # AppC (non-alias) should still load normally
         assert "AppC" in controller.apps
+
+
+class TestPressedUntilReleasedDefault:
+    """pressedUntilReleased must default to False (bool), not '' (empty string)."""
+
+    @patch('builtins.open', mock_open(read_data=MINIMAL_JSON))
+    def setup_method(self, method):
+        self.kc = KeyController(verbose=False)
+
+    def test_missing_key_defaults_to_false(self):
+        """Config without pressedUntilReleased must produce False, not ''."""
+        config = {"key_sequence": "CMD+A", "color": "#FF0000"}
+        result = self.kc.get_config_items(config)
+        assert result['pressedUntilReleased'] is False, (
+            f"Expected False (bool), got {result['pressedUntilReleased']!r}"
+        )
+
+
+class TestEmptyKeycodeString:
+    """keycode_string_to_tuple must reject empty/whitespace-only strings with a clear error."""
+
+    @patch('builtins.open', mock_open(read_data=MINIMAL_JSON))
+    def setup_method(self, method):
+        self.kc = KeyController(verbose=False)
+
+    def test_empty_string_raises_clear_error(self):
+        """Empty string must raise ValueError mentioning 'Empty'."""
+        with pytest.raises(ValueError, match="(?i)empty"):
+            self.kc.keycode_string_to_tuple("")
+
+    def test_whitespace_only_raises_clear_error(self):
+        """Whitespace-only string must raise ValueError mentioning 'Empty'."""
+        with pytest.raises(ValueError, match="(?i)empty"):
+            self.kc.keycode_string_to_tuple("   ")
+
+
+class TestKeyNumberValidation:
+    """Key numbers in config must be validated to range 0-15 (16-key keypad)."""
+
+    def test_out_of_range_key_dropped_from_default(self):
+        """Key '999' in _default must be silently dropped, not added to config."""
+        config_json = json.dumps({
+            "settings": {"rotate": ""},
+            "applications": {
+                "_default": {
+                    "0": {"key_sequence": "CMD+A", "color": "#FF0000", "description": "OK"},
+                    "999": {"key_sequence": "CMD+B", "color": "#00FF00", "description": "Bad"}
+                },
+                "_otherwise": {}
+            },
+            "folders": {},
+            "urls": {}
+        })
+        with patch('builtins.open', mock_open(read_data=config_json)):
+            kc = KeyController(verbose=False)
+        assert 0 in kc.global_config, "Valid key 0 must be present"
+        assert 999 not in kc.global_config, "Out-of-range key 999 must be dropped"
+
+    def test_negative_key_dropped(self):
+        """Negative key numbers must be dropped."""
+        config_json = json.dumps({
+            "settings": {"rotate": ""},
+            "applications": {
+                "_default": {
+                    "-1": {"key_sequence": "CMD+A", "color": "#FF0000", "description": "Bad"}
+                },
+                "_otherwise": {}
+            },
+            "folders": {},
+            "urls": {}
+        })
+        with patch('builtins.open', mock_open(read_data=config_json)):
+            kc = KeyController(verbose=False)
+        assert -1 not in kc.global_config, "Negative key -1 must be dropped"
 
 
 class TestSelfReferenceAlias:

@@ -36,7 +36,7 @@ class BasePlugin(ABC):
             )
 
     def _log_and_raise(self, msg: str) -> None:
-        self._log(msg)
+        print(msg)
         raise Exception(msg)
 
     def _log(self, message: str) -> None:

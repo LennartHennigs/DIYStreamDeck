@@ -133,19 +133,19 @@ def test_send_app_name_return_type_is_none():
 
 class TestSendHeartbeat:
 
-    def test_send_heartbeat_writes_hb_message(self):
-        """send_heartbeat() must write 'HB\\n' to the serial port."""
+    def test_run_heartbeat_loop_writes_hb_message(self):
+        """_run_heartbeat_loop() must write 'HB\\n' to the serial port."""
         ser = MagicMock()
         wdog = _make_watchdog(ser)
 
         # wait() returns False once (run body), then True (stop loop)
         with patch.object(wdog._stop_event, 'wait', side_effect=[False, True]):
-            wdog.send_heartbeat()
+            wdog._run_heartbeat_loop()
 
         ser.write.assert_called_once_with(b'HB\n')
 
-    def test_send_heartbeat_uses_heartbeat_interval(self):
-        """send_heartbeat() must call event.wait with HEARTBEAT_INTERVAL."""
+    def test_run_heartbeat_loop_uses_heartbeat_interval(self):
+        """_run_heartbeat_loop() must call event.wait with HEARTBEAT_INTERVAL."""
         wd = _import_watchdog()
         ser = MagicMock()
         wdog = _make_watchdog(ser)
@@ -156,33 +156,33 @@ class TestSendHeartbeat:
             return True  # stop immediately after first call
 
         with patch.object(wdog._stop_event, 'wait', side_effect=_record_and_stop):
-            wdog.send_heartbeat()
+            wdog._run_heartbeat_loop()
 
         assert wait_calls == [wd.HEARTBEAT_INTERVAL]
 
-    def test_send_heartbeat_sends_multiple_times(self):
-        """send_heartbeat() must keep sending HB on each loop iteration."""
+    def test_run_heartbeat_loop_sends_multiple_times(self):
+        """_run_heartbeat_loop() must keep sending HB on each loop iteration."""
         ser = MagicMock()
         wdog = _make_watchdog(ser)
 
         # False × 3 → 3 sends; True → stop
         with patch.object(wdog._stop_event, 'wait', side_effect=[False, False, False, True]):
-            wdog.send_heartbeat()
+            wdog._run_heartbeat_loop()
 
         assert ser.write.call_count == 3
         ser.write.assert_called_with(b'HB\n')
 
-    def test_send_heartbeat_stops_when_running_false(self):
+    def test_run_heartbeat_loop_stops_when_running_false(self):
         """Setting _stop_event stops the heartbeat loop without any write."""
         ser = MagicMock()
         wdog = _make_watchdog(ser)
         wdog._stop_event.set()  # already stopped before the loop body runs
 
-        wdog.send_heartbeat()
+        wdog._run_heartbeat_loop()
 
         ser.write.assert_not_called()
 
-    def test_send_heartbeat_handles_serial_exception(self):
+    def test_run_heartbeat_loop_handles_serial_exception(self):
         """A SerialException on write must be caught — loop must continue, not crash."""
         wd = _import_watchdog()
         serial_mod = sys.modules[wd.serial.__name__]
@@ -196,7 +196,7 @@ class TestSendHeartbeat:
 
         # False once (loop runs, exception caught internally), True next (stop)
         with patch.object(wdog._stop_event, 'wait', side_effect=[False, True]):
-            wdog.send_heartbeat()   # must not raise
+            wdog._run_heartbeat_loop()   # must not raise
 
 
 class TestSendHelloBye:
@@ -245,7 +245,7 @@ class TestSendHelloBye:
 class TestHeartbeatThreadLifecycle:
 
     def test_heartbeat_thread_runs_and_stops(self):
-        """send_heartbeat() run in a real thread stops cleanly after _stop_event is set."""
+        """_run_heartbeat_loop() run in a real thread stops cleanly after _stop_event is set."""
         ser = MagicMock()
         wdog = _make_watchdog(ser)
 
@@ -258,7 +258,7 @@ class TestHeartbeatThreadLifecycle:
 
         # Let the loop run a few times quickly, then stop
         with patch.object(wdog._stop_event, 'wait', side_effect=[False, False, False, True]):
-            t = threading.Thread(target=wdog.send_heartbeat)
+            t = threading.Thread(target=wdog._run_heartbeat_loop)
             t.start()
             t.join(timeout=1.0)
 
@@ -270,7 +270,7 @@ class TestHeartbeatThreadLifecycle:
 class TestSerialWriteThreadSafety:
 
     def test_heartbeat_routes_through_serial_write(self):
-        """send_heartbeat must call _serial_write, not ser.write directly."""
+        """_run_heartbeat_loop must call _serial_write, not ser.write directly."""
         wd = _import_watchdog()
         ser = MagicMock()
         wdog = _make_watchdog(ser)
@@ -279,15 +279,15 @@ class TestSerialWriteThreadSafety:
 
         def recording_serial_write(self_inner, message, label):
             serial_write_calls.append((message, label))
-            ser.write(message.encode('ascii', 'replace'))
+            ser.write(message.encode('utf-8'))
 
         with patch.object(wd.WatchDog, '_serial_write', recording_serial_write):
             # wait() returns False once (send HB), then True (stop)
             with patch.object(wdog._stop_event, 'wait', side_effect=[False, True]):
-                wdog.send_heartbeat()
+                wdog._run_heartbeat_loop()
 
         assert any('HB' in call[0] for call in serial_write_calls), (
-            "send_heartbeat must route through _serial_write, not call ser.write directly"
+            "_run_heartbeat_loop must route through _serial_write, not call ser.write directly"
         )
 
     def test_serial_write_uses_lock(self):
@@ -306,6 +306,19 @@ class TestSerialWriteThreadSafety:
 
         assert mock_lock.__enter__.call_count == 1, "_serial_write must acquire _serial_lock (context manager)"
         assert mock_lock.__exit__.call_count == 1, "_serial_write must release _serial_lock on exit"
+
+
+class TestSerialWriteEncoding:
+
+    def test_serial_write_uses_utf8_not_ascii(self):
+        """_serial_write must encode with UTF-8, preserving non-ASCII characters."""
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+
+        wdog._serial_write("App: Müller\n", "App")
+
+        expected = "App: Müller\n".encode('utf-8')
+        ser.write.assert_called_once_with(expected)
 
 
 class TestGetAppName:
@@ -521,4 +534,39 @@ class TestRotateSerialWrite:
         assert '_serial_write' in rotate_section, (
             "The Rotate command must route through _serial_write() to hold the serial lock"
         )
+
+
+class TestRunLoop:
+
+    def test_run_loop_is_instance_method(self):
+        """run_loop must be a method on WatchDog, not a standalone module function."""
+        wd = _import_watchdog()
+        assert hasattr(wd.WatchDog, 'run_loop'), (
+            "run_loop must be defined as a method on WatchDog, not a standalone function"
+        )
+        assert not hasattr(wd, 'run_loop'), (
+            "run_loop must not exist as a module-level function — it belongs on WatchDog"
+        )
+
+    def test_run_loop_calls_check_serial(self):
+        """run_loop() must call self.check_serial() on each iteration."""
+        wdog = _make_watchdog()
+
+        call_count = []
+
+        def _fake_check_serial():
+            call_count.append(1)
+            if len(call_count) >= 3:
+                raise KeyboardInterrupt  # exit the loop after 3 iterations
+
+        wd = _import_watchdog()
+        with patch.object(wdog, 'check_serial', side_effect=_fake_check_serial):
+            with patch.object(wd.Cocoa, 'NSRunLoop') as mock_runloop_cls:
+                mock_runloop_cls.currentRunLoop.return_value = MagicMock()
+                try:
+                    wdog.run_loop()
+                except KeyboardInterrupt:
+                    pass
+
+        assert len(call_count) >= 3, "run_loop must call check_serial on every iteration"
 

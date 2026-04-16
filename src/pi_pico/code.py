@@ -36,9 +36,10 @@ class KeyController:
 
     # initialize the key controller
     def __init__(self, verbose=False):
-        # initialize keycode mapping first
-        self.KEYCODE_MAPPING = {name: getattr(Keycode, name) for name in dir(
-            Keycode) if not name.startswith("__")}
+        # initialize keycode mapping (once per class, not per instance)
+        if KeyController.KEYCODE_MAPPING is None:
+            KeyController.KEYCODE_MAPPING = {name: getattr(Keycode, name) for name in dir(
+                Keycode) if not name.startswith("__")}
         
         # initialize the keypad and keyboard
         self.keypad = RgbKeypad()
@@ -119,8 +120,8 @@ class KeyController:
             self.send_application_name(app)
         elif keys:
             self.handle_key_sequences(keys, pressedUntilReleased)
-            if pressedColor:
-                key.set_led(*pressedColor)
+        if pressedColor and not folder:
+            key.set_led(*pressedColor)
         # close the folder if needed
         self.close_folder_if_needed(some_action, action)
         
@@ -206,6 +207,7 @@ class KeyController:
 
     # send the plugin command via serial
     def send_plugin_command(self, plugin, command):
+        # command may include a parameter, e.g. "toggle 'Lamp Name'" — intentional, matches Mac parser
         try:
             usb_cdc.console.write(f"Run: {plugin}.{command}\n".encode('utf-8'))
         except Exception as e:
@@ -224,6 +226,8 @@ class KeyController:
 
     # convert the keycodes to tuples if needed
     def keycode_string_to_tuple (self, keycode_string):
+        if not keycode_string or not keycode_string.strip():
+            raise ValueError("Empty key_sequence string")
         keycode_list = keycode_string.split('+')
         keycodes = []
         for key in keycode_list:
@@ -274,20 +278,14 @@ class KeyController:
 
     # get the config items
     def get_config_items(self, config):
-        if 'alias_of' in config:
-            config = config['alias_of']
         # get the key sequences
         key_sequence = config.get('key_sequence', [])
         key_sequences = tuple(self.convert_value(v) for v in key_sequence) if isinstance(
             key_sequence, list) else self.keycode_string_to_tuple (key_sequence)
-        # get the application
-        application = config.get('application', '')
-        if 'alias_of' in config:
-            application = config['alias_of']
         # return the config items
         return {
             'key_sequences': key_sequences,
-            'application': application,
+            'application': config.get('application', ''),
             'action': self.convert_action_string(config.get('action', '')),
             'folder': config.get('folder', ''),
 
@@ -296,7 +294,7 @@ class KeyController:
             'pressedColor': self.color_string_to_tuple(config.get('pressedColor', '')),
 
             'description': config.get('description', ''),
-            'pressedUntilReleased': config.get('pressedUntilReleased', '')
+            'pressedUntilReleased': config.get('pressedUntilReleased', False)
         }
 
     
@@ -308,7 +306,10 @@ class KeyController:
                 urls[url] = {}
                 for key, config in configs.items():
                     config_items = self.get_config_items(config)
-                    urls[url][int(key)] = config_items
+                    key_num = self._validate_key_number(key)
+                    if key_num is not None:
+                        urls[url][key_num] = config_items
+                self.add_global_config(urls[url])
         return urls
     
 
@@ -320,8 +321,10 @@ class KeyController:
                 config_items = self.get_config_items(config)
                 if config_items['folder'] and config_items['folder'] not in json_data.get("folders", {}):
                     print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
-                else:                 
-                    global_config[int(key)] = config_items
+                else:
+                    key_num = self._validate_key_number(key)
+                    if key_num is not None:
+                        global_config[key_num] = config_items
         return global_config
 
 
@@ -335,8 +338,10 @@ class KeyController:
             # check if the folder exists
             if config_items['folder'] and config_items['folder'] not in json_data.get("folders", {}):
                 print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
-            else:                     
-                app_config[app][int(key)] = config_items
+            else:
+                key_num = self._validate_key_number(key)
+                if key_num is not None:
+                    app_config[app][key_num] = config_items
             # check if toggleColor is set
             if 'toggleColor' in config_items and config_items['toggleColor']:
                 containsToggle = True
@@ -390,7 +395,9 @@ class KeyController:
                 if key in ["ignore_default", "autoclose"]:
                     continue
                 config_items = self.get_config_items(value)
-                folder_config[folder][int(key)] = config_items
+                key_num = self._validate_key_number(key)
+                if key_num is not None:
+                    folder_config[folder][key_num] = config_items
                 if config_items['action'] == "close_folder":
                     close_folder_found = True
             if not close_folder_found and not folder_config[folder]['autoclose']:
@@ -408,6 +415,19 @@ class KeyController:
                 config[key] = value
 
 
+    # validate that a key number string is in the valid range 0-15
+    def _validate_key_number(self, key_str):
+        try:
+            key_num = int(key_str)
+        except (ValueError, TypeError):
+            print(f"Warning: Key '{key_str}' is not a valid number, ignoring")
+            return None
+        if key_num < 0 or key_num > 15:
+            print(f"Warning: Key number {key_num} out of range (0-15), ignoring")
+            return None
+        return key_num
+
+
     # parse the json file
     def parse_json(self, json_filename):
         try:
@@ -415,7 +435,8 @@ class KeyController:
                 return json.load(json_file)
         except OSError as e:
             raise type(e)(f"Config file '{json_filename}' not found") from None
-        # ValueError (malformed JSON) propagates unchanged
+        except ValueError as e:
+            raise ValueError(f"Invalid JSON in '{json_filename}': {e}") from None
 
 
     # process the rotate serial command
@@ -530,9 +551,9 @@ class KeyController:
             if serial_str is not None:
                 self.process_serial_str(serial_str)
             else:
-                # No incoming serial - allow keypad to service updates
+                # No incoming serial - throttle idle CPU usage
                 time.sleep(0.1)
-                self.keypad.update()
+            self.keypad.update()  # always poll key state, even after processing serial
 
             # Check for heartbeat timeout. If we haven't seen a heartbeat (or HELLO)
             # within PICO_TIMEOUT_SECONDS, clear and unload the keypad.
@@ -540,9 +561,9 @@ class KeyController:
                 if (not self.unloaded) and (time.time() - self.last_heartbeat > PICO_TIMEOUT_SECONDS):
                     # perform unload on timeout
                     self.unload_keypad()
-            except Exception:
-                # keep loop resilient
-                pass
+            except Exception as e:
+                if self.verbose:
+                    print(f"Heartbeat check error: {e}")
 
 
 # main program

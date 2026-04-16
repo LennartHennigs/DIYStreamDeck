@@ -28,6 +28,7 @@ pytest tests/ -v                                    # All tests verbose
 ├── pytest.ini                    # Pytest configuration
 ├── requirements_test.txt          # Test dependencies
 ├── security/                      # Security vulnerability tests
+│   ├── test_actual_vulnerabilities.py
 │   └── test_command_injection.py
 └── unit/                          # Unit tests
     ├── mac/
@@ -39,8 +40,8 @@ pytest tests/ -v                                    # All tests verbose
     └── pico/
         ├── mock_circuitpython.py
         ├── test_config_loader.py
-        ├── test_core_controller.py
-        ├── test_heartbeat.py
+        ├── test_key_controller.py
+        ├── test_heartbeat_functionality.py
         ├── test_json_corruption.py
         └── test_keypad_functionality.py
 ```
@@ -56,7 +57,7 @@ The testing framework uses mocking within individual test files for isolation:
 
 ## Test Categories
 
-### Unit Tests (150+ tests passing)
+### Unit Tests (218 tests passing)
 
 - **Pi Pico Tests** (85+ tests): Configuration loading, JSON parsing, keypad setup, heartbeat, key rotation, folder navigation, JSON corruption handling
 - **Mac Plugin Tests**: Hue light control, Spotify integration, sounds playback, command handling, error scenarios

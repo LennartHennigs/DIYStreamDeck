@@ -61,7 +61,7 @@ class SpotifyPlugin(BasePlugin):
                 self.sp.pause_playback()
             else:
                 self.sp.start_playback()
-                self._log(self.get_current_song_info())
+                self._log_current_song()
         except Exception as e:
             self._log(f"Error: {e}")
 
@@ -74,7 +74,7 @@ class SpotifyPlugin(BasePlugin):
         if not current_playback['is_playing']:
             try:
                 self.sp.start_playback()
-                self._log(self.get_current_song_info())
+                self._log_current_song()
             except Exception as e:
                 self._log(f"Error: {e}")
         else:
@@ -93,7 +93,7 @@ class SpotifyPlugin(BasePlugin):
         if self.has_active_device():
             try:
                 self.sp.next_track()
-                self._log(self.get_current_song_info())
+                self._log_current_song()
             except Exception as e:
                 self._log(f"Error: {e}")
 
@@ -102,7 +102,7 @@ class SpotifyPlugin(BasePlugin):
         if self.has_active_device():
             try:
                 self.sp.previous_track()
-                self._log(self.get_current_song_info())
+                self._log_current_song()
             except Exception as e:
                 self._log(f"Error: {e}")
 
@@ -127,6 +127,12 @@ class SpotifyPlugin(BasePlugin):
             self._log(f"Volume {'increased' if volume_change > 0 else 'decreased'} to {new_volume}%")
         except Exception as e:
             self._log(f"Failed to {'increase' if volume_change > 0 else 'decrease'} volume: {e}")
+
+
+    def _log_current_song(self) -> None:
+        song_info = self.get_current_song_info()
+        if song_info:
+            self._log(song_info)
 
 
     def get_current_song_info(self) -> Optional[str]:
