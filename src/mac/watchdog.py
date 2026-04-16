@@ -21,7 +21,7 @@ import threading
 import time
 from AppKit import NSWorkspaceDidTerminateApplicationNotification
 
-VERSION = "1.2.1"
+VERSION = "1.2.2"
 HEARTBEAT_INTERVAL = 2
 SERIAL_CLOSE_GRACE_PERIOD = 0.3  # seconds to wait after BYE so Pico can read it before port closes
 PICO_VIDS = (0x2E8A, 0x239A)  # Raspberry Pi / Adafruit (CircuitPython) USB vendor IDs
