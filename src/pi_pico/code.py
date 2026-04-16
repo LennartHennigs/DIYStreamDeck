@@ -247,7 +247,7 @@ class KeyController:
             try:
                 return tuple(int(color_string[i:i+2], 16) for i in (1, 3, 5))
             except ValueError:
-                raise ValueError(f"Invalid hex color: {color_string!r}")
+                raise ValueError(f"Invalid hex color: '{color_string}'")
         return None
 
 
@@ -320,7 +320,8 @@ class KeyController:
             for key, config in json_data["applications"]["_default"].items():
                 config_items = self.get_config_items(config)
                 if config_items['folder'] and config_items['folder'] not in json_data.get("folders", {}):
-                    print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
+                    folder_name = config_items['folder']
+                    print(f"Error: Folder '{folder_name}' not found. Disabling key binding.")
                 else:
                     key_num = self._validate_key_number(key)
                     if key_num is not None:
@@ -337,7 +338,8 @@ class KeyController:
             config_items = self.get_config_items(value)
             # check if the folder exists
             if config_items['folder'] and config_items['folder'] not in json_data.get("folders", {}):
-                print(f"Error: Folder '{config_items['folder']}' not found. Disabling key binding.")
+                folder_name = config_items['folder']
+                print(f"Error: Folder '{folder_name}' not found. Disabling key binding.")
             else:
                 key_num = self._validate_key_number(key)
                 if key_num is not None:
@@ -364,8 +366,8 @@ class KeyController:
             resolved = json_data["applications"][alias_target]
             # Hard limit: chained aliases are not supported
             if 'alias_of' in resolved:
-                print(f"Error: Chained alias not supported: "
-                      f"'{app}' -> '{alias_target}' -> '{resolved['alias_of']}'")
+                chained = resolved['alias_of']
+                print(f"Error: Chained alias not supported: '{app}' -> '{alias_target}' -> '{chained}'")
                 return None
             config = resolved
         # process the config
