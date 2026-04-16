@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Keypad Configuration</title>
+<link rel="stylesheet" href="config.css">
+</head>
+<body>
+
+<!-- File picker modal -->
+<div id="fileModal">
+  <div id="fileModalCard">
+    <h2>Keypad Config</h2>
+    <p>Select a <code>key_def.json</code> file to edit.</p>
+    <input type="file" id="fileInput" accept=".json">
+    <p id="fileError"></p>
+  </div>
+</div>
+
+<!-- Main UI (hidden until file loaded) -->
+<div id="app" style="display:none">
+
+  <div id="keypad_header">
+    <select id="appsDropDown"></select>
+  </div>
+
+  <!-- Section-level settings bar -->
+  <div id="sectionSettings">
+    <label class="sectionLabel">
+      <input type="checkbox" id="ignoreDefaultCheck"> Ignore default keys
+    </label>
+    <span id="aliasOfRow" style="visibility:hidden">
+      <label class="sectionLabel">
+        <input type="checkbox" id="aliasOfCheck"> Alias of
+      </label>
+      <div id="aliasInputRow" style="display:none; align-items:center; gap:6px; width:100%">
+        <input type="text" id="aliasOfInput" placeholder="app name" style="flex:1; min-width:0">
+        <button type="button" id="openAliasBtn" class="iconBtn" title="Go to app">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+            <polyline points="15 3 21 3 21 9"/>
+            <line x1="10" y1="14" x2="21" y2="3"/>
+          </svg>
+        </button>
+      </div>
+    </span>
+    <span id="autocloseRow" style="display:none">
+      <label class="sectionLabel">
+        <input type="checkbox" id="autocloseCheck" checked> Auto-close folder
+      </label>
+    </span>
+  </div>
+
+  <div id="keypad"></div>
+
+  <!-- footer toolbar -->
+  <div id="toolbar">
+    <label for="rotateSelect">Rotate</label>
+    <select id="rotateSelect">
+      <option value="">None</option>
+      <option value="CW">CW</option>
+      <option value="CCW">CCW</option>
+    </select>
+    <button id="saveBtn" type="button">Save JSON</button>
+  </div>
+
+  <div id="sidepane">
+    <div id="panelTopBar">
+      <button id="closeBtn" type="button" title="Close">×</button>
+    </div>
+    <form id="sidepaneForm" autocomplete="off">
+      <div class="form-row">
+        <label>Color</label>
+        <div class="color-row">
+          <input type="color" id="colorPicker">
+          <input type="text" id="colorHex" placeholder="#rrggbb" maxlength="7">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="description">Description</label>
+        <input type="text" id="description">
+      </div>
+
+      <div class="form-row">
+        <label>Behavior</label>
+        <div class="radio-group">
+          <label class="radioLabel" data-value="nothing"><input type="radio" name="behaviour" value="nothing" checked> Do nothing</label>
+          <label class="radioLabel"><input type="radio" name="behaviour" value="keys"> Keys</label>
+          <label class="radioLabel"><input type="radio" name="behaviour" value="folder"> Folder</label>
+          <label class="radioLabel"><input type="radio" name="behaviour" value="application"> Application</label>
+          <label class="radioLabel"><input type="radio" name="behaviour" value="action"> Action</label>
+          <label class="radioLabel"><input type="radio" name="behaviour" value="string"> String</label>
+        </div>
+      </div>
+
+      <!-- keys -->
+      <div class="form-row behaviour-field" id="keysField">
+        <label for="keysInput">Key sequence</label>
+        <input type="text" id="keysInput" placeholder="e.g. GUI+SHIFT+P">
+        <label class="checkLabel"><input type="checkbox" id="pressedUntilReleasedCheck"> Hold until released</label>
+      </div>
+
+      <!-- folder -->
+      <div class="form-row behaviour-field" id="folderField" style="display:none">
+        <label for="folderInput">Folder name</label>
+        <div class="folder-input-row">
+          <input type="text" id="folderInput">
+          <button type="button" id="openFolderBtn" class="iconBtn" title="Open folder">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+              <polyline points="15 3 21 3 21 9"/>
+              <line x1="10" y1="14" x2="21" y2="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- application -->
+      <div class="form-row behaviour-field" id="applicationField" style="display:none">
+        <label for="applicationInput">Application</label>
+        <input type="text" id="applicationInput" placeholder="e.g. Finder">
+      </div>
+
+      <!-- action -->
+      <div class="form-row behaviour-field" id="actionField" style="display:none">
+        <label for="actionInput">Action</label>
+        <input type="text" id="actionInput" list="actionList" placeholder="e.g. spotify.next">
+        <datalist id="actionList"></datalist>
+      </div>
+
+      <!-- string -->
+      <div class="form-row behaviour-field" id="stringField" style="display:none">
+        <label for="stringInput">Text to type</label>
+        <input type="text" id="stringInput">
+        <label for="stringDelayInput">Char delay (s)</label>
+        <input type="number" id="stringDelayInput" value="0.05" min="0" step="0.01">
+      </div>
+
+      <!-- optional color overrides (always visible) -->
+      <div class="form-row">
+        <label>Toggle color <span class="hint">(optional)</span></label>
+        <div class="color-row">
+          <input type="color" id="toggleColorPicker">
+          <input type="text" id="toggleColorHex" placeholder="#rrggbb" maxlength="7">
+          <button type="button" id="clearToggleColor" class="clearColorBtn">✕</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Pressed color <span class="hint">(optional)</span></label>
+        <div class="color-row">
+          <input type="color" id="pressedColorPicker">
+          <input type="text" id="pressedColorHex" placeholder="#rrggbb" maxlength="7">
+          <button type="button" id="clearPressedColor" class="clearColorBtn">✕</button>
+        </div>
+      </div>
+
+      <div class="form-row button-row">
+        <button id="clearBtn" type="button">Clear</button>
+        <button id="reloadBtn" type="button">Reload</button>
+        <button id="applyBtn" type="button">Apply</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="config.js"></script>
+</body>
+</html>
