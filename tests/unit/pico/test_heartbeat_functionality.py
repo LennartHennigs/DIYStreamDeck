@@ -328,6 +328,76 @@ class TestHeartbeatFunctionality:
         assert len(self.controller.folder_stack) == 1  # Still in folder
 
 
+    def test_heartbeat_unloaded_set_before_clear_keypad(self):
+        """unloaded must be True even when clear_keypad() raises an exception."""
+        original_clear = self.controller.clear_keypad
+
+        def raising_clear():
+            raise RuntimeError("Hardware failure")
+
+        self.controller.clear_keypad = raising_clear
+
+        try:
+            self.controller.unload_keypad()
+        except RuntimeError:
+            pass
+
+        assert self.controller.unloaded is True, (
+            "unloaded must be set True before clear_keypad() so a failure does not "
+            "allow the timeout to fire again"
+        )
+
+
+class TestPingCommand:
+    """Tests for PING -> PONG port-probe protocol."""
+
+    @patch('builtins.open', mock_open(read_data='''{
+        "settings": {"rotate": ""},
+        "applications": {"_otherwise": {}},
+        "folders": {},
+        "urls": {}
+    }'''))
+    def setup_method(self, method):
+        from src.pi_pico.code import KeyController
+        self.controller = KeyController(verbose=False)
+
+    def _console(self):
+        import sys
+        return sys.modules['usb_cdc'].console
+
+    def test_ping_writes_pong(self):
+        """PING command must write PONG to the serial console."""
+        console = self._console()
+        console.get_output()  # clear buffer
+        self.controller.process_serial_str("PING")
+        assert console.get_output() == "PONG\n"
+
+    def test_ping_does_not_update_heartbeat(self):
+        """PING must not update the heartbeat timestamp."""
+        import time
+        self.controller.last_heartbeat = 0.0
+        self.controller.process_serial_str("PING")
+        assert self.controller.last_heartbeat == 0.0
+
+    def test_ping_does_not_change_unloaded_state(self):
+        """PING must not affect the unloaded flag."""
+        self.controller.unloaded = True
+        self.controller.process_serial_str("PING")
+        assert self.controller.unloaded is True
+
+    def test_ping_returns_early(self):
+        """PING must be handled before the HB / HELLO / BYE branches."""
+        # If PING fell through to the app-routing branch it would call process_app,
+        # which would change current_config. Confirm it does not.
+        import sys
+        initial_config = self.controller.current_config.copy()
+        console = self._console()
+        console.get_output()
+        self.controller.process_serial_str("PING")
+        assert self.controller.current_config == initial_config
+        assert console.get_output() == "PONG\n"
+
+
 class TestUnloadKeypadAtomicity:
     """Tests that unload_keypad() marks unloaded=True even if clear_keypad() raises."""
 

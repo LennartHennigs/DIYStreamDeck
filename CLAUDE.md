@@ -25,6 +25,8 @@ DIY StreamDeck using a Raspberry Pi Pico + Pimoroni RGB Keypad. Two components:
 | `Launch: <name>` | Pico → Mac | Request app launch |
 | `Run: <plugin.cmd>` | Pico → Mac | Request plugin command |
 | `ECHO[:<token>]` | Pico → Mac | Connection test (watchdog replies `ECHO-OK`) |
+| `PING` | Mac → Pico | Port probe during auto-detection |
+| `PONG` | Pico → Mac | Reply confirming Pico identity |
 
 Pico unloads the keypad if heartbeats stop (host disconnected).
 

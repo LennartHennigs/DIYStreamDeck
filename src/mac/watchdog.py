@@ -6,6 +6,7 @@
 import sys
 import Cocoa
 import serial
+import serial.tools.list_ports
 import objc
 import argparse
 import re
@@ -21,6 +22,7 @@ from AppKit import NSWorkspaceDidTerminateApplicationNotification
 
 VERSION = "1.2.1"
 HEARTBEAT_INTERVAL = 2
+PICO_VIDS = (0x2E8A, 0x239A)  # Raspberry Pi / Adafruit (CircuitPython) USB vendor IDs
 
 plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
 sys.path.append(plugins_directory)
@@ -30,6 +32,36 @@ def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Seria
         return serial.Serial(port, baud_rate, timeout=1)
     except serial.SerialException:
         return None
+
+
+def find_pico_port_by_vid() -> Optional[str]:
+    """Return first serial port with a known Pico/CircuitPython VID, or None."""
+    for port in serial.tools.list_ports.comports():
+        if port.vid in PICO_VIDS:
+            return port.device
+    return None
+
+
+def find_pico_port_by_ping(baud_rate: int, timeout: float = 1.0) -> Optional[str]:
+    """Try each serial port; return first that replies PONG to a PING."""
+    for port in serial.tools.list_ports.comports():
+        try:
+            with serial.Serial(port.device, baud_rate, timeout=timeout) as s:
+                s.write(b"PING\n")
+                response = s.readline().decode("utf-8", errors="ignore").strip()
+                if response == "PONG":
+                    return port.device
+        except (serial.SerialException, OSError):
+            continue
+    return None
+
+
+def find_pico_port(baud_rate: int) -> Optional[str]:
+    """Auto-detect Pico port: VID match first, PING probe as fallback."""
+    port = find_pico_port_by_vid()
+    if port:
+        return port
+    return find_pico_port_by_ping(baud_rate)
 
 
 class WatchDog(Cocoa.NSObject):
@@ -319,8 +351,8 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
 def main() -> None:
     parser = argparse.ArgumentParser(
         description='Monitor active app and send data to microcontroller')
-    parser.add_argument('--port', required=True,
-                        help='Serial port for the microcontroller')
+    parser.add_argument('--port', default=None,
+                        help='Serial port for the microcontroller (auto-detected if omitted)')
     parser.add_argument('--speed', type=int, default=9600,
                         help='Baud rate for the serial connection (default: 9600)')
     parser.add_argument('--verbose', action='store_true', default=False,
@@ -329,12 +361,19 @@ def main() -> None:
                         help='Rotation direction for the keypad (default: CW)')
     args = parser.parse_args()
 
+    if args.port is None:
+        args.port = find_pico_port(args.speed)
+        if args.port is None:
+            print("Error: Pico not found. Connect the device or specify --port.")
+            return
+        print(f"Auto-detected port: {args.port}")
+
     ser = create_serial_connection(args.port, args.speed)
     if ser is None:
         print("Error: No serial connection.")
         return
 
-    print(f'\nKeypad watchdog {VERSION} is running...')
+    print(f'Keypad watchdog {VERSION} is running...')
 
     plugins = load_plugins(verbose=args.verbose)
     watchdog = WatchDog.alloc().initWithSerial_args_plugins_(ser, args, plugins)

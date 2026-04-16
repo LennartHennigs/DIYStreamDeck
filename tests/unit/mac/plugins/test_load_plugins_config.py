@@ -99,6 +99,14 @@ def test_load_plugins_prefers_central(tmp_path, monkeypatch, capsys):
             pass
     serial_mod.Serial = _DummySerial
     sys.modules.setdefault("serial", serial_mod)
+    if 'serial.tools.list_ports' not in sys.modules:
+        _tools = types.ModuleType('serial.tools')
+        _lp = types.ModuleType('serial.tools.list_ports')
+        _lp.comports = lambda: []
+        _tools.list_ports = _lp
+        sys.modules['serial'].tools = _tools
+        sys.modules['serial.tools'] = _tools
+        sys.modules['serial.tools.list_ports'] = _lp
 
     monkeypatch.chdir(str(tmp_path))
     sys.path.insert(0, str(project_src.parent))  # insert tmp/src on path
@@ -161,6 +169,14 @@ def test_load_plugins_fallback_to_plugin_local(tmp_path, monkeypatch, capsys):
             pass
     serial_mod.Serial = _DummySerial
     sys.modules.setdefault("serial", serial_mod)
+    if 'serial.tools.list_ports' not in sys.modules:
+        _tools = types.ModuleType('serial.tools')
+        _lp = types.ModuleType('serial.tools.list_ports')
+        _lp.comports = lambda: []
+        _tools.list_ports = _lp
+        sys.modules['serial'].tools = _tools
+        sys.modules['serial.tools'] = _tools
+        sys.modules['serial.tools.list_ports'] = _lp
 
     monkeypatch.chdir(str(tmp_path))
     sys.path.insert(0, str(project_src.parent))
@@ -212,6 +228,14 @@ def test_load_plugins_skips_when_no_config(tmp_path, monkeypatch, capsys):
             pass
     serial_mod.Serial = _DummySerial
     sys.modules.setdefault("serial", serial_mod)
+    if 'serial.tools.list_ports' not in sys.modules:
+        _tools = types.ModuleType('serial.tools')
+        _lp = types.ModuleType('serial.tools.list_ports')
+        _lp.comports = lambda: []
+        _tools.list_ports = _lp
+        sys.modules['serial'].tools = _tools
+        sys.modules['serial.tools'] = _tools
+        sys.modules['serial.tools.list_ports'] = _lp
 
     monkeypatch.chdir(str(tmp_path))
     sys.path.insert(0, str(project_src.parent))

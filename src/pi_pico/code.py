@@ -519,6 +519,14 @@ class KeyController:
 
     # process the serial string
     def process_serial_str(self, serial_str):
+        # PING: port probe from host during auto-detection
+        if serial_str == "PING":
+            try:
+                usb_cdc.console.write(b"PONG\n")
+            except Exception:
+                pass
+            return
+
         # Heartbeat frame from host
         if serial_str == "HB":
             # update last seen heartbeat timestamp

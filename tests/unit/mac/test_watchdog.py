@@ -41,6 +41,15 @@ def _stub_cocoa_modules():
         serial_mod.SerialException = type('SerialException', (OSError,), {})
         serial_mod.Serial = MagicMock
         sys.modules['serial'] = serial_mod
+    # serial.tools.list_ports — always stub so `import serial.tools.list_ports` works
+    if 'serial.tools.list_ports' not in sys.modules:
+        tools_mod = types.ModuleType('serial.tools')
+        list_ports_mod = types.ModuleType('serial.tools.list_ports')
+        list_ports_mod.comports = MagicMock(return_value=[])
+        tools_mod.list_ports = list_ports_mod
+        sys.modules['serial'].tools = tools_mod
+        sys.modules['serial.tools'] = tools_mod
+        sys.modules['serial.tools.list_ports'] = list_ports_mod
 
     # Cocoa — NSObject must be a real class; everything else can be a MagicMock
     if 'Cocoa' not in sys.modules:
@@ -569,4 +578,122 @@ class TestRunLoop:
                     pass
 
         assert len(call_count) >= 3, "run_loop must call check_serial on every iteration"
+
+
+# ---------------------------------------------------------------------------
+# TestFindPicoPort
+# ---------------------------------------------------------------------------
+
+class TestFindPicoPort:
+    """Tests for find_pico_port_by_vid, find_pico_port_by_ping, and find_pico_port."""
+
+    def setup_method(self, method):
+        self.wd = _import_watchdog()
+
+    def _make_port(self, device, vid=None):
+        p = MagicMock()
+        p.device = device
+        p.vid = vid
+        return p
+
+    # -- find_pico_port_by_vid ------------------------------------------------
+
+    def test_vid_returns_device_when_vid_matches(self):
+        port = self._make_port('/dev/cu.usbmodem1', vid=0x2E8A)
+        with patch('serial.tools.list_ports.comports', return_value=[port]):
+            result = self.wd.find_pico_port_by_vid()
+        assert result == '/dev/cu.usbmodem1'
+
+    def test_vid_returns_none_when_no_match(self):
+        port = self._make_port('/dev/cu.Bluetooth', vid=0x05AC)
+        with patch('serial.tools.list_ports.comports', return_value=[port]):
+            result = self.wd.find_pico_port_by_vid()
+        assert result is None
+
+    def test_vid_returns_none_when_no_ports(self):
+        with patch('serial.tools.list_ports.comports', return_value=[]):
+            result = self.wd.find_pico_port_by_vid()
+        assert result is None
+
+    def test_vid_returns_first_matching_port(self):
+        p1 = self._make_port('/dev/cu.usbmodem1', vid=0x2E8A)
+        p2 = self._make_port('/dev/cu.usbmodem2', vid=0x2E8A)
+        with patch('serial.tools.list_ports.comports', return_value=[p1, p2]):
+            result = self.wd.find_pico_port_by_vid()
+        assert result == '/dev/cu.usbmodem1'
+
+    def test_vid_skips_port_with_none_vid(self):
+        port = self._make_port('/dev/cu.usbserial', vid=None)
+        with patch('serial.tools.list_ports.comports', return_value=[port]):
+            result = self.wd.find_pico_port_by_vid()
+        assert result is None
+
+    # -- find_pico_port_by_ping -----------------------------------------------
+
+    def test_ping_returns_device_when_pong_reply(self):
+        port = self._make_port('/dev/cu.usbmodem1')
+        ser_instance = MagicMock()
+        ser_instance.readline.return_value = b'PONG\n'
+        ser_instance.__enter__ = lambda s: s
+        ser_instance.__exit__ = MagicMock(return_value=False)
+        serial_cls = MagicMock(return_value=ser_instance)
+        with patch('serial.tools.list_ports.comports', return_value=[port]):
+            with patch('serial.Serial', serial_cls):
+                result = self.wd.find_pico_port_by_ping(9600)
+        assert result == '/dev/cu.usbmodem1'
+        ser_instance.write.assert_called_once_with(b'PING\n')
+
+    def test_ping_returns_none_when_no_pong(self):
+        port = self._make_port('/dev/cu.usbmodem1')
+        ser_instance = MagicMock()
+        ser_instance.readline.return_value = b'SOMETHING_ELSE\n'
+        ser_instance.__enter__ = lambda s: s
+        ser_instance.__exit__ = MagicMock(return_value=False)
+        with patch('serial.tools.list_ports.comports', return_value=[port]):
+            with patch('serial.Serial', MagicMock(return_value=ser_instance)):
+                result = self.wd.find_pico_port_by_ping(9600)
+        assert result is None
+
+    def test_ping_skips_port_raising_serial_exception(self):
+        SerialException = sys.modules['serial'].SerialException
+        port = self._make_port('/dev/cu.bad')
+        with patch('serial.tools.list_ports.comports', return_value=[port]):
+            with patch('serial.Serial', side_effect=SerialException("fail")):
+                result = self.wd.find_pico_port_by_ping(9600)
+        assert result is None
+
+    def test_ping_skips_port_raising_os_error(self):
+        port = self._make_port('/dev/cu.bad')
+        with patch('serial.tools.list_ports.comports', return_value=[port]):
+            with patch('serial.Serial', side_effect=OSError("no device")):
+                result = self.wd.find_pico_port_by_ping(9600)
+        assert result is None
+
+    def test_ping_returns_none_when_no_ports(self):
+        with patch('serial.tools.list_ports.comports', return_value=[]):
+            result = self.wd.find_pico_port_by_ping(9600)
+        assert result is None
+
+    # -- find_pico_port -------------------------------------------------------
+
+    def test_find_uses_vid_when_found(self):
+        with patch.object(self.wd, 'find_pico_port_by_vid', return_value='/dev/cu.pico') as mock_vid:
+            with patch.object(self.wd, 'find_pico_port_by_ping') as mock_ping:
+                result = self.wd.find_pico_port(9600)
+        assert result == '/dev/cu.pico'
+        mock_vid.assert_called_once()
+        mock_ping.assert_not_called()
+
+    def test_find_falls_back_to_ping_when_vid_none(self):
+        with patch.object(self.wd, 'find_pico_port_by_vid', return_value=None):
+            with patch.object(self.wd, 'find_pico_port_by_ping', return_value='/dev/cu.pico') as mock_ping:
+                result = self.wd.find_pico_port(9600)
+        assert result == '/dev/cu.pico'
+        mock_ping.assert_called_once_with(9600)
+
+    def test_find_returns_none_when_both_fail(self):
+        with patch.object(self.wd, 'find_pico_port_by_vid', return_value=None):
+            with patch.object(self.wd, 'find_pico_port_by_ping', return_value=None):
+                result = self.wd.find_pico_port(9600)
+        assert result is None
 
