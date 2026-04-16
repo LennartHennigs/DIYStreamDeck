@@ -53,13 +53,20 @@ cd src/mac
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
-# Run (use your actual port)
+# Run — port is auto-detected
+python3 watchdog.py --verbose
+
+# Or specify a port explicitly
 python3 watchdog.py --port /dev/cu.usbmodem2101 --verbose
 ```
 
 Or use the launcher script from the repo root:
 
 ```bash
+# Auto-detect
+./run-mac-watchdog.sh --verbose
+
+# Or specify a port
 ./run-mac-watchdog.sh --port /dev/cu.usbmodem2101 --verbose
 ```
 
@@ -67,7 +74,7 @@ Or use the launcher script from the repo root:
 
 | Flag | Description |
 | --- | --- |
-| `--port` | Serial port for the Pico (required) |
+| `--port` | Serial port for the Pico (optional — auto-detected if omitted) |
 | `--speed` | Baud rate (default: `9600`) |
 | `--verbose` | Print active app name to console |
 | `--rotate` | Rotate layout: `CW` or `CCW` |
