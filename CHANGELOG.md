@@ -1,6 +1,11 @@
 
 # CHANGELOG
 
+## 2026-04-16 (startup app detection + clean shutdown)
+
+- **Watchdog: detect and send frontmost app at startup** — previously the Pico remained on the default key layout until the first app switch. The watchdog now queries `NSWorkspace.sharedWorkspace().frontmostApplication()` immediately after sending `HELLO` and sends the active app name, so the correct layout loads without any manual app switch. Uses existing `_get_app_name()` helper for consistent name extraction with bundle ID fallback.
+- **Watchdog: fix clean shutdown — keypad now clears on Ctrl-C** — three bugs combined to prevent `BYE` from reaching the Pico: (1) heartbeat thread was joined *after* `send_bye()`, causing a deadlock if the thread held the serial lock; (2) no `ser.flush()` meant bytes could be lost in the OS buffer; (3) the port closed before the Pico's 0.1s loop had time to read `BYE`. Fixed by joining the heartbeat thread first, then `send_bye()` → `flush()` → `sleep(SERIAL_CLOSE_GRACE_PERIOD)` → `close()`.
+
 ## 2026-04-16 (code review fixes)
 
 - **Pi Pico `get_config_items`: fix `pressedUntilReleased` default** — defaulted to empty string `''` instead of `False`, causing semantic type mismatch. Changed to `False`.

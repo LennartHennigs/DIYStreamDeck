@@ -251,6 +251,81 @@ class TestSendHelloBye:
         assert written.strip() == f"HELLO:{wd.VERSION}"
 
 
+class TestStartupAppDetection:
+
+    def test_frontmost_app_is_sent_when_present(self):
+        """If frontmostApplication() returns an app, send_app_name_to_microcontroller is called."""
+        wdog = _make_watchdog()
+        frontmost_mock = MagicMock()
+        frontmost_mock.localizedName.return_value = "Safari"
+        frontmost_mock.bundleIdentifier.return_value = None
+        frontmost_mock.bundleExecutable.return_value = None
+
+        with patch.object(wdog, 'send_app_name_to_microcontroller') as mock_send:
+            if frontmost_mock:
+                wdog.send_app_name_to_microcontroller(wdog._get_app_name(frontmost_mock))
+
+        mock_send.assert_called_once_with("Safari")
+
+    def test_no_send_when_frontmost_is_none(self):
+        """If frontmostApplication() returns None, send_app_name_to_microcontroller is NOT called."""
+        wdog = _make_watchdog()
+
+        with patch.object(wdog, 'send_app_name_to_microcontroller') as mock_send:
+            if None:
+                wdog.send_app_name_to_microcontroller(wdog._get_app_name(None))
+
+        mock_send.assert_not_called()
+
+    def test_startup_app_detection_in_source(self):
+        """Source must query frontmostApplication() via _get_app_name() after send_hello()."""
+        src = _read_source()
+        assert 'frontmostApplication' in src, (
+            "main() must call frontmostApplication() to detect the active app at startup"
+        )
+        assert '_get_app_name' in src, (
+            "startup detection must use _get_app_name() for consistent name extraction"
+        )
+        hello_idx = src.index('send_hello()')
+        frontmost_idx = src.index('frontmostApplication()')
+        assert frontmost_idx > hello_idx, (
+            "frontmostApplication() must be called after send_hello()"
+        )
+
+    def test_shutdown_joins_heartbeat_before_send_bye(self):
+        """heartbeat_thread.join() must appear before send_bye() in the finally block.
+
+        Rationale: send_bye() acquires _serial_lock. If the heartbeat thread is
+        mid-write it holds that lock. Joining first guarantees the lock is free
+        before BYE is written, preventing a deadlock on clean shutdown.
+        """
+        src = _read_source()
+        finally_idx = src.rindex('finally:')   # last finally = shutdown block
+        shutdown_block = src[finally_idx:]
+        join_idx = shutdown_block.index('heartbeat_thread.join()')
+        bye_idx = shutdown_block.index('send_bye()')
+        assert join_idx < bye_idx, (
+            "heartbeat_thread.join() must come before send_bye() in the finally block "
+            "to release the serial lock before BYE is written"
+        )
+
+    def test_shutdown_flushes_before_close(self):
+        """ser.flush() must appear between send_bye() and ser.close().
+
+        Rationale: flush() drains the OS write buffer so the Pico receives BYE
+        before the serial port is torn down.
+        """
+        src = _read_source()
+        finally_idx = src.rindex('finally:')
+        shutdown_block = src[finally_idx:]
+        bye_idx = shutdown_block.index('send_bye()')
+        flush_idx = shutdown_block.index('ser.flush()')
+        close_idx = shutdown_block.index('ser.close()')
+        assert bye_idx < flush_idx < close_idx, (
+            "Shutdown order must be: send_bye() → ser.flush() → ser.close()"
+        )
+
+
 class TestHeartbeatThreadLifecycle:
 
     def test_heartbeat_thread_runs_and_stops(self):

@@ -18,10 +18,12 @@ import importlib.util
 import os
 from src.mac.plugins.base_plugin import BasePlugin
 import threading
+import time
 from AppKit import NSWorkspaceDidTerminateApplicationNotification
 
 VERSION = "1.2.1"
 HEARTBEAT_INTERVAL = 2
+SERIAL_CLOSE_GRACE_PERIOD = 0.3  # seconds to wait after BYE so Pico can read it before port closes
 PICO_VIDS = (0x2E8A, 0x239A)  # Raspberry Pi / Adafruit (CircuitPython) USB vendor IDs
 
 plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
@@ -387,6 +389,9 @@ def main() -> None:
     )
     # send HELLO so the keypad can know we started
     watchdog.send_hello()
+    frontmost = Cocoa.NSWorkspace.sharedWorkspace().frontmostApplication()
+    if frontmost:
+        watchdog.send_app_name_to_microcontroller(watchdog._get_app_name(frontmost))
     heartbeat_thread = threading.Thread(target=watchdog._run_heartbeat_loop)
     heartbeat_thread.start()
 
@@ -402,10 +407,13 @@ def main() -> None:
     finally:
         notification_center.removeObserver_(watchdog)
         watchdog._stop_event.set()
-        # send a clean BYE
+        heartbeat_thread.join()   # stop heartbeat before BYE to avoid lock contention
         watchdog.send_bye()
-        heartbeat_thread.join()
+        ser.flush()
+        time.sleep(SERIAL_CLOSE_GRACE_PERIOD)
         ser.close()
+        if args.verbose:
+            print("Shutdown complete.")
 
 
 # Entry point for the script
