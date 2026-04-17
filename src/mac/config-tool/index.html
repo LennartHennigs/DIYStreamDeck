@@ -15,6 +15,28 @@
     <p>Select a <code>key_def.json</code> file to edit.</p>
     <input type="file" id="fileInput" accept=".json">
     <p id="fileError"></p>
+    <div class="modal-or">or</div>
+    <button id="createNewBtn" type="button">Create new file</button>
+  </div>
+</div>
+
+<!-- Add entry modal -->
+<div id="addEntryModal">
+  <div id="addEntryCard">
+    <h3>New entry</h3>
+    <label for="addEntryType">Type</label>
+    <select id="addEntryType">
+      <option value="application">Application</option>
+      <option value="folder">Folder</option>
+      <option value="url">URL</option>
+    </select>
+    <label for="addEntryName">Name</label>
+    <input type="text" id="addEntryName" placeholder="e.g. Safari">
+    <p id="addEntryError"></p>
+    <div class="modal-btn-row">
+      <button id="addEntryCancelBtn" type="button">Cancel</button>
+      <button id="addEntryConfirmBtn" type="button">Add</button>
+    </div>
   </div>
 </div>
 
@@ -34,7 +56,7 @@
       <label class="sectionLabel">
         <input type="checkbox" id="aliasOfCheck"> Alias of
       </label>
-      <div id="aliasInputRow" style="display:none; align-items:center; gap:6px; width:100%">
+      <div id="aliasInputRow" style="display:none; align-items:center; gap:5px; width:100%">
         <input type="text" id="aliasOfInput" placeholder="app name" style="flex:1; min-width:0">
         <button type="button" id="openAliasBtn" class="iconBtn" title="Go to app">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -54,6 +76,12 @@
 
   <div id="keypad"></div>
 
+  <div id="entryActions">
+    <button id="addEntryBtn" class="btn-outline" type="button">Add new</button>
+    <button id="clearAllBtn" class="btn-outline" type="button">Clear</button>
+    <button id="deleteEntryBtn" class="btn-outline-danger" type="button">Delete</button>
+  </div>
+
   <!-- footer toolbar -->
   <div id="toolbar">
     <label for="rotateSelect">Rotate</label>
@@ -62,6 +90,7 @@
       <option value="CW">CW</option>
       <option value="CCW">CCW</option>
     </select>
+    <button id="cancelBtn" class="btn-outline" type="button">Cancel</button>
     <button id="saveBtn" type="button">Save JSON</button>
   </div>
 
@@ -70,14 +99,6 @@
       <button id="closeBtn" type="button" title="Close">×</button>
     </div>
     <form id="sidepaneForm" autocomplete="off">
-      <div class="form-row">
-        <label>Color</label>
-        <div class="color-row">
-          <input type="color" id="colorPicker">
-          <input type="text" id="colorHex" placeholder="#rrggbb" maxlength="7">
-        </div>
-      </div>
-
       <div class="form-row">
         <label for="description">Description</label>
         <input type="text" id="description">
@@ -138,13 +159,11 @@
         <input type="number" id="stringDelayInput" value="0.05" min="0" step="0.01">
       </div>
 
-      <!-- optional color overrides (always visible) -->
       <div class="form-row">
-        <label>Toggle color <span class="hint">(optional)</span></label>
+        <label>Color</label>
         <div class="color-row">
-          <input type="color" id="toggleColorPicker">
-          <input type="text" id="toggleColorHex" placeholder="#rrggbb" maxlength="7">
-          <button type="button" id="clearToggleColor" class="clearColorBtn">✕</button>
+          <input type="color" id="colorPicker">
+          <input type="text" id="colorHex" placeholder="#rrggbb" maxlength="7">
         </div>
       </div>
 
@@ -154,6 +173,15 @@
           <input type="color" id="pressedColorPicker">
           <input type="text" id="pressedColorHex" placeholder="#rrggbb" maxlength="7">
           <button type="button" id="clearPressedColor" class="clearColorBtn">✕</button>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label>Toggle color <span class="hint">(optional)</span></label>
+        <div class="color-row">
+          <input type="color" id="toggleColorPicker">
+          <input type="text" id="toggleColorHex" placeholder="#rrggbb" maxlength="7">
+          <button type="button" id="clearToggleColor" class="clearColorBtn">✕</button>
         </div>
       </div>
 

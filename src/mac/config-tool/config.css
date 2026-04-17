@@ -136,6 +136,38 @@ body, html {
 
 #saveBtn:hover { background: #1976d2; }
 
+.btn-outline {
+  background: none;
+  border: 1px solid #555;
+  color: #ccc;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.82em;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-outline:hover { border-color: #888; color: #fff; }
+
+.btn-outline-danger {
+  background: none;
+  border: 1px solid #7b2e2e;
+  color: #e57373;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.82em;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-outline-danger:hover { background: #c0392b; border-color: #c0392b; color: #fff; }
+
+#cancelBtn {
+  padding: 6px 14px;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
 /* ── dropdown ─────────────────────────────────────────────────────────────── */
 
 #keypad_header {
@@ -154,6 +186,8 @@ body, html {
   font-size: 0.9em;
   cursor: pointer;
 }
+
+#addEntryBtn { margin-right: auto; }
 
 optgroup {
   font-weight: 600;
@@ -187,7 +221,11 @@ optgroup {
 #aliasOfRow {
   width: 100%;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
+}
+
+#aliasInputRow {
+  padding-left: 22px;
 }
 
 #aliasOfInput {
@@ -314,7 +352,8 @@ optgroup {
 
 #keypad_header,
 #sectionSettings,
-#keypad {
+#keypad,
+#entryActions {
   margin-left: auto;
   margin-right: auto;
 }
@@ -429,7 +468,7 @@ input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
 .radio-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   margin-top: 2px;
 }
 
@@ -454,7 +493,7 @@ input[type="checkbox"] { cursor: pointer; accent-color: #2196f3; }
 #folderField .folder-input-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 #folderField .folder-input-row input {
@@ -465,7 +504,7 @@ input[type="checkbox"] { cursor: pointer; accent-color: #2196f3; }
 .checkLabel {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   font-size: 0.82em;
   color: #bbb;
   text-transform: none;
@@ -484,18 +523,160 @@ input[type="checkbox"] { cursor: pointer; accent-color: #2196f3; }
 
 .button-row button {
   flex: 1;
-  padding: 9px;
+  padding: 6px 10px;
   border: none;
   border-radius: 6px;
   color: #fff;
   cursor: pointer;
-  font-size: 0.88em;
+  font-size: 0.82em;
   font-weight: 500;
 }
 
 #applyBtn { background: #2196f3; }
 #applyBtn:hover { background: #1976d2; }
-#clearBtn { background: #c0392b; }
-#clearBtn:hover { background: #a93226; }
+#clearBtn { background: none; border: 1px solid #7b2e2e; color: #e57373; border-radius: 6px; }
+#clearBtn:hover { background: #c0392b; border-color: #c0392b; color: #fff; }
 #reloadBtn { background: #444; }
 #reloadBtn:hover { background: #555; }
+
+/* ── file modal: create new ───────────────────────────────────────────────── */
+
+.modal-or {
+  margin: 16px 0 12px;
+  font-size: 0.82em;
+  color: #666;
+  text-align: center;
+  position: relative;
+}
+
+.modal-or::before,
+.modal-or::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 38%;
+  height: 1px;
+  background: #3a3a3a;
+}
+
+.modal-or::before { left: 0; }
+.modal-or::after  { right: 0; }
+
+#createNewBtn {
+  display: block;
+  width: 100%;
+  background: #333;
+  color: #e0e0e0;
+  border: 1px solid #555;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-size: 0.9em;
+  cursor: pointer;
+  text-align: center;
+}
+
+#createNewBtn:hover { background: #3a3a3a; border-color: #777; }
+
+/* ── add entry modal ──────────────────────────────────────────────────────── */
+
+#addEntryModal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+#addEntryCard {
+  background: #2a2a2a;
+  border-radius: 12px;
+  padding: 28px 32px;
+  width: 300px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+#addEntryCard h3 {
+  margin: 0 0 18px;
+  font-size: 1.1em;
+  font-weight: 600;
+  color: #fff;
+}
+
+#addEntryCard label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 0.78em;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+#addEntryType {
+  width: 100%;
+  background: #333;
+  color: #e0e0e0;
+  border: 1px solid #555;
+  border-radius: 5px;
+  padding: 6px 9px;
+  font-size: 0.88em;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+#addEntryName {
+  width: 100%;
+  background: #333;
+  color: #e0e0e0;
+  border: 1px solid #4a4a4a;
+  border-radius: 5px;
+  padding: 6px 9px;
+  font-size: 0.88em;
+  outline: none;
+  margin-bottom: 4px;
+  box-sizing: border-box;
+}
+
+#addEntryName:focus { border-color: #2196f3; }
+
+#addEntryError {
+  color: #ff6b6b;
+  font-size: 0.82em;
+  min-height: 1.2em;
+  margin: 4px 0 12px;
+}
+
+.modal-btn-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.modal-btn-row button {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.88em;
+  font-weight: 500;
+  color: #fff;
+}
+
+#addEntryCancelBtn { background: #444; }
+#addEntryCancelBtn:hover { background: #555; }
+#addEntryConfirmBtn { background: #2196f3; }
+#addEntryConfirmBtn:hover { background: #1976d2; }
+
+/* ── entry actions ────────────────────────────────────────────────────────── */
+
+#entryActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  width: 100%;
+  max-width: 300px;
+  margin: 10px 0 0;
+}
+

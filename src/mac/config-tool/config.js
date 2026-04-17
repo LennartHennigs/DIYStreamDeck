@@ -79,6 +79,7 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   // header controls
+  document.getElementById('cancelBtn').addEventListener('click', resetApp);
   document.getElementById('rotateSelect').addEventListener('change', function () {
     if (rawData) rawData.settings = rawData.settings || {};
     if (rawData) rawData.settings.rotate = this.value;
@@ -116,9 +117,62 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('closeBtn').addEventListener('click', closeSidepanel);
   document.getElementById('openFolderBtn').addEventListener('click', navigateToFolder);
   document.getElementById('openAliasBtn').addEventListener('click', navigateToAlias);
+
+  // file modal: create new
+  document.getElementById('createNewBtn').addEventListener('click', createNewFile);
+
+  // add entry modal
+  document.getElementById('addEntryBtn').addEventListener('click', openAddEntryModal);
+  document.getElementById('addEntryCancelBtn').addEventListener('click', closeAddEntryModal);
+  document.getElementById('addEntryConfirmBtn').addEventListener('click', confirmAddEntry);
+  document.getElementById('addEntryName').addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmAddEntry();
+    if (e.key === 'Escape') closeAddEntryModal();
+  });
+
+  // entry actions
+  document.getElementById('clearAllBtn').addEventListener('click', clearAllKeys);
+  document.getElementById('deleteEntryBtn').addEventListener('click', deleteEntry);
+
+  // close sidepanel on canvas click
+  document.getElementById('app').addEventListener('click', e => {
+    if (!sidepane.classList.contains('open')) return;
+    if (sidepane.contains(e.target)) return;
+    if (e.target.closest('.key')) return;
+    closeSidepanel();
+  });
 });
 
 // ─── file loading ────────────────────────────────────────────────────────────
+
+function showApp()       { document.getElementById('fileModal').style.display = 'none'; document.getElementById('app').style.display = 'flex'; }
+function showFileModal() { document.getElementById('app').style.display = 'none'; document.getElementById('fileModal').style.display = 'flex'; }
+
+function resetApp() {
+  rawData = null;
+  currentKeyConfig = {};
+  applicationsArray = [];
+  foldersArray = [];
+  urlsArray = [];
+  globalsData = null;
+  activeButtonIndex = null;
+  selectedButton = null;
+  currentSection = null;
+  closeSidepanel();
+  showFileModal();
+  document.getElementById('fileInput').value = '';
+  document.getElementById('fileError').textContent = '';
+}
+
+function createNewFile() {
+  const skeleton = {
+    settings: {},
+    applications: { _default: {}, _otherwise: {} }
+  };
+  rawData = skeleton;
+  initUI(skeleton);
+  showApp();
+}
 
 function handleFileSelected(e) {
   const file = e.target.files[0];
@@ -129,8 +183,7 @@ function handleFileSelected(e) {
       const data = JSON.parse(ev.target.result);
       rawData = data;
       initUI(data);
-      document.getElementById('fileModal').style.display = 'none';
-      document.getElementById('app').style.display = 'flex';
+      showApp();
     } catch (err) {
       document.getElementById('fileError').textContent = 'Invalid JSON: ' + err.message;
     }
@@ -306,6 +359,9 @@ function updateSectionSettingsBar() {
   aliasRow.style.visibility = (type === 'Applications' && !isUnderscored && !isAliasTarget) ? 'visible' : 'hidden';
   autocloseRow.style.display = type === 'Folders' ? '' : 'none';
   ignoreCheck.closest('label').style.visibility = isUnderscored ? 'hidden' : 'visible';
+
+  const canDelete = type !== 'Global';
+  document.getElementById('deleteEntryBtn').style.display = canDelete ? '' : 'none';
 
   const srcEntry = getSourceEntry();
   if (!srcEntry) { ignoreCheck.checked = false; return; }
@@ -680,6 +736,95 @@ function navigateToFolder() {
 
 function navigateToAlias() {
   navigateDropdownTo(document.getElementById('aliasOfInput').value.trim(), ['Applications', 'Aliases'], false);
+}
+
+// ─── add entry modal ──────────────────────────────────────────────────────────
+
+function openAddEntryModal() {
+  document.getElementById('addEntryName').value = '';
+  document.getElementById('addEntryError').textContent = '';
+  document.getElementById('addEntryModal').style.display = 'flex';
+  document.getElementById('addEntryName').focus();
+}
+
+function closeAddEntryModal() {
+  document.getElementById('addEntryModal').style.display = 'none';
+}
+
+function confirmAddEntry() {
+  const type = document.getElementById('addEntryType').value;
+  const name = document.getElementById('addEntryName').value.trim();
+  const errorEl = document.getElementById('addEntryError');
+  if (!name) { errorEl.textContent = 'Name is required.'; return; }
+
+  const typeMap = {
+    application: { array: applicationsArray, dataKey: 'applications', label: 'Applications' },
+    folder:      { array: foldersArray,      dataKey: 'folders',      label: 'Folders' },
+    url:         { array: urlsArray,         dataKey: 'urls',         label: 'URLs' },
+  };
+  const { array, dataKey, label } = typeMap[type];
+
+  if (array.some(([k]) => k === name)) {
+    errorEl.textContent = `A ${type === 'url' ? 'URL entry' : type} with that name already exists.`;
+    return;
+  }
+
+  if (!rawData[dataKey]) rawData[dataKey] = {};
+  rawData[dataKey][name] = {};
+  array.push([name, rawData[dataKey][name]]);
+
+  const optgroups = Array.from(appsDropDown.querySelectorAll('optgroup'));
+  let g = optgroups.find(g => g.label === label);
+  if (!g) g = addOptgroup(label);
+  const opt = document.createElement('option');
+  opt.value = name; opt.text = name;
+  g.appendChild(opt);
+  appsDropDown.value = name;
+
+  closeAddEntryModal();
+  appsDropDown.dispatchEvent(new Event('change'));
+}
+
+// ─── entry actions ────────────────────────────────────────────────────────────
+
+function clearAllKeys() {
+  if (!currentSection) return;
+  const entry = getSourceEntry();
+  for (let i = 0; i < BUTTON_COUNT; i++) {
+    const key = String(i);
+    if (currentKeyConfig[key] !== undefined) {
+      delete currentKeyConfig[key];
+      if (entry) delete entry[1][key];
+    }
+  }
+  colorizeKeypad();
+  if (sidepane.classList.contains('open')) closeSidepanel();
+}
+
+function deleteEntry() {
+  if (!currentSection) return;
+  const { type, name } = currentSection;
+
+  const typeMap = {
+    Applications: { array: applicationsArray, dataKey: 'applications' },
+    Folders:      { array: foldersArray,      dataKey: 'folders' },
+    URLs:         { array: urlsArray,         dataKey: 'urls' },
+  };
+  const mapping = typeMap[type];
+  if (!mapping) return;
+
+  const { array, dataKey } = mapping;
+  const idx = array.findIndex(([k]) => k === name);
+  if (idx === -1) return;
+  array.splice(idx, 1);
+  if (rawData[dataKey]) delete rawData[dataKey][name];
+
+  appsDropDown.querySelector(`option[value="${name}"]`)?.remove();
+
+  if (appsDropDown.options.length > 0) {
+    appsDropDown.selectedIndex = 0;
+    appsDropDown.dispatchEvent(new Event('change'));
+  }
 }
 
 // ─── save ─────────────────────────────────────────────────────────────────────
