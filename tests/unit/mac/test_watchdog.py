@@ -104,6 +104,7 @@ def _make_watchdog(serial_mock=None, verbose=False):
     wdog.plugins = {}
     wdog._serial_lock = threading.Lock()
     wdog._stop_event = threading.Event()
+    wdog._last_sent_app_name = None
     return wdog
 
 
@@ -323,6 +324,82 @@ class TestStartupAppDetection:
         close_idx = shutdown_block.index('ser.close()')
         assert bye_idx < flush_idx < close_idx, (
             "Shutdown order must be: send_bye() → ser.flush() → ser.close()"
+        )
+
+
+class TestAppNameDeduplication:
+    """send_app_name_to_microcontroller must skip serial writes when the app
+    name hasn't changed since the last send. macOS fires
+    NSWorkspaceDidActivateApplicationNotification liberally (window focus
+    flicker, background helpers, Terminal foreground/background); every
+    duplicate App: line makes the Pico repaint all 16 LEDs and wipes any
+    active Claude signal color.
+    """
+
+    def test_first_app_name_is_sent(self):
+        """Fresh watchdog → first call to send_app_name_to_microcontroller writes."""
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+        wdog.send_app_name_to_microcontroller("Terminal")
+        assert ser.write.call_count == 1
+        ser.write.assert_called_once_with(b"App: Terminal\n")
+
+    def test_duplicate_app_name_suppressed(self):
+        """Sending the same name twice → serial written only once."""
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+        wdog.send_app_name_to_microcontroller("Terminal")
+        wdog.send_app_name_to_microcontroller("Terminal")
+        wdog.send_app_name_to_microcontroller("Terminal")
+        assert ser.write.call_count == 1, (
+            "Redundant App: writes must be suppressed (macOS fires spurious "
+            "activation notifications; each one wipes the Claude signal)"
+        )
+
+    def test_different_app_name_sends_again(self):
+        """App A then App B → two writes, one per distinct name."""
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+        wdog.send_app_name_to_microcontroller("Terminal")
+        wdog.send_app_name_to_microcontroller("Claude")
+        assert ser.write.call_count == 2
+        # Verify both names actually landed
+        writes = [call.args[0] for call in ser.write.call_args_list]
+        assert b"App: Terminal\n" in writes
+        assert b"App: Claude\n" in writes
+
+    def test_url_change_within_same_app_still_sends(self):
+        """Safari with two different URLs → two writes.
+
+        get_url() appends the URL, so the effective name differs.
+        """
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+        # get_url() is what appends URL info; stub it to control the value.
+        with patch.object(wdog, 'get_url', side_effect=lambda name: " (example.com)"):
+            wdog.send_app_name_to_microcontroller("Safari")
+        with patch.object(wdog, 'get_url', side_effect=lambda name: " (other.com)"):
+            wdog.send_app_name_to_microcontroller("Safari")
+        assert ser.write.call_count == 2, (
+            "URL change within Safari must still send (effective name differs)"
+        )
+        writes = [call.args[0] for call in ser.write.call_args_list]
+        assert b"App: Safari (example.com)\n" in writes
+        assert b"App: Safari (other.com)\n" in writes
+
+    def test_dedup_state_initialized_in_init(self):
+        """`_last_sent_app_name` must be initialized to None in initWithSerial_args_plugins_.
+
+        Guards against future refactors that would remove the initialization
+        and cause AttributeError on first send.
+        """
+        src = _read_source()
+        init_idx = src.index('def initWithSerial_args_plugins_')
+        # Find the return statement inside this method (end of init block)
+        return_idx = src.index('return self', init_idx)
+        init_block = src[init_idx:return_idx]
+        assert '_last_sent_app_name' in init_block, (
+            "initWithSerial_args_plugins_ must initialize _last_sent_app_name = None"
         )
 
 
@@ -660,7 +737,7 @@ class TestRunLoop:
 # ---------------------------------------------------------------------------
 
 class TestFindPicoPort:
-    """Tests for find_pico_port_by_vid, find_pico_port_by_ping, and find_pico_port."""
+    """Tests for find_pico_port_by_vid."""
 
     def setup_method(self, method):
         self.wd = _import_watchdog()
@@ -703,75 +780,6 @@ class TestFindPicoPort:
             result = self.wd.find_pico_port_by_vid()
         assert result is None
 
-    # -- find_pico_port_by_ping -----------------------------------------------
-
-    def test_ping_returns_device_when_pong_reply(self):
-        port = self._make_port('/dev/cu.usbmodem1')
-        ser_instance = MagicMock()
-        ser_instance.readline.return_value = b'PONG\n'
-        ser_instance.__enter__ = lambda s: s
-        ser_instance.__exit__ = MagicMock(return_value=False)
-        serial_cls = MagicMock(return_value=ser_instance)
-        with patch('serial.tools.list_ports.comports', return_value=[port]):
-            with patch('serial.Serial', serial_cls):
-                result = self.wd.find_pico_port_by_ping(9600)
-        assert result == '/dev/cu.usbmodem1'
-        ser_instance.write.assert_called_once_with(b'PING\n')
-
-    def test_ping_returns_none_when_no_pong(self):
-        port = self._make_port('/dev/cu.usbmodem1')
-        ser_instance = MagicMock()
-        ser_instance.readline.return_value = b'SOMETHING_ELSE\n'
-        ser_instance.__enter__ = lambda s: s
-        ser_instance.__exit__ = MagicMock(return_value=False)
-        with patch('serial.tools.list_ports.comports', return_value=[port]):
-            with patch('serial.Serial', MagicMock(return_value=ser_instance)):
-                result = self.wd.find_pico_port_by_ping(9600)
-        assert result is None
-
-    def test_ping_skips_port_raising_serial_exception(self):
-        SerialException = sys.modules['serial'].SerialException
-        port = self._make_port('/dev/cu.bad')
-        with patch('serial.tools.list_ports.comports', return_value=[port]):
-            with patch('serial.Serial', side_effect=SerialException("fail")):
-                result = self.wd.find_pico_port_by_ping(9600)
-        assert result is None
-
-    def test_ping_skips_port_raising_os_error(self):
-        port = self._make_port('/dev/cu.bad')
-        with patch('serial.tools.list_ports.comports', return_value=[port]):
-            with patch('serial.Serial', side_effect=OSError("no device")):
-                result = self.wd.find_pico_port_by_ping(9600)
-        assert result is None
-
-    def test_ping_returns_none_when_no_ports(self):
-        with patch('serial.tools.list_ports.comports', return_value=[]):
-            result = self.wd.find_pico_port_by_ping(9600)
-        assert result is None
-
-    # -- find_pico_port -------------------------------------------------------
-
-    def test_find_uses_vid_when_found(self):
-        with patch.object(self.wd, 'find_pico_port_by_vid', return_value='/dev/cu.pico') as mock_vid:
-            with patch.object(self.wd, 'find_pico_port_by_ping') as mock_ping:
-                result = self.wd.find_pico_port(9600)
-        assert result == '/dev/cu.pico'
-        mock_vid.assert_called_once()
-        mock_ping.assert_not_called()
-
-    def test_find_falls_back_to_ping_when_vid_none(self):
-        with patch.object(self.wd, 'find_pico_port_by_vid', return_value=None):
-            with patch.object(self.wd, 'find_pico_port_by_ping', return_value='/dev/cu.pico') as mock_ping:
-                result = self.wd.find_pico_port(9600)
-        assert result == '/dev/cu.pico'
-        mock_ping.assert_called_once_with(9600)
-
-    def test_find_returns_none_when_both_fail(self):
-        with patch.object(self.wd, 'find_pico_port_by_vid', return_value=None):
-            with patch.object(self.wd, 'find_pico_port_by_ping', return_value=None):
-                result = self.wd.find_pico_port(9600)
-        assert result is None
-
 
 class TestOutputMessage:
     """Tests for issue #6: Output: serial message (Pico -> Mac)."""
@@ -802,4 +810,43 @@ class TestOutputMessage:
         with patch.object(wdog, 'handle_output') as mock_handler:
             wdog.check_serial()
         mock_handler.assert_called_once()
+
+
+class TestSendLineToKeypad:
+    """Tests for _send_line_to_keypad: the sender exposed to plugins.
+
+    Plugins receive this method as a callable via BasePlugin.start()
+    and use it to push messages to the Pico under the watchdog's lock.
+    """
+
+    def test_send_line_writes_message_to_serial(self):
+        """_send_line_to_keypad must write the provided line to the serial port."""
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+        wdog._send_line_to_keypad("Claude: green\n")
+        ser.write.assert_called_once_with(b"Claude: green\n")
+
+    def test_send_line_uses_serial_lock(self):
+        """_send_line_to_keypad must acquire _serial_lock (reuses _serial_write)."""
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+
+        mock_lock = MagicMock()
+        mock_lock.__enter__ = MagicMock(return_value=None)
+        mock_lock.__exit__ = MagicMock(return_value=False)
+        wdog._serial_lock = mock_lock
+
+        wdog._send_line_to_keypad("Claude: red\n")
+
+        assert mock_lock.__enter__.call_count == 1
+        assert mock_lock.__exit__.call_count == 1
+
+    def test_send_line_handles_serial_error_gracefully(self):
+        """Serial write errors must be caught (matches _serial_write behavior)."""
+        ser = MagicMock()
+        ser.write.side_effect = OSError("port closed")
+        wdog = _make_watchdog(ser)
+        # Must not raise even if serial fails.
+        wdog._send_line_to_keypad("Claude: yellow\n")
+
 

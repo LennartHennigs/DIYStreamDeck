@@ -1,6 +1,6 @@
 # DIY Streamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0
-# last changed: 01-31-24
+# last changed: 2026-06-03
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import time
@@ -20,6 +20,18 @@ import board
 PICO_HEARTBEAT_INTERVAL = 2
 PICO_TIMEOUT_MULTIPLIER = 2
 PICO_TIMEOUT_SECONDS = PICO_HEARTBEAT_INTERVAL * PICO_TIMEOUT_MULTIPLIER
+
+# Signal colors for `Claude: <color>` serial messages from the Mac (claude plugin).
+# Dim values on purpose — 16 LEDs at full intensity are harsh. Yellow uses
+# equal R and G so the hue matches `#FFFF00` in key_def.json (asymmetric
+# dimming turns yellow orange). The color the Pico sets stays lit until
+# an app switch, rotation, keypress, or a new Claude: line overrides it —
+# the color IS the status signal, not just an animation.
+FLASH_COLORS = {
+    "green":  (0, 90, 0),
+    "red":    (110, 0, 0),
+    "yellow": (110, 110, 0),
+}
 
 
 class KeyController:
@@ -74,9 +86,18 @@ class KeyController:
 
         # Heartbeat / timeout handling
         # Keep a timestamp of the last received heartbeat (or HELLO)
-        self.last_heartbeat = time.time()
+        self.last_heartbeat = time.monotonic()
         # If True the keypad has been unloaded due to timeout or BYE
         self.unloaded = False
+
+        # Sticky signal state: when set, holds the RGB tuple the keypad is
+        # currently displaying as a Claude Code status flood-fill. Cleared
+        # (set to None) by any deliberate acknowledgment — app switch,
+        # rotate, HELLO handshake, or a keypress — right before update_keys()
+        # repaints the real layout. A new `Claude:` line while one is active
+        # just overwrites it. Field name kept for git-blame continuity — it
+        # used to hold a monotonic-time deadline; now it holds a color.
+        self._flash_deadline = None
 
 
     # open a folder and display the key layout
@@ -102,6 +123,12 @@ class KeyController:
     def key_press_action(self, key):
         if key.number not in self.current_config:
             return
+        # A keypress is a deliberate ack of any active Claude signal — drop
+        # the sticky color and repaint the real layout first, otherwise the
+        # 15 non-pressed keys would keep showing the flood-fill.
+        if self._flash_deadline is not None:
+            self._flash_deadline = None
+            self.update_keys()
         key_def = self.current_config[key.number]
         action = key_def.get('action')
         folder = key_def.get('folder')
@@ -193,10 +220,19 @@ class KeyController:
                 self.keypad.on_press(key, lambda key=key: self.key_press_action(key))
                 self.keypad.on_release(key, lambda key=key: self.key_release_action(key))
             # no key definition found
-            else:            
+            else:
                 key.led_off()
                 self.keypad.on_press(key, lambda _, key=key: None)
                 self.keypad.on_release(key, lambda _, key=key: None)
+
+
+    # flood-fill all LEDs with an RGB tuple and remember it as the sticky
+    # signal color. The color persists until a deliberate ack — app switch,
+    # rotate, HELLO, or keypress — clears it and repaints the real layout.
+    def flash_all(self, rgb):
+        for key in self.keys:
+            key.set_led(*rgb)
+        self._flash_deadline = rgb
 
 
     # read a line from the serial console
@@ -488,6 +524,7 @@ class KeyController:
             return
         self.rotate = value
         self.current_config = self.rotate_keys_if_needed()
+        self._flash_deadline = None
         self.update_keys()
 
 
@@ -506,7 +543,15 @@ class KeyController:
         else:
             self.current_config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
         self.current_config = self.rotate_keys_if_needed()
+        self._flash_deadline = None
         self.update_keys()
+
+
+    # process the Claude serial command (Mac -> Pico from claude plugin / hooks)
+    def process_flash(self, serial_str):
+        color = serial_str[8:].strip().lower()
+        if color in FLASH_COLORS:
+            self.flash_all(FLASH_COLORS[color])
 
 
     # parse the app name and url
@@ -558,25 +603,18 @@ class KeyController:
 
     # process the serial string
     def process_serial_str(self, serial_str):
-        # PING: port probe from host during auto-detection
-        if serial_str == "PING":
-            try:
-                usb_cdc.console.write(b"PONG\n")
-            except Exception:
-                pass
-            return
-
         # Heartbeat frame from host
         if serial_str == "HB":
             # update last seen heartbeat timestamp
-            self.last_heartbeat = time.time()
+            self.last_heartbeat = time.monotonic()
             return
 
         # HELLO: host started -> clear keypad then load basic config
         if serial_str.startswith("HELLO"):
             self.clear_keypad()
+            self._flash_deadline = None
             self.load_basic_config()
-            self.last_heartbeat = time.time()
+            self.last_heartbeat = time.monotonic()
             return
 
         # BYE: host shutting down -> clear and mark unloaded
@@ -591,6 +629,8 @@ class KeyController:
             self.process_terminated(serial_str)
         elif serial_str.startswith("App: "):
             self.process_app(serial_str)
+        elif serial_str.startswith("Claude: "):
+            self.process_flash(serial_str)
 
 
     # main loop
@@ -602,12 +642,13 @@ class KeyController:
             else:
                 # No incoming serial - throttle idle CPU usage
                 time.sleep(0.1)
+
             self.keypad.update()  # always poll key state, even after processing serial
 
             # Check for heartbeat timeout. If we haven't seen a heartbeat (or HELLO)
             # within PICO_TIMEOUT_SECONDS, clear and unload the keypad.
             try:
-                if (not self.unloaded) and (time.time() - self.last_heartbeat > PICO_TIMEOUT_SECONDS):
+                if (not self.unloaded) and (time.monotonic() - self.last_heartbeat > PICO_TIMEOUT_SECONDS):
                     # perform unload on timeout
                     self.unload_keypad()
             except Exception as e:

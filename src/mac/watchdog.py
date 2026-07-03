@@ -44,28 +44,6 @@ def find_pico_port_by_vid() -> Optional[str]:
     return None
 
 
-def find_pico_port_by_ping(baud_rate: int, timeout: float = 1.0) -> Optional[str]:
-    """Try each serial port; return first that replies PONG to a PING."""
-    for port in serial.tools.list_ports.comports():
-        try:
-            with serial.Serial(port.device, baud_rate, timeout=timeout) as s:
-                s.write(b"PING\n")
-                response = s.readline().decode("utf-8", errors="ignore").strip()
-                if response == "PONG":
-                    return port.device
-        except (serial.SerialException, OSError):
-            continue
-    return None
-
-
-def find_pico_port(baud_rate: int) -> Optional[str]:
-    """Auto-detect Pico port: VID match first, PING probe as fallback."""
-    port = find_pico_port_by_vid()
-    if port:
-        return port
-    return find_pico_port_by_ping(baud_rate)
-
-
 class WatchDog(Cocoa.NSObject):
     ser: serial.Serial
     args: argparse.Namespace
@@ -85,6 +63,8 @@ class WatchDog(Cocoa.NSObject):
         self.plugins = plugins
         self._serial_lock = threading.Lock()
         self._stop_event = threading.Event()
+        # Dedup state for send_app_name_to_microcontroller — see there.
+        self._last_sent_app_name = None
         # Add observer for application termination
         Cocoa.NSWorkspace.sharedWorkspace().notificationCenter().addObserver_selector_name_object_(
             self,
@@ -177,6 +157,16 @@ class WatchDog(Cocoa.NSObject):
         if app_name in ["Safari", "Google Chrome"]:
             app_name = app_name + self.get_url(app_name)
 
+        # Suppress redundant activations. macOS fires
+        # NSWorkspaceDidActivateApplicationNotification on many events that don't
+        # actually change the active app (window focus flicker, background helpers,
+        # Terminal foreground/background). Sending duplicate App: lines forces the
+        # Pico to repaint every key via update_keys(), which visibly wipes any
+        # active Claude signal color and burns cycles for no functional gain.
+        if app_name == self._last_sent_app_name:
+            return
+        self._last_sent_app_name = app_name
+
         if self.args.verbose:
             print(f'Active app: {app_name}')
         self._serial_write("App: " + app_name + '\n', "App")
@@ -194,6 +184,11 @@ class WatchDog(Cocoa.NSObject):
 
     def send_bye(self) -> None:
         self._serial_write("BYE\n", "BYE")
+
+    # Exposed to plugins (via BasePlugin.start(send_to_keypad)) so background
+    # listeners can push single lines to the Pico under the watchdog's lock.
+    def _send_line_to_keypad(self, line: str) -> None:
+        self._serial_write(line, "plugin")
 
 
     # Read data from the serial connection from the keypad
@@ -371,7 +366,7 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.port is None:
-        args.port = find_pico_port(args.speed)
+        args.port = find_pico_port_by_vid()
         if args.port is None:
             print("Error: Pico not found. Connect the device or specify --port.")
             return
@@ -405,6 +400,15 @@ def main() -> None:
     if args.rotate:
         watchdog._serial_write(f'Rotate: {args.rotate}\n', 'Rotate')
 
+    # Start service-style plugins (background listeners). Default
+    # BasePlugin.on_watchdog_start is a no-op, so keypress-only plugins
+    # (spotify/hue/sounds) are unaffected.
+    for name, plugin in plugins.items():
+        try:
+            plugin.on_watchdog_start(watchdog._send_line_to_keypad)
+        except Exception as e:
+            print(f"Plugin '{name}' on_watchdog_start error: {e}")
+
     try:
         watchdog.run_loop()
     except KeyboardInterrupt:
@@ -415,6 +419,12 @@ def main() -> None:
         notification_center.removeObserver_(watchdog)
         watchdog._stop_event.set()
         heartbeat_thread.join()   # stop heartbeat before BYE to avoid lock contention
+        # Stop plugins before closing the port (they may want a final flush)
+        for name, plugin in plugins.items():
+            try:
+                plugin.on_watchdog_stop()
+            except Exception as e:
+                print(f"Plugin '{name}' on_watchdog_stop error: {e}")
         watchdog.send_bye()
         ser.flush()
         time.sleep(SERIAL_CLOSE_GRACE_PERIOD)

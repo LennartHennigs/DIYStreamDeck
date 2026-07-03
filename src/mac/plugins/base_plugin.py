@@ -12,7 +12,12 @@ class BasePlugin(ABC):
     """Abstract base class for plugins.
 
     Plugins must implement `commands()` which returns a mapping of command
-    names to callables.
+    names to callables. Plugins that need to react to external events
+    (rather than only responding to keypresses) may optionally override
+    `on_watchdog_start(send_to_keypad)` and `on_watchdog_stop()` — these
+    default to no-ops so existing plugins are unaffected. The `on_watchdog_*`
+    names are used (rather than plain `start`/`stop`) so lifecycle hooks
+    can never collide with plugin command handlers.
     """
 
     def __init__(self, config_file: str, verbose: bool = False) -> None:
@@ -23,6 +28,14 @@ class BasePlugin(ABC):
     def commands(self) -> Dict[str, Callable]:
         """Return a dict mapping command names to callables."""
         raise NotImplementedError
+
+    def on_watchdog_start(self, send_to_keypad: Callable[[str], None]) -> None:
+        """Optional lifecycle hook; see class docstring. Default: no-op."""
+        pass
+
+    def on_watchdog_stop(self) -> None:
+        """Optional lifecycle hook; see class docstring. Default: no-op."""
+        pass
 
     def _load_config(self, config_file: str) -> dict:
         try:

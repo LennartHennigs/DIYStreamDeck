@@ -47,7 +47,7 @@ class TestHeartbeatFunctionality:
         """Test heartbeat timestamp is set on initialization"""
         # Should have a recent timestamp
         assert self.controller.last_heartbeat > 0
-        assert abs(time.time() - self.controller.last_heartbeat) < 1.0
+        assert abs(time.monotonic() - self.controller.last_heartbeat) < 1.0
         assert self.controller.unloaded is False
         
     def test_heartbeat_processing(self):
@@ -84,12 +84,12 @@ class TestHeartbeatFunctionality:
     def test_heartbeat_timeout_detection(self):
         """Test keypad unloads when heartbeat times out"""
         # Set old timestamp to simulate timeout
-        old_time = time.time() - 10  # 10 seconds ago
+        old_time = time.monotonic() - 10  # 10 seconds ago
         self.controller.last_heartbeat = old_time
         
         # Simulate timeout check from run loop
         TIMEOUT_SECONDS = 4  # PICO_HEARTBEAT_INTERVAL * PICO_TIMEOUT_MULTIPLIER
-        current_time = time.time()
+        current_time = time.monotonic()
         
         if (not self.controller.unloaded) and (current_time - self.controller.last_heartbeat > TIMEOUT_SECONDS):
             self.controller.unload_keypad()
@@ -102,10 +102,10 @@ class TestHeartbeatFunctionality:
         """Test regular heartbeats prevent timeout"""
         # Set timestamp just under timeout threshold
         TIMEOUT_SECONDS = 4
-        self.controller.last_heartbeat = time.time() - (TIMEOUT_SECONDS - 1)
+        self.controller.last_heartbeat = time.monotonic() - (TIMEOUT_SECONDS - 1)
         
         # Check if timeout would occur
-        if (not self.controller.unloaded) and (time.time() - self.controller.last_heartbeat > TIMEOUT_SECONDS):
+        if (not self.controller.unloaded) and (time.monotonic() - self.controller.last_heartbeat > TIMEOUT_SECONDS):
             self.controller.unload_keypad()
             
         # Should NOT be unloaded (within timeout window)
@@ -132,7 +132,7 @@ class TestHeartbeatFunctionality:
     def test_heartbeat_recovery_after_timeout(self):
         """Test recovery from timeout state with HELLO"""
         # Force timeout state
-        self.controller.last_heartbeat = time.time() - 10
+        self.controller.last_heartbeat = time.monotonic() - 10
         self.controller.unload_keypad()
         assert self.controller.unloaded is True
         
@@ -142,7 +142,7 @@ class TestHeartbeatFunctionality:
         # Should be recovered
         assert self.controller.unloaded is False
         assert len(self.controller.current_config) > 0
-        assert abs(time.time() - self.controller.last_heartbeat) < 1.0
+        assert abs(time.monotonic() - self.controller.last_heartbeat) < 1.0
         
     def test_bye_command_ignores_heartbeat_state(self):
         """Test BYE command unloads regardless of heartbeat"""
@@ -186,7 +186,7 @@ class TestHeartbeatFunctionality:
     def test_heartbeat_idempotent_unload(self):
         """Test multiple timeout checks don't cause issues"""
         # Force timeout state
-        self.controller.last_heartbeat = time.time() - 10
+        self.controller.last_heartbeat = time.monotonic() - 10
         self.controller.unload_keypad()
         assert self.controller.unloaded is True
         
@@ -215,13 +215,13 @@ class TestHeartbeatFunctionality:
         TIMEOUT_SECONDS = 4
         
         # Set timestamp to exactly timeout threshold
-        self.controller.last_heartbeat = time.time() - TIMEOUT_SECONDS
+        self.controller.last_heartbeat = time.monotonic() - TIMEOUT_SECONDS
         
         # Small delay to ensure we're just over the threshold
         time.sleep(0.001)
         
         # Check timeout
-        if (not self.controller.unloaded) and (time.time() - self.controller.last_heartbeat > TIMEOUT_SECONDS):
+        if (not self.controller.unloaded) and (time.monotonic() - self.controller.last_heartbeat > TIMEOUT_SECONDS):
             self.controller.unload_keypad()
             
         # Should be unloaded
@@ -255,7 +255,7 @@ class TestHeartbeatFunctionality:
         output = console.get_output()
         assert output == ""
         
-    @patch('time.time')
+    @patch('time.monotonic')
     def test_heartbeat_timeout_simulation(self, mock_time):
         """Test timeout behavior with controlled time"""
         # Start at time 100
@@ -346,56 +346,6 @@ class TestHeartbeatFunctionality:
             "unloaded must be set True before clear_keypad() so a failure does not "
             "allow the timeout to fire again"
         )
-
-
-class TestPingCommand:
-    """Tests for PING -> PONG port-probe protocol."""
-
-    @patch('builtins.open', mock_open(read_data='''{
-        "settings": {"rotate": ""},
-        "applications": {"_otherwise": {}},
-        "folders": {},
-        "urls": {}
-    }'''))
-    def setup_method(self, method):
-        from src.pi_pico.code import KeyController
-        self.controller = KeyController(verbose=False)
-
-    def _console(self):
-        import sys
-        return sys.modules['usb_cdc'].console
-
-    def test_ping_writes_pong(self):
-        """PING command must write PONG to the serial console."""
-        console = self._console()
-        console.get_output()  # clear buffer
-        self.controller.process_serial_str("PING")
-        assert console.get_output() == "PONG\n"
-
-    def test_ping_does_not_update_heartbeat(self):
-        """PING must not update the heartbeat timestamp."""
-        import time
-        self.controller.last_heartbeat = 0.0
-        self.controller.process_serial_str("PING")
-        assert self.controller.last_heartbeat == 0.0
-
-    def test_ping_does_not_change_unloaded_state(self):
-        """PING must not affect the unloaded flag."""
-        self.controller.unloaded = True
-        self.controller.process_serial_str("PING")
-        assert self.controller.unloaded is True
-
-    def test_ping_returns_early(self):
-        """PING must be handled before the HB / HELLO / BYE branches."""
-        # If PING fell through to the app-routing branch it would call process_app,
-        # which would change current_config. Confirm it does not.
-        import sys
-        initial_config = self.controller.current_config.copy()
-        console = self._console()
-        console.get_output()
-        self.controller.process_serial_str("PING")
-        assert self.controller.current_config == initial_config
-        assert console.get_output() == "PONG\n"
 
 
 class TestUnloadKeypadAtomicity:

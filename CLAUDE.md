@@ -7,10 +7,12 @@ Guidance for Claude Code when working in this repository. See [README.md](README
 DIY StreamDeck using a Raspberry Pi Pico + Pimoroni RGB Keypad. Two components:
 
 - **Pi Pico** (`src/pi_pico/`): CircuitPython (`code.py`, `KeyController` class) — reads `key_def.json`, drives LEDs, sends HID events.
-  **`code.py` is CircuitPython, not CPython.** Constraints: no `threading`, no `.with_traceback()`, no `json.JSONDecodeError` (raises plain `ValueError`), no `errno` module, ~200 KB heap. Keep changes minimal — every extra import and line costs RAM.
+  **`code.py` is CircuitPython, not CPython.** Constraints: no `threading`, no `.with_traceback()`, no `json.JSONDecodeError` (raises plain `ValueError`), no `errno` module, ~200 KB heap. Use `time.monotonic()` for timing — `time.time()` is integer-second resolution on the Pico (no RTC). Keep changes minimal — every extra import and line costs RAM.
 - **Mac Watchdog** (`src/mac/`): Python (`watchdog.py`, `WatchDog` class) — detects active app via Cocoa/NSWorkspace, sends app name to Pico over USB serial, executes plugin commands.
 
 `_default` keys merge into every app, folder, and URL layout unless `ignore_default: true`. `_otherwise` is the fallback layout for apps without a specific definition.
+
+macOS fires `NSWorkspaceDidActivateApplicationNotification` on many events that don't actually change the active app (focus flicker, background helpers). `send_app_name_to_microcontroller` dedups on `_last_sent_app_name` to avoid spurious `App:` writes that would repaint LEDs (and wipe any active Claude signal color) on the Pico.
 
 ### Communication Protocol
 
@@ -22,12 +24,11 @@ DIY StreamDeck using a Raspberry Pi Pico + Pimoroni RGB Keypad. Two components:
 | `App: <name>` | Mac → Pico | Active application changed |
 | `Rotate: CW\|CCW` | Mac → Pico | Rotate keypad layout |
 | `Terminated: <name>` | Mac → Pico | App terminated (resets toggle state) |
+| `Claude: green\|red\|yellow` | Mac → Pico | Flood-fill LEDs; color persists until app switch, rotation, keypress, or next signal (claude plugin / Claude Code hooks) |
 | `Launch: <name>` | Pico → Mac | Request app launch |
 | `Run: <plugin.cmd>` | Pico → Mac | Request plugin command |
 | `Output: <text>` | Pico → Mac | Forward text to Mac console (`[Pico] <text>`) |
 | `ECHO[:<token>]` | Pico → Mac | Connection test (watchdog replies `ECHO-OK`) |
-| `PING` | Mac → Pico | Port probe during auto-detection |
-| `PONG` | Pico → Mac | Reply confirming Pico identity |
 
 Pico unloads the keypad if heartbeats stop (host disconnected).
 
@@ -40,6 +41,7 @@ Pico unloads the keypad if heartbeats stop (host disconnected).
 | `src/mac/watchdog.py` | Mac watchdog entry point |
 | `src/mac/plugins/` | Plugin implementations (extend `BasePlugin`) |
 | `src/mac/plugins_config/` | Plugin credentials (git-ignored; copy from `*.json.example`) |
+| `src/mac/hooks/` | Claude Code hook scripts (`streamdeck-claude.py`) + installer |
 | `src/mac/requirements.txt` | Mac Python dependencies |
 | `tests/` | Test suite (see [`tests/CLAUDE.md`](tests/CLAUDE.md)) |
 | `CHANGELOG.md` | Change history |
@@ -55,7 +57,18 @@ pip install -r src/mac/requirements.txt
 
 # Run directly
 python3 src/mac/watchdog.py --port /dev/cu.usbmodem2101 --verbose
+
+# Deploy Pico firmware
+./deploy-to-pico.sh              # requires sudo (noasync remount, macOS 14+ FAT32 safety)
+# Or use Thonny save + Ctrl-D in REPL if sudo is inconvenient
+
+# Manually trigger a Claude Code signal without waiting for a real event
+./test-claude.sh                 # cycles green → red → yellow
 ```
+
+For serial-protocol debugging: run watchdog with `--verbose` (logs `Active app:`, `[Pico] <text>` output, plugin activity) and use `send_output(text)` on the Pico to correlate events across the wire.
+
+`send_output(text)` writes `Output: <text>\n` to the Mac console (via the watchdog); `print(text)` on the Pico only shows in a directly-attached serial REPL (Thonny) and is invisible to the running watchdog.
 
 ### Testing
 
@@ -65,7 +78,7 @@ python -m venv test_venv && source test_venv/bin/activate
 pip install -r tests/requirements_test.txt
 
 # Run tests
-./run-tests.sh all       # everything (255 tests)
+./run-tests.sh all       # everything (304 tests)
 ./run-tests.sh pico      # Pi Pico only
 ./run-tests.sh mac       # Mac/watchdog only
 ./run-tests.sh security  # security tests only
@@ -93,6 +106,8 @@ Test locations:
 ## Plugin Development
 
 Plugins extend `BasePlugin` in `src/mac/plugins/`. Each plugin needs a config template in `src/mac/plugins_config/<name>.json.example`. Command format: `plugin_name.command [parameter]`. See [README.md](README.md) for the full command reference.
+
+Service-style plugins (that push events *to* the keypad, not just react to keypresses) override optional `on_watchdog_start(send_to_keypad)` and `on_watchdog_stop()` on `BasePlugin` — the `on_watchdog_` prefix keeps lifecycle names distinct from user command handlers like `SoundsPlugin.stop`. See `src/mac/plugins/claude.py` for the reference implementation (Unix-socket listener relaying `Claude: <color>` to the Pico).
 
 ## Development Principles
 

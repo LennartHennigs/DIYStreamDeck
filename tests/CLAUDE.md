@@ -24,8 +24,10 @@ pytest tests/ -v                                    # All tests verbose
 
 ### Directory Structure
 
-```text                    # Shared pytest fixtures (ESSENTIAL)
-├── pytest.ini                    # Pytest configuration
+```text
+tests/
+├── conftest.py                    # Shared pytest fixtures + helpers (wait_for, short_socket_path)
+├── pytest.ini                     # Pytest configuration
 ├── requirements_test.txt          # Test dependencies
 ├── security/                      # Security vulnerability tests
 │   ├── test_actual_vulnerabilities.py
@@ -33,16 +35,23 @@ pytest tests/ -v                                    # All tests verbose
 └── unit/                          # Unit tests
     ├── mac/
     │   ├── test_watchdog.py
+    │   ├── hooks/
+    │   │   ├── test_streamdeck_claude.py
+    │   │   └── test_install_claude_hooks.py
     │   └── plugins/
+    │       ├── test_base_plugin_lifecycle.py
+    │       ├── test_claude_plugin.py
     │       ├── test_hue_plugin.py
+    │       ├── test_load_plugins_config.py
     │       ├── test_sounds_plugin.py
     │       └── test_spotify.py
     └── pico/
         ├── mock_circuitpython.py
         ├── test_config_loader.py
-        ├── test_key_controller.py
+        ├── test_flash_handler.py
         ├── test_heartbeat_functionality.py
         ├── test_json_corruption.py
+        ├── test_key_controller.py
         └── test_keypad_functionality.py
 ```
 
@@ -57,11 +66,14 @@ The testing framework uses mocking within individual test files for isolation:
 
 ## Test Categories
 
-### Unit Tests (218 tests passing)
+### Unit Tests
 
-- **Pi Pico Tests** (85+ tests): Configuration loading, JSON parsing, keypad setup, heartbeat, key rotation, folder navigation, JSON corruption handling, string key type, eager config validation
+- **Pi Pico Tests**: Configuration loading, JSON parsing, keypad setup, heartbeat + timeout, key rotation, folder navigation, JSON corruption handling, string key type, eager config validation, `Claude:` handler (sticky signal color), `Output:` protocol
 - **Mac Plugin Tests**: Hue light control, Spotify integration, sounds playback, command handling, error scenarios
-- **Watchdog Tests**: Source-level checks for VERSION interpolation, dead code, and type annotations
+- **Mac Plugin Tests (claude)**: Socket listener lifecycle, color validation, `on_watchdog_start/stop` behavior, keypad-triggerable test commands
+- **Mac Hook Tests**: Claude Code hook script (`streamdeck-claude.py`) event routing + silent-on-failure; `install-claude-hooks.sh` idempotency, backup, uninstaller preserves other hooks
+- **Watchdog Tests**: Source-level checks for VERSION interpolation, dead code, and type annotations; `App:` deduplication; plugin lifecycle wiring
+- **BasePlugin Lifecycle Tests**: `on_watchdog_start` / `on_watchdog_stop` are optional no-op defaults; existing plugins unaffected
 - **Mock-based**: Complete isolation from hardware dependencies
 
 ### Security Tests
@@ -89,6 +101,13 @@ tests/security/test_new_vulnerability.py
 ```
 
 Use fixtures from `conftest.py` where available (`mock_config`, `temp_file`, `mock_hue_bridge`, `mock_spotify_client`, etc.).
+
+### Reusable helpers
+
+- `_make_watchdog(serial_mock, verbose)` in `tests/unit/mac/test_watchdog.py` — instantiates a `WatchDog` bypassing Cocoa init. Reuse for any watchdog method test.
+- `_read_source()` in `tests/unit/mac/test_watchdog.py` — for source-inspection tests (guard against structural regressions like symbol removal).
+- `wait_for(condition, timeout, interval)` in `tests/conftest.py` — poll a predicate; used by claude-plugin socket tests.
+- `short_socket_path` fixture in `tests/conftest.py` — yields an `AF_UNIX` path under `/tmp` short enough for macOS's ~104-char limit (pytest's `tmp_path` is too deep).
 
 ### Test Markers
 

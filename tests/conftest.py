@@ -358,7 +358,7 @@ def pytest_addoption(parser):
     """Add custom command line options"""
     parser.addoption(
         "--run-hardware",
-        action="store_true", 
+        action="store_true",
         default=False,
         help="Run hardware tests that require physical devices"
     )
@@ -368,3 +368,41 @@ def pytest_addoption(parser):
         default=False,
         help="Run slow tests that take significant time"
     )
+
+
+# ---------------------------------------------------------------------------
+# Shared helpers used by the claude-plugin and hook-script tests
+# ---------------------------------------------------------------------------
+import time
+
+
+def wait_for(condition, timeout=1.0, interval=0.01):
+    """Poll `condition()` until truthy or timeout. Returns True if it succeeded.
+
+    Shared by the claude-plugin and streamdeck-claude hook tests so both
+    files exercise the same polling shape.
+    """
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if condition():
+            return True
+        time.sleep(interval)
+    return False
+
+
+@pytest.fixture
+def short_socket_path():
+    """Yield a filesystem path short enough for an AF_UNIX socket on macOS.
+
+    macOS caps AF_UNIX paths at ~104 chars, which pytest's deep tmp paths
+    exceed. Uses /tmp directly with a short prefix, and cleans up on exit.
+    """
+    d = tempfile.mkdtemp(prefix="sdx", dir="/tmp")
+    path = os.path.join(d, "s")
+    yield path
+    try:
+        if os.path.exists(path):
+            os.unlink(path)
+        os.rmdir(d)
+    except OSError:
+        pass
