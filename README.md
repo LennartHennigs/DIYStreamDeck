@@ -44,6 +44,8 @@ If you find this useful, consider giving it a ⭐️ on [GitHub](https://github.
 1. [Install CircuitPython](https://learn.adafruit.com/welcome-to-circuitpython/installing-circuitpython) on the Pico.
 2. Install required libraries into `lib/`: `adafruit_dotstar.mpy`, `adafruit_hid`, and [rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython).
 3. Copy `src/pi_pico/` to the Pico root.
+   - **CLI (recommended):** `./deploy-to-pico.sh` — copies `code.py` and `key_def.json` to `/Volumes/CIRCUITPY` automatically. Includes a macOS 14+ remount fix to prevent FAT32 corruption. The remount is temporary; Thonny works as normal after reconnecting.
+   - **Manual:** drag-and-drop in Finder, or use [Thonny](https://thonny.org/).
 4. Edit `key_def.json` to set up your layouts. Key `0` is top-left, `15` is bottom-right. [Thonny](https://thonny.org/) makes this easy.
 
 ### Mac Watchdog
@@ -210,6 +212,35 @@ Place `.wav` or `.mp3` files in `src/mac/sounds/` (configure path in `plugins_co
 | `sounds.play 'file.mp3'` | Play a sound file |
 | `sounds.stop` | Stop playback |
 
+### Flash (Claude Code integration)
+
+The flash plugin lights the whole keypad briefly in traffic-light colors when Claude Code fires lifecycle events:
+
+| Event | Color | Meaning |
+| --- | --- | --- |
+| `Stop` | green | Claude finished a turn cleanly |
+| `Notification` | red | Claude needs your input (permission prompt, idle) |
+| `StopFailure` | yellow | Turn ended with an API error |
+
+Setup:
+
+```bash
+# 1. Copy the config template (no credentials needed; empty defaults work)
+cp src/mac/plugins_config/flash.json.example src/mac/plugins_config/flash.json
+
+# 2. Register the hook script with Claude Code (idempotent; backs up settings.json first)
+brew install jq   # once, if you don't already have it
+./src/mac/hooks/install-claude-hooks.sh
+```
+
+The installer appends three entries to `~/.claude/settings.json` — coexists with peon-ping or any other hooks you have wired up. Remove with `./src/mac/hooks/uninstall-claude-hooks.sh`.
+
+The plugin also exposes `flash.green`, `flash.red`, `flash.yellow` as keypad-triggerable commands for testing (add `"action": "flash.green"` to any key in `key_def.json`).
+
+**How it works.** The watchdog owns the serial port to the Pico exclusively — Claude Code hooks can't write to it directly. Instead, the flash plugin runs a background listener on a Unix domain socket (`/tmp/streamdeck-flash.sock`). The hook script writes a one-line datagram (`green`/`red`/`yellow`) to the socket; the plugin validates and forwards `Flash: <color>` over the serial port under the watchdog's existing lock. The Pico floods all LEDs with the color for ~250 ms, then repaints the real layout via the existing `update_keys()` — non-blocking; key scanning never freezes.
+
+If the watchdog isn't running, or the Pico is unplugged, the hook silently no-ops so Claude Code isn't slowed down.
+
 ---
 
 ## Testing
@@ -220,7 +251,7 @@ python3 -m venv test_venv && source test_venv/bin/activate
 pip install -r tests/requirements_test.txt
 
 # Run tests
-./run-tests.sh all       # everything (255 tests)
+./run-tests.sh all       # everything (296 tests)
 ./run-tests.sh pico      # Pi Pico only
 ./run-tests.sh mac       # Mac/watchdog only
 ./run-tests.sh security  # security tests only

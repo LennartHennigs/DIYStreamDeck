@@ -1,6 +1,28 @@
 
 # CHANGELOG
 
+## 2026-07-03 (deploy-to-pico.sh)
+
+- **New `deploy-to-pico.sh`** — CLI script to copy `code.py` and `key_def.json` to the Pico's CIRCUITPY volume. Includes a `noasync` remount step to prevent FAT32 corruption on macOS 14+. The remount is session-scoped; Thonny and normal USB behaviour are unaffected after reconnect.
+
+## 2026-07-03 (Claude Code integration: flash plugin + PING removal)
+
+### New: flash plugin — traffic-light feedback for Claude Code hooks
+
+- **`Flash: <color>` serial protocol on the Pico** — new Mac → Pico command. On receipt, the Pico floods all 16 LEDs with the color's RGB tuple for ~250 ms, then repaints the active layout via the existing `update_keys()` — non-blocking, so key scanning never freezes and the real layout (app / folder / URL) is restored exactly. Recognized colors: `green`, `red`, `yellow` (dim: `(0, 90, 0)`, `(110, 0, 0)`, `(110, 70, 0)` — full-intensity RGB across 16 LEDs is harsh). New `FLASH_COLORS` constant and `flash_all(rgb)` method in `code.py`; deadline check in `run()` restores after `FLASH_DURATION_S`. Unknown colors are silently ignored.
+- **New `flash` plugin (`src/mac/plugins/flash.py`)** — background Unix domain socket listener (`/tmp/streamdeck-flash.sock`, `SOCK_DGRAM`) that validates incoming color datagrams against `VALID_COLORS = ("green", "red", "yellow")` and forwards `Flash: <color>\n` to the Pico via the watchdog's existing serial lock. Junk payloads dropped silently (matches the input-validation shape of `sounds.py`). Also exposes `flash.green` / `flash.red` / `flash.yellow` as keypad-triggerable commands for testing. Stale socket files from prior crashes are cleaned up on start.
+- **`BasePlugin` lifecycle extension** — added optional `start(send_to_keypad)` / `stop()` methods (both no-op by default). Service-style plugins that push events *to* the keypad (rather than only reacting to keypresses) use `start()` to receive a sender callable from the watchdog and to spawn background listeners. Existing plugins (`spotify`, `hue`, `sounds`) are unaffected.
+- **Watchdog wiring** — new `_send_line_to_keypad(line)` method wraps `_serial_write` under the existing `_serial_lock`. `main()` now calls `plugin.start(watchdog._send_line_to_keypad)` after loading plugins and `plugin.stop()` in the shutdown `finally` block (before `send_bye()`). Errors in either are caught and logged.
+- **Claude Code hook script (`src/mac/hooks/streamdeck-flash.py`)** — reads Claude Code's JSON event payload on stdin, maps `Stop → green`, `Notification → red`, `StopFailure → yellow`, writes a datagram to the flash socket. Silent on any failure (missing socket, bad JSON, closed connection) — Claude Code isn't slowed down when the keypad isn't connected. Respects `STREAMDECK_FLASH_SOCKET` env var for tests.
+- **Installer (`src/mac/hooks/install-claude-hooks.sh`)** — idempotent bash + `jq` script that appends `Stop` / `Notification` / `StopFailure` hook entries to `~/.claude/settings.json`. Creates `settings.json.bak` before mutation, refuses to touch malformed JSON, coexists with peon-ping and other hooks. Companion `uninstall-claude-hooks.sh` removes only entries pointing at this repo's `streamdeck-flash.py`.
+- **`CLAUDE.md` protocol table** — added `Flash: green|red|yellow` row (Mac → Pico direction) and `src/mac/hooks/` to the file-locations table.
+- **`README.md`** — new "Flash (Claude Code integration)" plugin section with setup / uninstall / architecture-in-brief.
+- **Tests: 46 new (277 → 296).** `test_base_plugin_lifecycle.py` (4), `test_watchdog.py::TestSendLineToKeypad` (3), `test_flash_plugin.py` (18), `test_flash_handler.py` (9), `test_streamdeck_flash.py` (9), `test_install_claude_hooks.py` (10 — install idempotency, backup creation, existing-hook preservation, uninstall selectivity, invalid-JSON refusal). Installer tests skip if `jq` isn't installed.
+
+### Cleanup: remove unused PING/PONG port-probe fallback
+
+- **Watchdog / Pico: remove `PING/PONG` port-probe protocol** — `find_pico_port_by_ping` was a fallback that only fired when VID detection failed. VID detection has always succeeded on real hardware (Pico `0x2E8A`, Adafruit `0x239A`), so the code path was never exercised in practice. Removed `find_pico_port_by_ping` and its wrapper `find_pico_port` from `watchdog.py` (`main()` now calls `find_pico_port_by_vid` directly); removed the `if serial_str == "PING":` branch from `code.py:process_serial_str`. Dropped 8 corresponding Mac tests and 4 Pico tests. `CLAUDE.md` protocol table trimmed. If VID detection ever fails, `--port /dev/cu.usbmodemXXXX` remains the escape hatch. Simplification aligns with the KISS/YAGNI principles in `CLAUDE.md`.
+
 ## 2026-04-16 (Output protocol + eager config validation + string key type)
 
 - **Pico/Mac: `Output:` serial protocol message (issue #6)** — Pico can now forward text to the Mac watchdog console via `send_output(text)`, which writes `Output: <text>\n` over serial. The watchdog receives it with a new `handle_output()` handler that always prints `[Pico] <text>` to stdout regardless of the verbose flag. Useful for debugging and for surfacing config errors at load time.
