@@ -404,9 +404,13 @@ class TestColorStringToTuple:
         assert self.kc.color_string_to_tuple("#1A2B3C") == (26, 43, 60)
 
     def test_non_hash_string_returns_none(self):
-        """Strings not starting with '#' return None."""
-        assert self.kc.color_string_to_tuple("red") is None
+        """Non-hex strings that aren't a known color name return None."""
+        assert self.kc.color_string_to_tuple("chartreuse") is None
         assert self.kc.color_string_to_tuple("255,0,0") is None
+
+    def test_named_color_returns_tuple(self):
+        """A known color name resolves to its RGB tuple."""
+        assert self.kc.color_string_to_tuple("red") == (255, 0, 0)
 
     def test_invalid_hex_raises_valueerror(self):
         """A '#' string with non-hex digits must raise ValueError, not crash silently."""

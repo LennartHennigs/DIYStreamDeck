@@ -1,6 +1,11 @@
 
 # CHANGELOG
 
+## 2026-07-05 (named colors in key_def.json)
+
+- **Pico: color fields now accept named colors, not just hex.** `color`, `toggleColor`, and `pressedColor` can be written as a name (`"red"`, `"orange"`, `"gray"`, …) instead of `#RRGGBB`, making layouts far easier to read. Added a `NAMED_COLORS` map (13 entries incl. `gray`/`grey` alias) and one lookup line in `color_string_to_tuple` — names resolve case- and whitespace-insensitively; unknown names still return `None` (non-crashing) exactly as before, and hex is unchanged. Values are full-brightness to match the hex colors already used in `key_def.json`; kept separate from the dimmed `FLASH_COLORS` signal palette. New `test_named_colors` in `test_key_controller.py`.
+- **`key_def.json` rewritten to use names** wherever a hex value had an exact named equivalent (`#FF0000`→`red`, `#FFFF00`→`yellow`, etc.). The four brand-matched one-off shades (Zeplin `#FF4D04`, Outlook `#A2BAF5`, Slack `#4E1E66`, TODO accent `#0080FF`) keep their hex values — no standard name fits. README documents both hex and the named-color table.
+
 ## 2026-07-04 (code-review fixes: heartbeat, signal color, dedup, plugin lifecycle)
 
 - **Pico: blocking key actions no longer trip the heartbeat timeout.** `handle_string_key` sleeps `string_delay` per character inside the keypress path; a long string (~80+ chars at the default 0.05 s) could block the main loop past `PICO_TIMEOUT_SECONDS` (4 s), so `run()`'s timeout check unloaded the keypad mid-use. Both `handle_string_key` and `handle_key_sequences` now refresh `last_heartbeat = time.monotonic()` when they finish, crediting back the self-inflicted blocking time. If the host is genuinely gone, the timeout still fires 4 s after typing ends. New tests in `test_heartbeat_functionality.py`.

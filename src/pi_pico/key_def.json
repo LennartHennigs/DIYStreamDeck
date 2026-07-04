@@ -8,22 +8,22 @@
     "_default": {
       "12": {
         "folder": "apps_folder",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "Apps Folder"
       },
       "13": {
         "folder": "controls_folder",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "Controls Folder"
       },
       "14": {
         "key_sequence": "GUI+TAB",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Previous App"
       },
       "15": {
         "folder": "close_app_folder",
-        "color": "#FF0000",
+        "color": "red",
         "description": "Close App Folder"
       }
     },
@@ -31,42 +31,42 @@
     "Finder": {
       "0": {
         "key_sequence": "GUI+N",
-        "color": "#00FF00",
+        "color": "green",
         "description": "New Folder"
       },
       "1": {
         "key_sequence": "GUI+SEMICOLON",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "Navigate back"
       },
       "2": {
         "key_sequence": "GUI+QUOTE",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "Navigate forth"
       },
       "3": {
         "key_sequence": "GUI+W",
-        "color": "#FF0000",
+        "color": "red",
         "description": "Close Window"
       },
       "4": {
         "key_sequence": "GUI+SHIFT+D",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Desktop"
       },
       "5": {
         "key_sequence": "GUI+SHIFT+O",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Documents"
       },
       "6": {
         "key_sequence": "ALT+GUI+L",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Downloads"
       },
       "8": {
         "key_sequence": "GUI+T",
-        "color": "#00FF00",
+        "color": "green",
         "description": "New Tab"
       }
     },
@@ -74,42 +74,42 @@
     "Slack": {
       "0": {
         "key_sequence": "CONTROL+ONE",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Home"
       },
       "1": {
         "key_sequence": "CONTROL+TWO",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "DMs"
       },
       "2": {
         "key_sequence": "CONTROL+THREE",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Activity"
       },
       "3": {
         "key_sequence": "CONTROL+FOUR",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Later"
       },
       "4": {
         "key_sequence": "GUI+N",
-        "color": "#00FF00",
+        "color": "green",
         "description": "New Conversations"
       },
       "5": {
         "key_sequence": "GUI+F",
-        "color": "#FFA500",
+        "color": "orange",
         "description": "Find Conversation"
       },
       "6": {
         "key_sequence": "ESCAPE",
-        "color": "#000000",
+        "color": "black",
         "description": "Cancel"
       },
       "8": {
         "key_sequence": "GUI+SHIFT+D",
-        "color": "#0000FF",
+        "color": "blue",
         "description": "Toggle Sidebar"
       }
     },
@@ -117,7 +117,7 @@
     "Notes": {
       "0": {
         "key_sequence": "GUI+N",
-        "color": "#00FF00",
+        "color": "green",
         "description": "New Note"        
       }
     },
@@ -129,32 +129,32 @@
     "Google Chrome": {
       "0": {
         "key_sequence": "GUI+T",
-        "color": "#00FF00",
+        "color": "green",
         "description": "New Tab"
       },
       "1": {
         "key_sequence": "CONTROL+SHIFT+TAB",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Prev Tab"
       },
       "2": {
         "key_sequence": "CONTROL+TAB",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Next Tab"
       },
       "3": {
         "key_sequence": "GUI+W",
-        "color": "#FF0000",
+        "color": "red",
         "description": "Close Tab"
       },
       "5": {
         "key_sequence": "GUI+LEFT_ARROW",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "Back"
       },
       "6": {
         "key_sequence": "GUI+RIGHT_ARROW",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "Forward"
       }
     },
@@ -162,12 +162,12 @@
     "Thonny": {
       "2": {
         "key_sequence": "F5",
-        "color": "#00FF00",
+        "color": "green",
         "description": "RUN"
       },
       "3": {
         "key_sequence": "CONTROL+F2",
-        "color": "#FF0000",
+        "color": "red",
         "description": "STOP"
       }
     },
@@ -175,54 +175,54 @@
     "com.larian.bg3": {
       "0": {
         "key_sequence": "TAB",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Party"
       },
       "1": {
         "key_sequence": "I",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Inventory"
       },
       "3": {
         "key_sequence": "M",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Map"
       },
       "2": {
         "key_sequence": "ESCAPE",
-        "color": "#000000",
+        "color": "black",
         "description": "Escape"
       },
       "4": {
         "key_sequence": "Q",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "rotate left",
         "pressedUntilReleased": true
       },
       "5": {
         "key_sequence": "HOME",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "to Char"
       },
       "6": {
         "key_sequence": "E",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "rotate right",
         "pressedUntilReleased": true
       },
       "8": {
         "key_sequence": "LEFT_BRACKET",
-        "color": "#00FF00",
+        "color": "green",
         "description": "prev. char"
       },
       "9": {
         "key_sequence": "RIGHT_BRACKET",
-        "color": "#00FF00",
+        "color": "green",
         "description": "next char"
       },
       "11": {
         "key_sequence": "SPACE",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "end turn"
       }
     },
@@ -230,37 +230,37 @@
     "zoom.us": {
       "0": {
         "key_sequence": "GUI+SHIFT+A",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Mute/Unmute"
       },
       "1": {
         "key_sequence": "GUI+SHIFT+V",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Start/Stop Video"
       },
       "2": {
         "key_sequence": "ESCAPE",
-        "color": "#000000",
+        "color": "black",
         "description": "Escape"
       },
       "3": {
         "key_sequence": "ALT+Z",
-        "color": "#FFA500",
+        "color": "orange",
         "description": "Raise Hand"
       },
       "4": {
         "key_sequence": "GUI+U",
-        "color": "#FFA500",
+        "color": "orange",
         "description": "Show Participants Panel"
       },
       "5": {
         "key_sequence": "GUI+SHIFT+H",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Show/Hide Chat"
       },
       "6": {
         "key_sequence": "GUI+SHIFT+S",
-        "color": "#00FF00",
+        "color": "green",
         "description": "Share Screen"
       },
       "7": {
@@ -269,22 +269,22 @@
           0.175,
           "TAB"
         ],
-        "color": "#FFA500",
+        "color": "orange",
         "description": "Invite Participants"
       },
       "8": {
         "key_sequence": "GUI+SHIFT+F",
-        "color": "#0000FF",
+        "color": "blue",
         "description": "Enter/Exit Full Screen"
       },
       "10": {
         "key_sequence": "GUI+SHIFT+C",
-        "color": "#FF0000",
+        "color": "red",
         "description": "Record Meeting"
       },
       "11": {
         "key_sequence": "GUI+SHIFT+P",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "Pause/Resume Recording"
       }
     },
@@ -292,27 +292,27 @@
     "Microsoft Teams classic": {
       "0": {
         "key_sequence": "GUI+SHIFT+M",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Mute/Unmute"
       },
       "1": {
         "key_sequence": "GUI+SHIFT+O",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Start/Stop Video"
       },
       "2": {
         "key_sequence": "ESCAPE",
-        "color": "#000000",
+        "color": "black",
         "description": "Escape"
       },
       "3": {
         "key_sequence": "GUI+SHIFT+K",
-        "color": "#FFA500",
+        "color": "orange",
         "description": "Raise Hand"
       },
       "4": {
         "key_sequence": "GUI+SHIFT+E",
-        "color": "#00FF00",
+        "color": "green",
         "description": "Share Screen"
       }
     },
@@ -324,17 +324,17 @@
     "Microsoft Outlook": {
       "0": {
         "key_sequence": "GUI+ONE",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Switch to Mail"
       },
       "1": {
         "key_sequence": "GUI+TWO",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Switch to Calendar"
       },
       "3": {
         "key_sequence": "GUI+ALT+N",
-        "color": "#00FF00",
+        "color": "green",
         "description": "New Email"
       }
     },
@@ -342,17 +342,17 @@
     "Spotify": {
       "4": {
         "key_sequence": "GUI+LEFT_ARROW",
-        "color": "#00FF00",
+        "color": "green",
         "description": "Spotify - Previous Song"
       },
       "5": {
         "key_sequence": "SPACE",
-        "color": "#00FF00",
+        "color": "green",
         "description": "Spotify - Play or Pause"
       },
       "6": {
         "key_sequence": "GUI+RIGHT_ARROW",
-        "color": "#00FF00",
+        "color": "green",
         "description": "Spotify - Next Song"
       }
     },
@@ -360,47 +360,47 @@
     "Code": {
       "0": {
         "key_sequence": "GUI+SHIFT+E",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Explorer"
       },
       "1": {
         "key_sequence": "GUI+SHIFT+F",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Find"
       },
       "2": {
         "key_sequence": "CONTROL+SHIFT+G",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Source Control"
       },
       "3": {
         "key_sequence": "GUI+SHIFT+D",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Run & Debug"
       },
       "4": {
         "key_sequence": "GUI+B",
-        "color": "#0000FF",
+        "color": "blue",
         "description": "Toggle Sidebar"
       },
       "5": {
         "key_sequence": "GUI+SHIFT+P",
-        "color": "#00FF00",
+        "color": "green",
         "description": "Command Palette"
       },
       "6": {
         "key_sequence": "ESCAPE",
-        "color": "#000000",
+        "color": "black",
         "description": "Escape"
       },
       "7": {
         "key_sequence": "GUI+SHIFT+B",
-        "color": "#FFA500",
+        "color": "orange",
         "description": "Run Build Command"
       },
       "8": {
         "key_sequence": "GUI+SHIFT+V",
-        "color": "#00FF00",
+        "color": "green",
         "description": "Preview Markdown"
       }
     },
@@ -408,7 +408,7 @@
     "iTerm2": {
       "0": {
         "key_sequence": "GUI+T",
-        "color": "#00FF00",
+        "color": "green",
         "description": "New Tab"
       }
     },
@@ -437,7 +437,7 @@
       "ignore_default": true,
       "0": {
         "application": "zoom.us",
-        "color": "#0000FF",
+        "color": "blue",
         "description": "Launch Zoom"
       },
       "1": {
@@ -452,7 +452,7 @@
       },
       "4": {
         "application": "Figma",
-        "color": "#FF0000",
+        "color": "red",
         "description": "Launch Sketch"
       },
       "5": {
@@ -462,27 +462,27 @@
       },
       "8": {
         "application": "Finder",
-        "color": "#0000FF",
+        "color": "blue",
         "description": "Launch Finder"
       },
       "9": {
         "application": "Spotify",
-        "color": "#00FF00",
+        "color": "green",
         "description": "Launch Spotify"
       },
       "10": {
         "application": "Notes",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Launch Notes"
       },
       "11": {
         "application": "iTerm",
-        "color": "#808080",
+        "color": "gray",
         "description": "Launch iTerm"
       },
       "12": {
         "action": "close_folder",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "Close Folder"
       }
     },
@@ -491,52 +491,52 @@
       "ignore_default": true,
       "0": {
         "key_sequence": "F11",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Show Desktop"
       },
       "1": {
         "key_sequence": "LEFT_CONTROL+UP_ARROW",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Show all apps"
       },
       "2": {
         "key_sequence": "LEFT_CONTROL+DOWN_ARROW",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Show all apps windows"
       },
       "3": {
         "key_sequence": "GUI+LEFT_CONTROL+Q",
-        "color": "#FF0000",
+        "color": "red",
         "description": "Lock Screen"
       },
       "4": {
         "action": "spotify.prev",
-        "color": "#00FF00",
+        "color": "green",
         "description": "Spotify - Previous Song"
       },
       "5": {
         "action": "spotify.playpause",
-        "color": "#00FF00",
+        "color": "green",
         "description": "Spotify - Play or Pause"
       },
       "6": {
         "action": "spotify.next",
-        "color": "#00FF00",
+        "color": "green",
         "description": "Spotify - Next Song"
       },
       "9": {
         "action": "hue.toggle 'Schreibtisch Lampe'",
-        "color": "#FFFF00",
+        "color": "yellow",
         "description": "Let there be light!"
       },
       "11": {
         "action": "sounds.play 'grillen.mp3'",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "play"
       },
       "13": {
         "action": "close_folder",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "Close Folder"
       }
     },
@@ -545,12 +545,12 @@
       "ignore_default": true,
       "14": {
         "action": "close_folder",
-        "color": "#FFFFFF",
+        "color": "white",
         "description": "Close Folder"
       },
       "15": {
         "key_sequence": "GUI+Q",
-        "color": "#FF0000",
+        "color": "red",
         "description": "Close App"
       }
     }

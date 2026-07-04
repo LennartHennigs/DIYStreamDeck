@@ -33,6 +33,26 @@ FLASH_COLORS = {
     "yellow": (110, 110, 0),
 }
 
+# Predefined color names usable anywhere a "#RRGGBB" hex value is accepted
+# (color / toggleColor / pressedColor). Full-brightness values, matching the
+# hex colors already used in key_def.json — kept separate from the dimmed
+# FLASH_COLORS above, which are status signals with a different purpose.
+NAMED_COLORS = {
+    "black":   (0, 0, 0),
+    "white":   (255, 255, 255),
+    "red":     (255, 0, 0),
+    "green":   (0, 255, 0),
+    "blue":    (0, 0, 255),
+    "yellow":  (255, 255, 0),
+    "orange":  (255, 165, 0),
+    "cyan":    (0, 255, 255),
+    "magenta": (255, 0, 255),
+    "purple":  (128, 0, 128),
+    "pink":    (255, 105, 180),
+    "gray":    (128, 128, 128),
+    "grey":    (128, 128, 128),
+}
+
 
 class KeyController:
     JSON_FILE = "key_def.json"
@@ -302,7 +322,7 @@ class KeyController:
         return tuple(keycodes)
 
 
-    # convert the color string to a tuple if needed
+    # convert the color string (hex "#RRGGBB" or a named color) to an RGB tuple
     def color_string_to_tuple(self, color_string):
         if not color_string or not isinstance(color_string, str):
             return None
@@ -311,7 +331,7 @@ class KeyController:
                 return tuple(int(color_string[i:i+2], 16) for i in (1, 3, 5))
             except ValueError:
                 raise ValueError(f"Invalid hex color: '{color_string}'")
-        return None
+        return NAMED_COLORS.get(color_string.strip().lower())
 
 
     # parse a bool from a config value that may be a native bool or string "true"/"false"

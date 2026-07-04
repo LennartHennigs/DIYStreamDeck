@@ -334,9 +334,9 @@ class TestKeypadFunctionality:
         """Test handling of invalid color formats"""
         # Valid hex color
         assert self.controller.color_string_to_tuple("#FF0000") == (255, 0, 0)
-        
-        # Invalid color format — must return None, not False
-        assert self.controller.color_string_to_tuple("red") is None
+
+        # Known color name resolves; unknown name returns None, not False
+        assert self.controller.color_string_to_tuple("red") == (255, 0, 0)
         assert self.controller.color_string_to_tuple("invalid") is None
         
     def test_key_update_after_app_change(self):

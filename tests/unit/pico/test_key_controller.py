@@ -142,11 +142,31 @@ class TestKeyController:
         # Test hex color
         result = self.controller.color_string_to_tuple("#FF0000")
         assert result == (255, 0, 0)
-        
+
         # Test invalid color — must return None, not False
         result = self.controller.color_string_to_tuple("invalid")
         assert result is None
-        
+
+    def test_named_colors(self):
+        """Named colors resolve to full-brightness RGB tuples (matching key_def usage)"""
+        assert self.controller.color_string_to_tuple("red") == (255, 0, 0)
+        assert self.controller.color_string_to_tuple("green") == (0, 255, 0)
+        assert self.controller.color_string_to_tuple("yellow") == (255, 255, 0)
+        assert self.controller.color_string_to_tuple("blue") == (0, 0, 255)
+        assert self.controller.color_string_to_tuple("black") == (0, 0, 0)
+        assert self.controller.color_string_to_tuple("white") == (255, 255, 255)
+        assert self.controller.color_string_to_tuple("orange") == (255, 165, 0)
+        # case- and whitespace-insensitive
+        assert self.controller.color_string_to_tuple("  RED ") == (255, 0, 0)
+        assert self.controller.color_string_to_tuple("Green") == (0, 255, 0)
+        # gray/grey aliases
+        assert self.controller.color_string_to_tuple("gray") == (128, 128, 128)
+        assert self.controller.color_string_to_tuple("grey") == (128, 128, 128)
+        # unknown name still returns None (backward compatible)
+        assert self.controller.color_string_to_tuple("chartreuse") is None
+        # hex still works alongside names
+        assert self.controller.color_string_to_tuple("#FFA500") == (255, 165, 0)
+
     def test_serial_communication(self):
         """Test serial input/output"""
         # Ensure we use the same console object that the controller uses

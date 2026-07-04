@@ -140,10 +140,25 @@ The file has four top-level sections: `settings`, `applications`, `folders`, `ur
 
 **Common fields** (any key type):
 
-- `color` — LED color as `#RRGGBB`
+- `color` — LED color, either a `#RRGGBB` hex string or a [named color](#named-colors) (e.g. `"red"`)
 - `pressedColor` — color while held
 - `toggleColor` — color for toggled/active state
 - `description` — label printed in `--verbose` output
+
+<a name="named-colors"></a>
+**Named colors** — any color field accepts a name instead of hex (case-insensitive):
+
+| Name | RGB | Name | RGB |
+| --- | --- | --- | --- |
+| `black` | `0,0,0` | `magenta` | `255,0,255` |
+| `white` | `255,255,255` | `orange` | `255,165,0` |
+| `red` | `255,0,0` | `purple` | `128,0,128` |
+| `green` | `0,255,0` | `pink` | `255,105,180` |
+| `blue` | `0,0,255` | `gray` / `grey` | `128,128,128` |
+| `yellow` | `255,255,0` | | |
+| `cyan` | `0,255,255` | | |
+
+For any shade not listed, use a `#RRGGBB` hex value.
 
 **Shortcut-specific:**
 
