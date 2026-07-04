@@ -60,7 +60,7 @@ If you find this useful, consider giving it a ⭐️ on [GitHub](https://github.
 2. Install required libraries into `lib/`: `adafruit_dotstar.mpy`, `adafruit_hid`, and [rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython).
 3. Copy `src/pi_pico/` to the Pico root.
 
-   **First-time install — CLI:** `./deploy-to-pico.sh` copies `code.py` and `key_def.json` to `/Volumes/CIRCUITPY`. It performs a `noasync` remount to prevent FAT32 corruption on macOS 14+, which requires **`sudo` — you will be prompted for your macOS admin password**. The remount is temporary; unplugging and replugging restores normal behaviour, and Thonny works as usual afterward.
+   **First-time install — CLI:** `./deploy-to-pico.sh` copies `code.py` and `key_def.json` to `/Volumes/CIRCUITPY`. Pass `--code` to deploy only `code.py`, `--keys` to deploy only `key_def.json` (default: both); `--help` prints usage. An optional volume path overrides the default (e.g. `./deploy-to-pico.sh --keys /Volumes/CIRCUITPY1`). It performs a `noasync` remount to prevent FAT32 corruption on macOS 14+, which requires **`sudo` — you will be prompted for your macOS admin password**. The remount is temporary; unplugging and replugging restores normal behaviour, and Thonny works as usual afterward.
 
    **Iterating on `code.py` — Thonny:** [Thonny](https://thonny.org/) is the easier path once the Pico is set up. Open the file directly from `/Volumes/CIRCUITPY`, edit, save (Cmd-S), and press `Ctrl-D` in the REPL to soft-reboot the Pico. No `sudo`, no remount, no unplugging. This is the fastest inner loop for firmware changes.
 

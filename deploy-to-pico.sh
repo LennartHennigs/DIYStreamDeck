@@ -1,13 +1,36 @@
 #!/bin/bash
-# Deploy code.py and key_def.json to the Pi Pico CIRCUITPY volume.
-# Usage: ./deploy-to-pico.sh [/Volumes/CIRCUITPY]
+# Deploy code.py and/or key_def.json to the Pi Pico CIRCUITPY volume.
+# Usage: ./deploy-to-pico.sh [--code|--keys] [/Volumes/CIRCUITPY]
+#
+#   --code   deploy only code.py (firmware)
+#   --keys   deploy only key_def.json (key settings)
+#   (default: deploy both)
 #
 # The noasync remount prevents FAT32 corruption on macOS 14+ (async writes bug).
 # This mount change is temporary — unplugging/replugging restores normal behaviour.
 
 set -e
 
-MOUNT="${1:-/Volumes/CIRCUITPY}"
+usage() {
+  echo "Usage: ./deploy-to-pico.sh [--code|--keys] [/Volumes/CIRCUITPY]"
+  echo "  --code   deploy only code.py (firmware)"
+  echo "  --keys   deploy only key_def.json (key settings)"
+  echo "  (default: deploy both)"
+}
+
+MOUNT="/Volumes/CIRCUITPY"
+DEPLOY_CODE=true
+DEPLOY_KEYS=true
+
+for arg in "$@"; do
+  case "$arg" in
+    --code) DEPLOY_CODE=true; DEPLOY_KEYS=false ;;
+    --keys) DEPLOY_CODE=false; DEPLOY_KEYS=true ;;
+    -h|--help) usage; exit 0 ;;
+    -*) echo "Error: unknown option '$arg'"; usage; exit 1 ;;
+    *) MOUNT="$arg" ;;
+  esac
+done
 
 if [ ! -d "$MOUNT" ]; then
   echo "Error: CIRCUITPY not found at $MOUNT"
@@ -31,7 +54,8 @@ DEVICE=$(df "$MOUNT" | awk 'NR==2 {print $1}')
 remount_noasync "$DEVICE" "$MOUNT"
 
 echo "Deploying to $MOUNT..."
-cp -X src/pi_pico/code.py src/pi_pico/key_def.json "$MOUNT/"
+$DEPLOY_CODE && { echo "  code.py"; cp -X src/pi_pico/code.py "$MOUNT/"; }
+$DEPLOY_KEYS && { echo "  key_def.json"; cp -X src/pi_pico/key_def.json "$MOUNT/"; }
 sync
 
 echo "Done. Pico will restart automatically."

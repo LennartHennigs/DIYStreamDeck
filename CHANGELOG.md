@@ -1,6 +1,10 @@
 
 # CHANGELOG
 
+## 2026-07-04 (deploy-to-pico.sh selective deploy)
+
+- **`deploy-to-pico.sh` now takes `--code` / `--keys` flags** — deploy only `code.py` (firmware) or only `key_def.json` (key settings); default remains both. Added `--help`/`-h` usage output and validation that rejects unknown `-*` options. The optional volume-path argument still works and can be combined with a flag (e.g. `./deploy-to-pico.sh --keys /Volumes/CIRCUITPY1`). README install instructions updated.
+
 ## 2026-07-03 (rename flash → claude + persistent signal color)
 
 - **Plugin renamed `flash` → `claude`.** "Flash" described the LED animation, not what the plugin does — it's a Claude Code status channel and the name should say so. Class `FlashPlugin` → `ClaudePlugin`; commands `flash.{green,red,yellow}` → `claude.{green,red,yellow}`; module `src/mac/plugins/flash.py` → `claude.py`; config `flash.json[.example]` → `claude.json[.example]`; hook script `src/mac/hooks/streamdeck-flash.py` → `streamdeck-claude.py`; socket `/tmp/streamdeck-flash.sock` → `/tmp/streamdeck-claude.sock`; env override `STREAMDECK_FLASH_SOCKET` → `STREAMDECK_CLAUDE_SOCKET`; smoke-test script `test-flash.sh` → `test-claude.sh`. Wire message `Flash: <color>` → **`Claude: <color>`**.
