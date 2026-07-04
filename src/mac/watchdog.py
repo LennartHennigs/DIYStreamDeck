@@ -86,6 +86,11 @@ class WatchDog(Cocoa.NSObject):
         app_name = self._get_app_name(app)
         # send the app name to the keypad
         self._serial_write("Terminated: " + app_name + '\n', "Terminated")
+        # If the app that just died is the one currently shown, clear the App:
+        # dedup so a same-named relaunch that regains focus without an
+        # intervening app switch re-sends its layout instead of being suppressed.
+        if app_name == self._last_sent_app_name:
+            self._last_sent_app_name = None
 
 
     # Called every HEARTBEAT_INTERVAL seconds
@@ -185,8 +190,8 @@ class WatchDog(Cocoa.NSObject):
     def send_bye(self) -> None:
         self._serial_write("BYE\n", "BYE")
 
-    # Exposed to plugins (via BasePlugin.start(send_to_keypad)) so background
-    # listeners can push single lines to the Pico under the watchdog's lock.
+    # Exposed to plugins (via BasePlugin.on_watchdog_start(send_to_keypad)) so
+    # background listeners can push single lines to the Pico under the watchdog's lock.
     def _send_line_to_keypad(self, line: str) -> None:
         self._serial_write(line, "plugin")
 
@@ -351,6 +356,15 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
     return plugins
 
 
+# Invoke a lifecycle hook on every plugin, isolating per-plugin failures
+def _run_plugin_lifecycle(plugins: Dict[str, BasePlugin], method_name: str, *args) -> None:
+    for name, plugin in plugins.items():
+        try:
+            getattr(plugin, method_name)(*args)
+        except Exception as e:
+            print(f"Plugin '{name}' {method_name} error: {e}")
+
+
 # Main function
 def main() -> None:
     parser = argparse.ArgumentParser(
@@ -403,11 +417,7 @@ def main() -> None:
     # Start service-style plugins (background listeners). Default
     # BasePlugin.on_watchdog_start is a no-op, so keypress-only plugins
     # (spotify/hue/sounds) are unaffected.
-    for name, plugin in plugins.items():
-        try:
-            plugin.on_watchdog_start(watchdog._send_line_to_keypad)
-        except Exception as e:
-            print(f"Plugin '{name}' on_watchdog_start error: {e}")
+    _run_plugin_lifecycle(plugins, 'on_watchdog_start', watchdog._send_line_to_keypad)
 
     try:
         watchdog.run_loop()
@@ -420,11 +430,7 @@ def main() -> None:
         watchdog._stop_event.set()
         heartbeat_thread.join()   # stop heartbeat before BYE to avoid lock contention
         # Stop plugins before closing the port (they may want a final flush)
-        for name, plugin in plugins.items():
-            try:
-                plugin.on_watchdog_stop()
-            except Exception as e:
-                print(f"Plugin '{name}' on_watchdog_stop error: {e}")
+        _run_plugin_lifecycle(plugins, 'on_watchdog_stop')
         watchdog.send_bye()
         ser.flush()
         time.sleep(SERIAL_CLOSE_GRACE_PERIOD)

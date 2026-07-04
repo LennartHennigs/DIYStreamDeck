@@ -327,6 +327,32 @@ class TestHeartbeatFunctionality:
         assert self.controller.unloaded is False
         assert len(self.controller.folder_stack) == 1  # Still in folder
 
+    def test_string_key_refreshes_heartbeat_after_blocking(self):
+        """A blocking per-character string type must refresh last_heartbeat.
+
+        handle_string_key sleeps `delay` per character inside the keypress
+        path; a long string can exceed PICO_TIMEOUT_SECONDS while no HB frames
+        are read, spuriously unloading the keypad. The fix credits back the
+        self-inflicted blocking time by refreshing last_heartbeat at the end.
+        """
+        self.controller.last_heartbeat = time.monotonic() - 10
+        with patch('time.sleep'):  # don't actually block the test
+            self.controller.handle_string_key("a longish string of text", 0.05)
+        assert abs(time.monotonic() - self.controller.last_heartbeat) < 1.0, (
+            "handle_string_key must refresh last_heartbeat so long strings do "
+            "not spuriously unload the keypad"
+        )
+
+    def test_key_sequence_refreshes_heartbeat_after_blocking(self):
+        """handle_key_sequences also sleeps (inter-key + float delays) — it must
+        refresh last_heartbeat for the same reason."""
+        self.controller.last_heartbeat = time.monotonic() - 10
+        with patch('time.sleep'):
+            self.controller.handle_key_sequences(
+                [(6,), 0.5, (6,)], pressedUntilReleased=False)
+        assert abs(time.monotonic() - self.controller.last_heartbeat) < 1.0, (
+            "handle_key_sequences must refresh last_heartbeat after blocking"
+        )
 
     def test_heartbeat_unloaded_set_before_clear_keypad(self):
         """unloaded must be True even when clear_keypad() raises an exception."""

@@ -403,6 +403,75 @@ class TestAppNameDeduplication:
         )
 
 
+def _make_terminate_notification(app_name):
+    """Build a stub NSWorkspace termination notification for `app_name`."""
+    app = MagicMock()
+    app.localizedName.return_value = app_name
+    note = MagicMock()
+    note.userInfo.return_value = {'NSWorkspaceApplicationKey': app}
+    return note
+
+
+class TestTerminatedResetsDedup:
+    """applicationTerminated_ must reset the App: dedup when the terminated app
+    is the one currently displayed, so a same-named relaunch that regains focus
+    without an intervening app switch re-sends its layout."""
+
+    def test_terminating_current_app_allows_resend(self):
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+        wdog.send_app_name_to_microcontroller("Foo")          # App: Foo (1)
+        wdog.applicationTerminated_(_make_terminate_notification("Foo"))  # resets dedup
+        wdog.send_app_name_to_microcontroller("Foo")          # App: Foo (2) again
+        writes = [c.args[0] for c in ser.write.call_args_list]
+        assert writes.count(b"App: Foo\n") == 2, (
+            "terminating the currently-shown app must reset the dedup so a "
+            "same-name relaunch re-sends App:"
+        )
+
+    def test_terminating_other_app_keeps_dedup(self):
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+        wdog.send_app_name_to_microcontroller("Foo")          # App: Foo (1)
+        wdog.applicationTerminated_(_make_terminate_notification("Bar"))  # unrelated
+        wdog.send_app_name_to_microcontroller("Foo")          # suppressed
+        writes = [c.args[0] for c in ser.write.call_args_list]
+        assert writes.count(b"App: Foo\n") == 1, (
+            "terminating a different app must NOT reset the dedup for the "
+            "currently-shown app"
+        )
+
+
+class TestRunPluginLifecycle:
+    """The _run_plugin_lifecycle helper must invoke a named hook on every plugin
+    and isolate per-plugin exceptions."""
+
+    def test_runs_hook_on_each_plugin_with_args(self):
+        wd = _import_watchdog()
+        p1, p2 = MagicMock(), MagicMock()
+        wd._run_plugin_lifecycle({'a': p1, 'b': p2}, 'on_watchdog_start', 'SEND')
+        p1.on_watchdog_start.assert_called_once_with('SEND')
+        p2.on_watchdog_start.assert_called_once_with('SEND')
+
+    def test_one_plugin_error_does_not_stop_others(self, capsys):
+        wd = _import_watchdog()
+        p1, p2 = MagicMock(), MagicMock()
+        p1.on_watchdog_stop.side_effect = RuntimeError("boom")
+        wd._run_plugin_lifecycle({'a': p1, 'b': p2}, 'on_watchdog_stop')
+        p2.on_watchdog_stop.assert_called_once_with()
+        assert "boom" in capsys.readouterr().out, (
+            "a plugin lifecycle error must be caught and reported, not raised"
+        )
+
+    def test_send_line_comment_references_correct_hook(self):
+        """The _send_line_to_keypad comment must not reference the old
+        BasePlugin.start name (renamed to on_watchdog_start)."""
+        src = _read_source()
+        assert 'BasePlugin.start(' not in src, (
+            "stale comment references BasePlugin.start; the hook is on_watchdog_start"
+        )
+
+
 class TestHeartbeatThreadLifecycle:
 
     def test_heartbeat_thread_runs_and_stops(self):

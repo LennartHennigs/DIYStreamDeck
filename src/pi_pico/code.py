@@ -81,6 +81,14 @@ class KeyController:
         self.autoclose_current_folder = False
         self.folder_stack = []
 
+        # Sticky signal state: holds the RGB tuple currently flood-filled as a
+        # Claude Code status signal, or None when the real layout is showing.
+        # update_keys() clears it — every repaint of the real layout is a
+        # deliberate ack (app switch, rotate, HELLO, keypress, folder open/close).
+        # A new `Claude:` line while one is active just overwrites it. Must be
+        # set before the first update_keys() call below (which reads it).
+        self._signal_color = None
+
         # load the key layout
         self.update_keys()
 
@@ -89,15 +97,6 @@ class KeyController:
         self.last_heartbeat = time.monotonic()
         # If True the keypad has been unloaded due to timeout or BYE
         self.unloaded = False
-
-        # Sticky signal state: when set, holds the RGB tuple the keypad is
-        # currently displaying as a Claude Code status flood-fill. Cleared
-        # (set to None) by any deliberate acknowledgment — app switch,
-        # rotate, HELLO handshake, or a keypress — right before update_keys()
-        # repaints the real layout. A new `Claude:` line while one is active
-        # just overwrites it. Field name kept for git-blame continuity — it
-        # used to hold a monotonic-time deadline; now it holds a color.
-        self._flash_deadline = None
 
 
     # open a folder and display the key layout
@@ -123,11 +122,10 @@ class KeyController:
     def key_press_action(self, key):
         if key.number not in self.current_config:
             return
-        # A keypress is a deliberate ack of any active Claude signal — drop
-        # the sticky color and repaint the real layout first, otherwise the
-        # 15 non-pressed keys would keep showing the flood-fill.
-        if self._flash_deadline is not None:
-            self._flash_deadline = None
+        # A keypress is a deliberate ack of any active Claude signal — repaint
+        # the real layout first (update_keys() clears the sticky color),
+        # otherwise the 15 non-pressed keys would keep showing the flood-fill.
+        if self._signal_color is not None:
             self.update_keys()
         key_def = self.current_config[key.number]
         action = key_def.get('action')
@@ -194,6 +192,8 @@ class KeyController:
         if not pressedUntilReleased:
             time.sleep(0.025)
             self.keyboard.release_all()
+        # Same heartbeat credit as handle_string_key — sequence delays block the loop.
+        self.last_heartbeat = time.monotonic()
 
 
     # type a string with an optional per-character delay for slow apps
@@ -204,10 +204,17 @@ class KeyController:
             for char in text:
                 self.layout.write(char)
                 time.sleep(delay)
+        # Typing blocks the main loop; credit back the self-inflicted delay so
+        # a long string can't trip the heartbeat timeout and unload the keypad.
+        self.last_heartbeat = time.monotonic()
 
 
     # update the key layout
     def update_keys(self):
+        # Repainting the real layout acks any active Claude signal — drop the
+        # sticky color so state matches what's actually on the LEDs. flash_all()
+        # sets LEDs directly (not via update_keys), so the signal survives it.
+        self._signal_color = None
         for key in self.keys:
             # is there a key definition for this key?
             if key.number in self.current_config:
@@ -232,7 +239,7 @@ class KeyController:
     def flash_all(self, rgb):
         for key in self.keys:
             key.set_led(*rgb)
-        self._flash_deadline = rgb
+        self._signal_color = rgb
 
 
     # read a line from the serial console
@@ -524,7 +531,6 @@ class KeyController:
             return
         self.rotate = value
         self.current_config = self.rotate_keys_if_needed()
-        self._flash_deadline = None
         self.update_keys()
 
 
@@ -543,7 +549,6 @@ class KeyController:
         else:
             self.current_config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
         self.current_config = self.rotate_keys_if_needed()
-        self._flash_deadline = None
         self.update_keys()
 
 
@@ -612,7 +617,6 @@ class KeyController:
         # HELLO: host started -> clear keypad then load basic config
         if serial_str.startswith("HELLO"):
             self.clear_keypad()
-            self._flash_deadline = None
             self.load_basic_config()
             self.last_heartbeat = time.monotonic()
             return

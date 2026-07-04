@@ -3,16 +3,17 @@
 The Pico receives `Claude: green|red|yellow` lines from the Mac watchdog
 (pushed by the claude plugin's socket relay). On receipt it must:
 - Flood-fill all keys with the color's RGB tuple.
-- Remember the color as sticky state (`_flash_deadline`) — it does NOT
+- Remember the color as sticky state (`_signal_color`) — it does NOT
   fade after a timeout; the color IS the Claude Code status signal.
 - Get cleared (and the layout repainted) by any deliberate ack:
-  App: line, Rotate: line, HELLO: handshake, or a keypress.
+  App: line, Rotate: line, HELLO: handshake, a keypress, or a folder
+  open/close — anything that repaints the real layout via update_keys().
 - NOT get cleared by `Terminated:` (app death isn't user ack).
 - Ignore unknown colors.
 
-`_flash_deadline` is the git-blame-continuous name that used to hold a
-monotonic-time deadline. It now holds either the RGB tuple currently on
-the LEDs, or None. The rename cost wasn't worth the churn.
+`_signal_color` holds either the RGB tuple currently flood-filled on the
+LEDs, or None. It is set only by `flash_all()` and cleared centrally in
+`update_keys()`, so every repaint of the real layout is an implicit ack.
 """
 import sys
 import os
@@ -79,9 +80,9 @@ class TestClaudeSerialHandler:
     def test_claude_unknown_color_ignored(self):
         """Unknown color words must NOT set sticky state or repaint keys."""
         initial_colors = self._key_colors()
-        self.controller._flash_deadline = None
+        self.controller._signal_color = None
         self.controller.process_serial_str("Claude: mauve")
-        assert self.controller._flash_deadline is None, (
+        assert self.controller._signal_color is None, (
             "unknown colors must not set sticky state"
         )
         assert self._key_colors() == initial_colors
@@ -91,22 +92,22 @@ class TestClaudeSerialHandler:
     # ------------------------------------------------------------------
 
     def test_sticky_state_none_by_default(self):
-        """New controller must have _flash_deadline is None (no active signal)."""
-        assert self.controller._flash_deadline is None
+        """New controller must have _signal_color is None (no active signal)."""
+        assert self.controller._signal_color is None
 
     def test_claude_sets_sticky_color(self):
         """Claude: <color> must store the RGB tuple as sticky state."""
         from src.pi_pico.code import FLASH_COLORS
         self.controller.process_serial_str("Claude: red")
-        assert self.controller._flash_deadline == FLASH_COLORS["red"]
+        assert self.controller._signal_color == FLASH_COLORS["red"]
 
     def test_second_claude_overrides_sticky_color(self):
         """A new Claude: overwrites the previous sticky color."""
         from src.pi_pico.code import FLASH_COLORS
         self.controller.process_serial_str("Claude: green")
-        assert self.controller._flash_deadline == FLASH_COLORS["green"]
+        assert self.controller._signal_color == FLASH_COLORS["green"]
         self.controller.process_serial_str("Claude: red")
-        assert self.controller._flash_deadline == FLASH_COLORS["red"]
+        assert self.controller._signal_color == FLASH_COLORS["red"]
         for k in self.controller.keys:
             assert getattr(k, "led_color", None) == FLASH_COLORS["red"]
 
@@ -117,38 +118,38 @@ class TestClaudeSerialHandler:
     def test_app_clears_sticky_state(self):
         """App: line clears the sticky signal and repaints the layout."""
         self.controller.process_serial_str("Claude: green")
-        assert self.controller._flash_deadline is not None
+        assert self.controller._signal_color is not None
         self.controller.process_serial_str("App: Safari")
-        assert self.controller._flash_deadline is None, (
+        assert self.controller._signal_color is None, (
             "App: must clear the sticky signal"
         )
 
     def test_rotate_clears_sticky_state(self):
         """Rotate: line clears the sticky signal."""
         self.controller.process_serial_str("Claude: red")
-        assert self.controller._flash_deadline is not None
+        assert self.controller._signal_color is not None
         self.controller.process_serial_str("Rotate: CW")
-        assert self.controller._flash_deadline is None, (
+        assert self.controller._signal_color is None, (
             "Rotate: must clear the sticky signal"
         )
 
     def test_hello_clears_sticky_state(self):
         """HELLO: handshake clears the sticky signal (fresh session)."""
         self.controller.process_serial_str("Claude: yellow")
-        assert self.controller._flash_deadline is not None
+        assert self.controller._signal_color is not None
         self.controller.process_serial_str("HELLO:1.0")
-        assert self.controller._flash_deadline is None, (
+        assert self.controller._signal_color is None, (
             "HELLO: must clear the sticky signal"
         )
 
     def test_keypress_clears_sticky_state_and_repaints(self):
         """A keypress on a configured key clears sticky state and repaints."""
         self.controller.process_serial_str("Claude: green")
-        assert self.controller._flash_deadline is not None
+        assert self.controller._signal_color is not None
         # Simulate a press on key 0 (configured for CMD+C in the test JSON).
         key = self.controller.keys[0]
         self.controller.key_press_action(key)
-        assert self.controller._flash_deadline is None, (
+        assert self.controller._signal_color is None, (
             "keypress must clear the sticky signal"
         )
 
@@ -159,9 +160,39 @@ class TestClaudeSerialHandler:
         key = self.controller.keys[5]
         self.controller.key_press_action(key)
         # Unbound press returns before the ack — sticky signal survives
-        assert self.controller._flash_deadline is not None, (
+        assert self.controller._signal_color is not None, (
             "unbound keypress should not act as ack (early return before "
             "the clear-sticky block)"
+        )
+
+    def test_open_folder_clears_sticky_state(self):
+        """Opening a folder repaints via update_keys() → must clear the signal."""
+        self.controller.folders["sig_folder"] = {
+            0: {"key_sequences": (), "color": (1, 2, 3), "action": "",
+                "folder": "", "application": "", "toggleColor": False,
+                "pressedColor": False, "description": "", "pressedUntilReleased": ""}
+        }
+        self.controller.process_serial_str("Claude: green")
+        assert self.controller._signal_color is not None
+        self.controller.open_folder("sig_folder")
+        assert self.controller._signal_color is None, (
+            "opening a folder repaints the layout, so it must clear the sticky signal"
+        )
+
+    def test_close_folder_clears_sticky_state(self):
+        """Closing a folder repaints via update_keys() → must clear the signal."""
+        self.controller.folders["sig_folder"] = {
+            0: {"key_sequences": (), "color": (1, 2, 3), "action": "",
+                "folder": "", "application": "", "toggleColor": False,
+                "pressedColor": False, "description": "", "pressedUntilReleased": ""}
+        }
+        self.controller.open_folder("sig_folder")
+        assert self.controller.folder_stack, "precondition: inside a folder"
+        self.controller.process_serial_str("Claude: red")
+        assert self.controller._signal_color is not None
+        self.controller.close_folder_if_needed(True, "close_folder")
+        assert self.controller._signal_color is None, (
+            "closing a folder repaints the layout, so it must clear the sticky signal"
         )
 
     # ------------------------------------------------------------------
@@ -173,7 +204,7 @@ class TestClaudeSerialHandler:
         from src.pi_pico.code import FLASH_COLORS
         self.controller.process_serial_str("Claude: red")
         self.controller.process_serial_str("Terminated: Safari")
-        assert self.controller._flash_deadline == FLASH_COLORS["red"], (
+        assert self.controller._signal_color == FLASH_COLORS["red"], (
             "Terminated: must NOT clear the sticky signal"
         )
 
@@ -182,7 +213,7 @@ class TestClaudeSerialHandler:
         from src.pi_pico.code import FLASH_COLORS
         self.controller.process_serial_str("Claude: yellow")
         self.controller.process_serial_str("HB")
-        assert self.controller._flash_deadline == FLASH_COLORS["yellow"]
+        assert self.controller._signal_color == FLASH_COLORS["yellow"]
 
     def test_claude_does_not_break_heartbeat(self):
         """A Claude: signal must not touch last_heartbeat."""

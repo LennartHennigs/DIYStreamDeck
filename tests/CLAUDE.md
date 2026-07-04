@@ -128,6 +128,8 @@ Available pytest markers in `pytest.ini`:
 
 **Virtual environment** — Always activate first: `source test_venv/bin/activate`
 
+**Slow suite (not a hang)** — Mac tests take ~2 min (socket/thread joins with real timeouts, e.g. claude-plugin listener); full suite ~2–3 min. These are *not* marked `@pytest.mark.slow`, so `-m "not slow"` barely helps — give the run time before assuming it stalled. To iterate fast, run a single file: `source test_venv/bin/activate && PYTHONPATH=$(pwd) pytest tests/unit/pico/test_flash_handler.py -q`.
+
 ## Testing Principles
 
 1. **Isolation**: Each test runs independently with fresh mocks

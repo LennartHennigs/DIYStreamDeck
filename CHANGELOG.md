@@ -1,6 +1,14 @@
 
 # CHANGELOG
 
+## 2026-07-04 (code-review fixes: heartbeat, signal color, dedup, plugin lifecycle)
+
+- **Pico: blocking key actions no longer trip the heartbeat timeout.** `handle_string_key` sleeps `string_delay` per character inside the keypress path; a long string (~80+ chars at the default 0.05 s) could block the main loop past `PICO_TIMEOUT_SECONDS` (4 s), so `run()`'s timeout check unloaded the keypad mid-use. Both `handle_string_key` and `handle_key_sequences` now refresh `last_heartbeat = time.monotonic()` when they finish, crediting back the self-inflicted blocking time. If the host is genuinely gone, the timeout still fires 4 s after typing ends. New tests in `test_heartbeat_functionality.py`.
+- **Pico: `_flash_deadline` renamed to `_signal_color` and its clearing centralized.** The field held an RGB tuple despite the `_deadline` name, and the "clear the sticky signal" step was hand-duplicated at four repaint sites — but `open_folder`/`close_folder_if_needed` also repaint via `update_keys()` and were **missing** the clear, so opening or closing a folder while a `Claude:` color was lit left the flood-fill stuck over the changed layout. The clear now lives once inside `update_keys()` (every real-layout repaint is an implicit ack); the four manual clears are removed; `flash_all()` still sets LEDs directly so the signal survives it. Init moved above the first `update_keys()` call. New folder open/close tests in `test_flash_handler.py`.
+- **Watchdog: reset the `App:` dedup when the shown app terminates.** `_last_sent_app_name` was never reset, so if the frontmost app quit and a same-named instance regained focus without an intervening app switch, the `App:` line was suppressed and the keypad stayed on the stale layout. `applicationTerminated_` now clears the dedup when the terminated app is the one currently shown. New `TestTerminatedResetsDedup`.
+- **Watchdog: DRY plugin-lifecycle loops + fixed stale comment.** The near-identical `on_watchdog_start`/`on_watchdog_stop` loops in `main()` are replaced by a single `_run_plugin_lifecycle(plugins, method_name, *args)` helper (same per-plugin exception isolation and log format). Corrected the `_send_line_to_keypad` comment that still referenced the pre-rename `BasePlugin.start`. New `TestRunPluginLifecycle`.
+- **Tests: 8 new** (`test_heartbeat_functionality.py` ×2, `test_flash_handler.py` ×2, `test_watchdog.py` ×4). Full suite green.
+
 ## 2026-07-04 (deploy-to-pico.sh selective deploy)
 
 - **`deploy-to-pico.sh` now takes `--code` / `--keys` flags** — deploy only `code.py` (firmware) or only `key_def.json` (key settings); default remains both. Added `--help`/`-h` usage output and validation that rejects unknown `-*` options. The optional volume-path argument still works and can be combined with a flag (e.g. `./deploy-to-pico.sh --keys /Volumes/CIRCUITPY1`). README install instructions updated.
