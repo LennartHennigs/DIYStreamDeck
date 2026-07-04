@@ -1,6 +1,10 @@
 # AI tool artifacts
 .claude
 
+# Node
+package-lock.json
+node_modules/
+
 # Python virtual environments
 venv/
 env/
