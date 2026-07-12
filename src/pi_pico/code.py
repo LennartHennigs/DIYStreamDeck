@@ -68,6 +68,10 @@ class KeyController:
 
     # initialize the key controller
     def __init__(self, verbose=False):
+        # Must be first: config processing below reports errors via
+        # send_output -> _serial_write, whose error handler reads self.verbose.
+        self.verbose = verbose
+
         # initialize keycode mapping (once per class, not per instance)
         if KeyController.KEYCODE_MAPPING is None:
             KeyController.KEYCODE_MAPPING = {name: getattr(Keycode, name) for name in dir(
@@ -85,7 +89,6 @@ class KeyController:
         self.apps = self.process_app_section(self.json)
         self.folders = self.process_folder_section(self.json)
         self.urls = self.process_url_section(self.json)
-        self.current_config = self.apps.get("_otherwise", {})
 
         # rotate the keys if needed (robust to missing settings)
         rotate_setting = self.json.get("settings", {}).get("rotate", "")
@@ -94,12 +97,11 @@ class KeyController:
             print(f"Warning: Invalid rotation setting '{rotate_setting}', ignoring")
             rotate_upper = ''
         self.rotate = rotate_upper
-        self.current_config = self.rotate_keys_if_needed()
 
         # default settings
-        self.verbose = verbose
         self.autoclose_current_folder = False
         self.folder_stack = []
+        self._set_top_config(self.apps.get("_otherwise", {}))
 
         # Sticky signal state: holds the RGB tuple currently flood-filled as a
         # Claude Code status signal, or None when the real layout is showing.
@@ -122,10 +124,11 @@ class KeyController:
     # open a folder and display the key layout
     def open_folder(self, folder):
         if folder in self.folders:
-            self.folder_stack.append(self.current_config)
-            self.current_config = self.folders[folder]
-            self.current_config = self.rotate_keys_if_needed()
-            self.autoclose_current_folder = self.current_config.get('autoclose', True)
+            self.folder_stack.append((self._unrotated_config, self.autoclose_current_folder))
+            # read autoclose from the unrotated folder config — rotation drops
+            # non-numeric keys like 'autoclose'
+            self.autoclose_current_folder = self.folders[folder].get('autoclose', True)
+            self._set_current_config(self.folders[folder])
             self.update_keys()
 
 
@@ -134,7 +137,9 @@ class KeyController:
         if (some_action and self.autoclose_current_folder) or action == 'close_folder':
             if not self.folder_stack:
                 return
-            self.current_config = self.folder_stack.pop()
+            config, autoclose = self.folder_stack.pop()
+            self.autoclose_current_folder = autoclose
+            self._set_current_config(config)
             self.update_keys()
 
 
@@ -182,23 +187,25 @@ class KeyController:
         key_def = self.current_config[key.number]
         keys = key_def.get('key_sequences')
         color = key_def.get('color')
-        pressedUntilReleased = key_def.get('pressedUntilReleased')
         toggleColor = key_def.get('toggleColor')
         # process the action
         if keys:
             self.keyboard.release_all()
             if toggleColor:
-                temp = color
+                key_def['color'] = toggleColor
+                key_def['toggleColor'] = color
                 color = toggleColor
-                self.current_config[key.number]['color'] = toggleColor
-                self.current_config[key.number]['toggleColor'] = temp
+        # repaint the base color for every defined key — the press turned the
+        # LED off (or set pressedColor), string/app/plugin keys included
+        if color:
             key.set_led(*color)
 
 
     # handle the key sequences
     def handle_key_sequences(self, key_sequences, pressedUntilReleased):
         for item in key_sequences:
-            # is it a delay?
+            # is it a delay? (only floats — top-level ints are keycodes from a
+            # scalar key_sequence string; list delays are coerced to float at load)
             if isinstance(item, float):
                 self.keyboard.release_all()
                 time.sleep(item)
@@ -242,7 +249,9 @@ class KeyController:
                 if color:
                     key.set_led(*color)
                 else:
-                    raise ValueError(f"Error: Color not defined for key {key.number}.")
+                    # colors are validated at load time; never crash mid-session
+                    key.led_off()
+                    print(f"Warning: No color for key {key.number}, LED off")
                 # set the key press and release handlers
                 self.keypad.on_press(key, lambda key=key: self.key_press_action(key))
                 self.keypad.on_release(key, lambda key=key: self.key_release_action(key))
@@ -298,14 +307,30 @@ class KeyController:
         self._serial_write("Output", text)
 
 
-    # rotate the keys if needed
-    def rotate_keys_if_needed (self):
+    # set the active config: remember the pristine (unrotated) source and
+    # apply the current rotation to it — rotation is absolute, never compounded
+    def _set_current_config(self, config):
+        self._unrotated_config = config
+        self.current_config = self._rotated(config)
+
+
+    # switch to a top-level layout: any open folder state is discarded —
+    # the invariant lives here, not in caller choreography
+    def _set_top_config(self, config):
+        self.folder_stack = []
+        self.autoclose_current_folder = False
+        self._set_current_config(config)
+
+
+    # return a rotated copy of a config (or the config itself if no rotation)
+    def _rotated(self, config):
         if self.rotate == "CW":
-            return {i: self.current_config[cw] for i, cw in enumerate(self.CW) if cw in self.current_config}
+            return {i: config[cw] for i, cw in enumerate(self.CW) if cw in config}
         elif self.rotate == "CCW":
-            return {i: self.current_config[ccw] for i, ccw in enumerate(self.CCW) if ccw in self.current_config}
-        return self.current_config
-        
+            return {i: config[ccw] for i, ccw in enumerate(self.CCW) if ccw in config}
+        return config
+
+
 
     # convert the keycodes to tuples if needed
     def keycode_string_to_tuple (self, keycode_string):
@@ -334,6 +359,16 @@ class KeyController:
         return NAMED_COLORS.get(color_string.strip().lower())
 
 
+    # resolve a color config field, rejecting unresolvable non-empty values at
+    # load time (an unknown color must not crash update_keys mid-session)
+    def _color_from_config(self, config, field):
+        value = config.get(field, '')
+        color = self.color_string_to_tuple(value)
+        if value and color is None:
+            raise ValueError(f"Unknown color '{value}' for '{field}'")
+        return color
+
+
     # parse a bool from a config value that may be a native bool or string "true"/"false"
     def parse_bool_from_config(self, value, default=False):
         if isinstance(value, bool):
@@ -351,12 +386,14 @@ class KeyController:
             return action
 
 
-    # convert the value to a tuple if needed
+    # convert a list-sequence item: strings become keycode tuples, numbers
+    # become float delays (a JSON `1` must not end up as keycode 1)
     def convert_value(self, value):
         if isinstance(value, str):
             return self.keycode_string_to_tuple (value)
-        else:
-            return value
+        if isinstance(value, (int, float)) and not isinstance(value, bool):
+            return float(value)
+        return value
 
 
     # get the config items
@@ -372,9 +409,9 @@ class KeyController:
             'action': self.convert_action_string(config.get('action', '')),
             'folder': config.get('folder', ''),
 
-            'color': self.color_string_to_tuple(config.get('color', '')),
-            'toggleColor': self.color_string_to_tuple(config.get('toggleColor', '')),
-            'pressedColor': self.color_string_to_tuple(config.get('pressedColor', '')),
+            'color': self._color_from_config(config, 'color'),
+            'toggleColor': self._color_from_config(config, 'toggleColor'),
+            'pressedColor': self._color_from_config(config, 'pressedColor'),
 
             'string': config.get('string', ''),
             'string_delay': config.get('string_delay', 0.05),
@@ -538,7 +575,8 @@ class KeyController:
             with open(json_filename, 'r') as json_file:
                 return json.load(json_file)
         except OSError as e:
-            raise type(e)(f"Config file '{json_filename}' not found") from None
+            # keep the real reason — this may be a permission error, not a missing file
+            raise type(e)(f"Cannot open config file '{json_filename}': {e}") from None
         except ValueError as e:
             raise ValueError(f"Invalid JSON in '{json_filename}': {e}") from None
 
@@ -550,7 +588,8 @@ class KeyController:
             print(f"Warning: Invalid rotation value '{value}', ignoring")
             return
         self.rotate = value
-        self.current_config = self.rotate_keys_if_needed()
+        # re-apply to the pristine config — setting a rotation, not adding one
+        self._set_current_config(self._unrotated_config)
         self.update_keys()
 
 
@@ -565,10 +604,10 @@ class KeyController:
     def process_app(self, serial_str):
         app_name, url = self.parse_app_name_and_url(serial_str[5:])
         if url in self.urls:
-            self.current_config = self.urls[url]
+            config = self.urls[url]
         else:
-            self.current_config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
-        self.current_config = self.rotate_keys_if_needed()
+            config = self.apps.get(app_name, self.apps.get("_otherwise", {}))
+        self._set_top_config(config)
         self.update_keys()
 
 
@@ -606,13 +645,12 @@ class KeyController:
             except Exception:
                 pass
         # empty current config
-        self.current_config = {}
+        self._set_top_config({})
 
 
     # Load the basic/default config (the _otherwise app)
     def load_basic_config(self):
-        self.current_config = self.apps.get("_otherwise", {})
-        self.current_config = self.rotate_keys_if_needed()
+        self._set_top_config(self.apps.get("_otherwise", {}))
         # re-apply key handlers and colors
         self.update_keys()
         self.unloaded = False

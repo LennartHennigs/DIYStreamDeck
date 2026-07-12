@@ -298,3 +298,80 @@ class TestKeycodeMappingSharing:
         assert kc1.KEYCODE_MAPPING is kc2.KEYCODE_MAPPING, (
             "KEYCODE_MAPPING should be the same object (class-level), not rebuilt per instance"
         )
+
+# Config with nested folders for rotation / folder-stack hygiene tests
+MOCK_FOLDER_STACK_CONFIG = '''{
+    "settings": {"rotate": ""},
+    "applications": {
+        "_otherwise": {
+            "0": {"key_sequence": "CMD+C", "color": "#00FF00", "description": "Copy"},
+            "3": {"folder": "outer", "color": "#FFFFFF", "description": "Open outer"}
+        },
+        "AppX": {
+            "1": {"key_sequence": "CMD+X", "color": "#FF0000", "description": "Cut"}
+        }
+    },
+    "folders": {
+        "outer": {
+            "autoclose": "false",
+            "0": {"folder": "inner", "color": "#FFFFFF", "description": "Open inner"},
+            "1": {"key_sequence": "CMD+A", "color": "#FF00FF", "description": "Action in outer"},
+            "2": {"action": "close_folder", "color": "#808080", "description": "Back"}
+        },
+        "inner": {
+            "0": {"key_sequence": "SPACE", "color": "#FF8000", "description": "Action in inner"}
+        }
+    }
+}'''
+
+
+class TestRotationSetsNotComposes:
+    """Bug fix: 'Rotate:' commands composed with the current (already rotated)
+    layout instead of setting an absolute rotation of the pristine config."""
+
+    @patch('builtins.open', mock_open(read_data=MOCK_JSON_CONFIG))
+    def setup_method(self, method):
+        from src.pi_pico.code import KeyController
+        self.controller = KeyController(verbose=True)
+
+    def test_rotate_cw_twice_equals_once(self):
+        self.controller.process_serial_str("Rotate: CW")
+        once = dict(self.controller.current_config)
+        self.controller.process_serial_str("Rotate: CW")
+        assert self.controller.current_config == once
+
+    def test_rotate_cw_then_ccw_gives_ccw_layout(self):
+        baseline = dict(self.controller.current_config)  # unrotated, keys {0, 1}
+        self.controller.process_serial_str("Rotate: CW")
+        self.controller.process_serial_str("Rotate: CCW")
+        # CCW places source key 0 at position 12 and source key 1 at position 8
+        expected = {12: baseline[0], 8: baseline[1]}
+        assert self.controller.current_config == expected
+
+
+class TestFolderStackHygiene:
+    """Bug fix: folder stack leaked across app switches, and closing a nested
+    folder lost the parent folder's autoclose flag."""
+
+    @patch('builtins.open', mock_open(read_data=MOCK_FOLDER_STACK_CONFIG))
+    def setup_method(self, method):
+        from src.pi_pico.code import KeyController
+        self.controller = KeyController(verbose=True)
+
+    def test_app_switch_clears_folder_stack(self):
+        self.controller.key_press_action(self.controller.keypad.keys[3])  # open outer
+        assert len(self.controller.folder_stack) == 1
+        self.controller.process_serial_str("App: AppX")
+        assert self.controller.folder_stack == []
+
+    def test_nested_folder_close_restores_parent_autoclose(self):
+        keys = self.controller.keypad.keys
+        self.controller.key_press_action(keys[3])  # open outer (autoclose false)
+        self.controller.key_press_action(keys[0])  # open inner (autoclose true)
+        self.controller.key_press_action(keys[0])  # action in inner -> autocloses to outer
+        assert len(self.controller.folder_stack) == 1
+        assert 2 in self.controller.current_config  # back in outer (has close_folder key)
+        # outer has autoclose false: an action must NOT close it
+        self.controller.key_press_action(keys[1])
+        assert len(self.controller.folder_stack) == 1
+        assert 2 in self.controller.current_config

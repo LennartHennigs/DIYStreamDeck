@@ -714,3 +714,49 @@ class TestEagerConfigValidation:
         result = self.kc.load_single_app_config("TestApp", json_data["applications"]["TestApp"], json_data)
         assert 0 not in result, "Bad key must be skipped"
         assert 1 in result, "Good key must still be loaded"
+
+
+BAD_COLOR_JSON = '''{
+    "settings": {"rotate": ""},
+    "applications": {
+        "_otherwise": {"0": {"key_sequence": "CMD+C", "color": "#00FF00"}},
+        "BadApp": {"1": {"key_sequence": "CMD+X", "color": "wite"}}
+    },
+    "folders": {}
+}'''
+
+BAD_KEYCODE_JSON = '''{
+    "settings": {"rotate": ""},
+    "applications": {
+        "_otherwise": {"0": {"key_sequence": "BOGUS_KEYCODE", "color": "#00FF00"}}
+    },
+    "folders": {}
+}'''
+
+
+class TestBadColorValidatedAtLoad:
+    """Bug fix: an unknown named color used to load as None and crash the
+    firmware with ValueError the first time that app was activated."""
+
+    @patch('builtins.open', mock_open(read_data=BAD_COLOR_JSON))
+    def setup_method(self, method):
+        self.kc = KeyController(verbose=False)
+
+    def test_bad_named_color_key_skipped_at_load(self):
+        assert 1 not in self.kc.apps["BadApp"]
+
+    def test_switching_to_app_with_bad_color_does_not_raise(self):
+        self.kc.process_serial_str("App: BadApp")  # must not raise
+
+
+class TestVerboseInitOrder:
+    """Bug fix: a config error during __init__ triggered send_output before
+    self.verbose was assigned; a failing serial write then raised
+    AttributeError from inside the exception handler."""
+
+    def test_config_error_with_failing_serial_write_does_not_raise(self):
+        console = sys.modules['usb_cdc'].console
+        with patch.object(console, 'write', side_effect=RuntimeError("serial down")):
+            with patch('builtins.open', mock_open(read_data=BAD_KEYCODE_JSON)):
+                kc = KeyController(verbose=False)
+        assert kc is not None

@@ -522,3 +522,79 @@ class TestStringKeyType:
         self.controller.key_release_action(key_5)
         # release_all clears pressed_keys; string key has no key_sequences so it must not fire
         assert self.controller.keyboard.pressed_keys == [42]
+
+class TestLedRestoreAfterPress:
+    """Bug fix: keys without key_sequences (string / app / plugin action) went
+    dark after a press because key_press_action() calls led_off() but
+    key_release_action() only repainted keys that have key_sequences."""
+
+    @patch('builtins.open', mock_open(read_data=MOCK_STRING_CONFIG))
+    def setup_method(self, method):
+        from src.pi_pico.code import KeyController
+        self.controller = KeyController(verbose=True)
+
+    def test_string_key_led_restored_on_release(self):
+        """A string key must show its configured color again after release."""
+        key_5 = self.controller.keypad.keys[5]  # color #0000FF
+        with patch('time.sleep'):
+            self.controller.key_press_action(key_5)
+        self.controller.key_release_action(key_5)
+        assert key_5.led_color == (0, 0, 255)
+
+    def test_plugin_action_key_led_restored_on_release(self):
+        """A plugin-action key with pressedColor must restore its base color on release."""
+        self.controller.current_config[7] = {
+            'key_sequences': (),
+            'application': '',
+            'action': ('spotify', 'play'),
+            'folder': '',
+            'color': (0, 255, 0),
+            'toggleColor': None,
+            'pressedColor': (255, 0, 0),
+            'string': '',
+            'string_delay': 0.05,
+            'description': 'Play',
+            'pressedUntilReleased': False,
+        }
+        self.controller.update_keys()
+        key_7 = self.controller.keypad.keys[7]
+        self.controller.key_press_action(key_7)
+        assert key_7.led_color == (255, 0, 0)  # pressedColor while held
+        self.controller.key_release_action(key_7)
+        assert key_7.led_color == (0, 255, 0)  # base color restored
+
+
+class TestNumericDelayInSequence:
+    """Bug fix: an integer delay in a key_sequence (e.g. 1 instead of 1.0) was
+    passed to keyboard.press() as HID keycode 1 instead of sleeping."""
+
+    @patch('builtins.open', mock_open(read_data=MOCK_KEYPAD_CONFIG))
+    def setup_method(self, method):
+        from src.pi_pico.code import KeyController
+        self.controller = KeyController(verbose=True)
+
+    def test_integer_delay_in_list_sequence_sleeps(self):
+        """A JSON `1` in a list key_sequence is a delay, coerced to float at load."""
+        items = self.controller.get_config_items(
+            {"key_sequence": ["CMD+S", 1, "ENTER"], "color": "#FF0000"})
+        pressed = []
+        self.controller.keyboard.press = lambda *keys: pressed.extend(keys)
+        with patch('time.sleep') as mock_sleep:
+            self.controller.handle_key_sequences(items['key_sequences'], False)
+        assert 1 not in pressed, "integer delay must not be sent as a keycode"
+        mock_sleep.assert_any_call(1.0)
+
+    def test_scalar_string_sequence_presses_keycodes_not_delays(self):
+        """Regression: "CMD+C" converts to top-level keycode ints (227, 6) —
+        those are keycodes to press, never delays to sleep (a keycode-second
+        sleep froze every keypress)."""
+        items = self.controller.get_config_items(
+            {"key_sequence": "CMD+C", "color": "#FF0000"})
+        pressed = []
+        self.controller.keyboard.press = lambda *keys: pressed.extend(keys)
+        with patch('time.sleep') as mock_sleep:
+            self.controller.handle_key_sequences(items['key_sequences'], False)
+        assert pressed, "scalar key_sequence must press its keycodes"
+        for call_args in mock_sleep.call_args_list:
+            assert call_args.args[0] < 1, (
+                f"keycode was slept as a delay: {call_args.args[0]}")
