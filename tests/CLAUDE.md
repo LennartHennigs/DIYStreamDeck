@@ -35,6 +35,7 @@ tests/
 └── unit/                          # Unit tests
     ├── mac/
     │   ├── test_watchdog.py
+    │   ├── test_statusbar_layout.py
     │   ├── hooks/
     │   │   ├── test_streamdeck_claude.py
     │   │   └── test_install_claude_hooks.py
@@ -46,6 +47,7 @@ tests/
     │       ├── test_sounds_plugin.py
     │       └── test_spotify.py
     └── pico/
+        ├── conftest.py
         ├── mock_circuitpython.py
         ├── test_config_loader.py
         ├── test_flash_handler.py
@@ -128,7 +130,7 @@ Available pytest markers in `pytest.ini`:
 
 **Virtual environment** — Always activate first: `source test_venv/bin/activate`
 
-**Slow suite (not a hang)** — Mac tests take ~2 min (socket/thread joins with real timeouts, e.g. claude-plugin listener); full suite ~2–3 min. These are *not* marked `@pytest.mark.slow`, so `-m "not slow"` barely helps — give the run time before assuming it stalled. To iterate fast, run a single file: `source test_venv/bin/activate && PYTHONPATH=$(pwd) pytest tests/unit/pico/test_flash_handler.py -q`.
+**Suite speed** — the full suite runs in ~1–2 s. Pico tests never real-sleep: the autouse `fast_sleep` fixture in `tests/unit/pico/conftest.py` caps `time.sleep` at 1 ms (the firmware's HID-timing sleeps are meaningless in unit tests, and macOS App Nap defers real sleeps of *backgrounded* pytest runs for minutes — never remove that fixture). If a run looks hung, it is almost certainly running as a background/App-Napped process — run pytest in a foreground terminal.
 
 ## Testing Principles
 

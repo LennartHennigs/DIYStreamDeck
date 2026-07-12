@@ -43,12 +43,30 @@ Pico unloads the keypad if heartbeats stop (host disconnected).
 | `src/mac/plugins_config/` | Plugin credentials (git-ignored; copy from `*.json.example`) |
 | `src/mac/hooks/` | Claude Code hook scripts (`streamdeck-claude.py`) + installer |
 | `src/mac/requirements.txt` | Mac Python dependencies |
+| `src/mac/statusbar.py` | Menu-bar app (rumps wrapper around watchdog) |
+| `src/mac/assets/grid_icon.png` | Menu bar icon — regenerate with `scripts/generate_icon.py` |
+| `src/mac/layout_formatter.py` | Loads `key_def.json`, formats layout lines for the status bar cheat sheet |
+| `scripts/generate_icon.py` | One-time generator for `src/mac/assets/grid_icon.png` |
+| `DIYStreamDeck.spec` | PyInstaller spec for the standalone `.app` bundle |
+| `build-app.sh` | Builds `dist/DIYStreamDeck.app`; `--install` copies to `/Applications/` |
 | `tests/` | Test suite (see [`tests/CLAUDE.md`](tests/CLAUDE.md)) |
 | `CHANGELOG.md` | Change history |
 
 ## Development Commands
 
 ```bash
+# Runtime venv setup (needs framework Python for rumps/menu bar)
+# python.org Python 3.11 installer creates /Library/Frameworks/Python.framework/
+# Homebrew Python is non-framework and works for everything except the statusbar app
+/Library/Frameworks/Python.framework/Versions/3.11/bin/python3.11 -m venv .venv
+.venv/bin/pip install -r src/mac/requirements.txt
+
+# Run the menu-bar status app
+./run-statusbar.sh
+
+# Build the standalone .app (requires pyinstaller in .venv)
+./build-app.sh [--install]
+
 # Install dependencies
 pip install -r src/mac/requirements.txt
 
@@ -73,8 +91,8 @@ For serial-protocol debugging: run watchdog with `--verbose` (logs `Active app:`
 ### Testing
 
 ```bash
-# First-time setup
-python -m venv test_venv && source test_venv/bin/activate
+# First-time setup (use Python 3.11 — Python 3.14 has an importlib.metadata bug that causes pytest to hang on startup)
+/opt/homebrew/bin/python3.11 -m venv test_venv && source test_venv/bin/activate
 pip install -r tests/requirements_test.txt
 
 # Run tests
@@ -108,6 +126,13 @@ Test locations:
 Plugins extend `BasePlugin` in `src/mac/plugins/`. Each plugin needs a config template in `src/mac/plugins_config/<name>.json.example`. Command format: `plugin_name.command [parameter]`. See [README.md](README.md) for the full command reference.
 
 Service-style plugins (that push events *to* the keypad, not just react to keypresses) override optional `on_watchdog_start(send_to_keypad)` and `on_watchdog_stop()` on `BasePlugin` — the `on_watchdog_` prefix keeps lifecycle names distinct from user command handlers like `SoundsPlugin.stop`. See `src/mac/plugins/claude.py` for the reference implementation (Unix-socket listener relaying `Claude: <color>` to the Pico).
+
+## Gotchas
+
+- **Homebrew Python + rumps**: Homebrew Python is non-framework. `rumps` status bar items need `title=" "` (a space, not `None`) alongside `icon=` or the item is invisible. `title=None` + icon renders nothing.
+- **`redis` hangs Python**: A broken `redis` install causes Python (and `pip`) to hang on import. Remove it directly: `rm -rf .venv/lib/python3.11/site-packages/redis .venv/lib/python3.11/site-packages/redis-*.dist-info`
+- **PyObjC NSRect format**: `((x, y), (w, h))` — not `(x, y, w, h)`. The flat 4-tuple raises `ValueError: depythonifying struct of 2 members`.
+- **Plugin loader order**: Config check must happen before module import (`load_plugins` in `watchdog.py`). Importing first causes noisy errors from unconfigured plugins whose optional dependencies (e.g. `spotipy` → `redis`) are missing.
 
 ## Development Principles
 

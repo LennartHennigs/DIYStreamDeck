@@ -43,6 +43,9 @@ If you find this useful, consider giving it a ⭐️ on [GitHub](https://github.
 | Script | Purpose |
 | --- | --- |
 | `run-mac-watchdog.sh` | Launcher for `watchdog.py` — sets PYTHONPATH, forwards flags |
+| `run-statusbar.sh` | Launcher for the menu-bar app (`statusbar.py`) — status icon + layout cheat sheet |
+| `src/mac/service/install-service.sh` | Install the watchdog as a login LaunchAgent (`--statusbar` for the menu-bar app) |
+| `src/mac/service/uninstall-service.sh` | Remove the LaunchAgent |
 | `deploy-to-pico.sh` | Copy `code.py` + `key_def.json` to the CIRCUITPY volume — **prompts for `sudo` password** (macOS 14+ FAT32 safety remount) |
 | `run-config-tool.sh` | Launch the browser-based `key_def.json` editor at `http://localhost:8001` |
 | `run-tests.sh` | Activate the test venv and run the pytest suite |
@@ -99,6 +102,37 @@ Or use the launcher script from the repo root:
 | `--speed` | Baud rate (default: `9600`) |
 | `--verbose` | Print active app name to console |
 | `--rotate` | Rotate layout: `CW` or `CCW` |
+| `--no-reconnect` | Exit when the Pico disconnects (default: wait and reconnect automatically) |
+
+The watchdog **reconnects automatically**: if the Pico is unplugged (or not
+attached at startup), it waits and re-attaches as soon as the device appears,
+re-sending `HELLO` so the keypad repaints. Use `--no-reconnect` for the old
+exit-on-disconnect behavior.
+
+### Run at login (LaunchAgent)
+
+```bash
+./src/mac/service/install-service.sh              # headless watchdog
+./src/mac/service/install-service.sh --statusbar  # menu-bar app instead
+./src/mac/service/uninstall-service.sh            # remove
+```
+
+The agent starts at login, is restarted by launchd if it crashes, and logs to
+`~/Library/Logs/diystreamdeck.log`.
+
+### Menu-bar app
+
+`./run-statusbar.sh` runs the watchdog inside a small menu-bar app:
+
+- **Status icon** — `●` connected, `◌` searching, `○` disconnected.
+- **Layout** submenu — a cheat sheet of the active app's keys ("Key 3 — Close
+  Tab (GUI+W)"), read from `key_def.json` (override with `--key-def`).
+- **Auto-connect** toggle — when on (default), the app finds and re-attaches
+  to the Pico automatically; when off, use **Connect now**.
+- Same flags as the watchdog (`--port`, `--speed`, `--verbose`, `--rotate`).
+
+Clicking the menu-bar icon does not activate the app, so the keypad keeps
+showing the layout of the app you're actually using.
 
 ---
 
