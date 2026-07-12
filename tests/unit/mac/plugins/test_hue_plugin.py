@@ -21,8 +21,8 @@ class TestHuePlugin:
         config = {"bridge_ip": "192.168.1.1"}
         config_file = tmp_path / "hue.json"
         config_file.write_text(json.dumps(config))
-        with patch("src.mac.plugins.hue.Bridge", return_value=mock_hue_bridge):
-            plugin = HuePlugin(str(config_file), verbose=False)
+        plugin = HuePlugin(str(config_file), verbose=False)
+        plugin._bridge = mock_hue_bridge  # inject; connection is lazy now
         return plugin
 
     @pytest.fixture
@@ -30,8 +30,8 @@ class TestHuePlugin:
         config = {"bridge_ip": "192.168.1.1"}
         config_file = tmp_path / "hue.json"
         config_file.write_text(json.dumps(config))
-        with patch("src.mac.plugins.hue.Bridge", return_value=mock_hue_bridge):
-            plugin = HuePlugin(str(config_file), verbose=True)
+        plugin = HuePlugin(str(config_file), verbose=True)
+        plugin._bridge = mock_hue_bridge  # inject; connection is lazy now
         return plugin
 
     # --- commands ---

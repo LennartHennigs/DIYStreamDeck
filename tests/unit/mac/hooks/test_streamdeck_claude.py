@@ -28,7 +28,9 @@ class _Listener:
         self.path = path
         self.received = []
         self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
-        self._sock.settimeout(1.0)
+        # short timeout: close() can only join once recvfrom wakes, so this
+        # bounds every test's teardown time
+        self._sock.settimeout(0.05)
         self._sock.bind(path)
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._stop = threading.Event()

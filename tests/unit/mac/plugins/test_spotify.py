@@ -369,7 +369,7 @@ def _make_spotify_plugin(sp_mock):
     """Return a SpotifyPlugin with attributes set directly (no real Spotify auth)."""
     m = _import_spotify()
     plugin = object.__new__(m.SpotifyPlugin)
-    plugin.sp = sp_mock
+    plugin._sp = sp_mock  # inject; authentication is lazy now
     plugin.verbose = True
     return plugin
 

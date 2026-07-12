@@ -248,3 +248,40 @@ def test_load_plugins_skips_when_no_config(tmp_path, monkeypatch, capsys):
 
     assert "Skipping plugin 'skipped': no config found" in captured.out
     assert 'skipped' not in plugins
+
+
+def test_load_plugins_discovers_class_by_base_not_name(tmp_path, capsys):
+    """Smell fix: the plugin class is found by scanning for the BasePlugin
+    subclass defined in the module, not by the fragile capitalize()+'Plugin'
+    naming convention (my_plugin.py no longer requires My_pluginPlugin)."""
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..')))
+    from tests.unit.mac.test_watchdog import _import_watchdog
+
+    project_src = tmp_path / "src" / "mac"
+    plugins_dir = project_src / "plugins"
+    plugins_dir.mkdir(parents=True)
+    (plugins_dir / "funky_name.py").write_text(
+        "from src.mac.plugins.base_plugin import BasePlugin\n"
+        "\n"
+        "class TotallyDifferentName(BasePlugin):\n"
+        "    def __init__(self, config_file, verbose):\n"
+        "        self.verbose = verbose\n"
+        "        self._config_file_used = config_file\n"
+        "\n"
+        "    def commands(self):\n"
+        "        return {}\n"
+    )
+    cfg_dir = project_src / "plugins_config"
+    cfg_dir.mkdir()
+    (cfg_dir / "funky_name.json").write_text("{}")
+
+    watchdog_mod = _import_watchdog()
+    original_file = watchdog_mod.__file__
+    try:
+        watchdog_mod.__file__ = str(project_src / "watchdog.py")
+        plugins = watchdog_mod.load_plugins(path="plugins", verbose=True)
+    finally:
+        watchdog_mod.__file__ = original_file
+
+    assert "funky_name" in plugins
+    assert type(plugins["funky_name"]).__name__ == "TotallyDifferentName"

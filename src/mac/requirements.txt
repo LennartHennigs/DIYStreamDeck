@@ -6,3 +6,4 @@ urllib3==1.26.6
 spotipy==2.23.0
 phue==1.1
 playsound3>=3.3.0
+rumps>=0.4.0

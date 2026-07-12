@@ -12,6 +12,7 @@ import sys
 import types
 import threading
 import argparse
+import pytest
 from unittest.mock import MagicMock, patch, call
 
 
@@ -100,10 +101,11 @@ def _make_watchdog(serial_mock=None, verbose=False):
     wd = _import_watchdog()
     wdog = object.__new__(wd.WatchDog)
     wdog.ser = serial_mock or MagicMock()
-    wdog.args = argparse.Namespace(verbose=verbose, rotate=None)
+    wdog.args = argparse.Namespace(verbose=verbose, rotate=None, no_reconnect=False)
     wdog.plugins = {}
     wdog._serial_lock = threading.Lock()
     wdog._stop_event = threading.Event()
+    wdog._disconnected = threading.Event()
     wdog._last_sent_app_name = None
     return wdog
 
@@ -301,12 +303,13 @@ class TestStartupAppDetection:
         before BYE is written, preventing a deadlock on clean shutdown.
         """
         src = _read_source()
-        finally_idx = src.rindex('finally:')   # last finally = shutdown block
-        shutdown_block = src[finally_idx:]
+        # shutdown protocol lives in end_session() since the session refactor
+        start = src.index('def end_session')
+        shutdown_block = src[start:src.index('\ndef ', start + 1)]
         join_idx = shutdown_block.index('heartbeat_thread.join()')
         bye_idx = shutdown_block.index('send_bye()')
         assert join_idx < bye_idx, (
-            "heartbeat_thread.join() must come before send_bye() in the finally block "
+            "heartbeat_thread.join() must come before send_bye() in end_session() "
             "to release the serial lock before BYE is written"
         )
 
@@ -317,8 +320,9 @@ class TestStartupAppDetection:
         before the serial port is torn down.
         """
         src = _read_source()
-        finally_idx = src.rindex('finally:')
-        shutdown_block = src[finally_idx:]
+        # shutdown protocol lives in end_session() since the session refactor
+        start = src.index('def end_session')
+        shutdown_block = src[start:src.index('\ndef ', start + 1)]
         bye_idx = shutdown_block.index('send_bye()')
         flush_idx = shutdown_block.index('ser.flush()')
         close_idx = shutdown_block.index('ser.close()')
@@ -919,3 +923,199 @@ class TestSendLineToKeypad:
         wdog._send_line_to_keypad("Claude: yellow\n")
 
 
+
+
+# ---------------------------------------------------------------------------
+# Review fixes: optional plugin params, junk serial bytes, exit codes
+# ---------------------------------------------------------------------------
+
+class TestOptionalPluginParams:
+    """Bug fix: commands whose only parameters have defaults (e.g.
+    spotify.volume_up(volume_change=10)) were rejected with 'Parameter
+    missing' when invoked without a parameter."""
+
+    def _run(self, wdog, line):
+        match = re.match(r"^Run: (.+)$", line)
+        assert match
+        wdog.run_plugin_command(match)
+
+    def test_command_with_default_param_runs_without_param(self):
+        wdog = _make_watchdog()
+        called = []
+
+        def volume_up(volume_change=10):
+            called.append(volume_change)
+
+        plugin = MagicMock()
+        plugin.commands.return_value = {'spotify.volume_up': volume_up}
+        wdog.plugins = {'spotify': plugin}
+        self._run(wdog, "Run: spotify.volume_up")
+        assert called == [10]
+
+    def test_command_with_required_param_still_rejected(self):
+        wdog = _make_watchdog()
+        called = []
+
+        def play(filename):
+            called.append(filename)
+
+        plugin = MagicMock()
+        plugin.commands.return_value = {'sounds.play': play}
+        wdog.plugins = {'sounds': plugin}
+        self._run(wdog, "Run: sounds.play")
+        assert called == []
+
+
+class TestReadSerialDataRobustness:
+    """Bug fix: a junk byte on the wire raised UnicodeDecodeError and killed
+    the run loop (the Pico side already handled this case)."""
+
+    def test_junk_bytes_do_not_raise(self):
+        ser = MagicMock()
+        ser.in_waiting = 5
+        ser.readline.return_value = b'\xff\xfeRun: x\n'
+        wdog = _make_watchdog(ser)
+        result = wdog.read_serial_data()  # must not raise
+        assert result is None or isinstance(result, str)
+
+
+class TestMainExitCodes:
+    """Bug fix: main() returned exit code 0 on failure (missing Pico / failed
+    serial connection), which breaks launchd and scripting."""
+
+    def test_exit_1_when_pico_not_found(self, monkeypatch):
+        # --no-reconnect: with reconnect (the default) main() would wait for the Pico
+        wd = _import_watchdog()
+        monkeypatch.setattr(sys, 'argv', ['watchdog.py', '--no-reconnect'])
+        monkeypatch.setattr(wd, 'find_pico_port_by_vid', lambda: None)
+        with pytest.raises(SystemExit) as excinfo:
+            wd.main()
+        assert excinfo.value.code == 1
+
+    def test_exit_1_when_connection_fails(self, monkeypatch):
+        wd = _import_watchdog()
+        monkeypatch.setattr(sys, 'argv', ['watchdog.py', '--no-reconnect', '--port', '/dev/fake'])
+        monkeypatch.setattr(wd, 'create_serial_connection', lambda port, speed: None)
+        with pytest.raises(SystemExit) as excinfo:
+            wd.main()
+        assert excinfo.value.code == 1
+
+
+# ---------------------------------------------------------------------------
+# Auto-reconnect (Phase D)
+# ---------------------------------------------------------------------------
+
+class TestDisconnectDetection:
+    """A dead serial port must set the _disconnected event (ending the
+    session so main() can reconnect) instead of crashing or spamming errors."""
+
+    def test_read_error_marks_disconnected(self):
+        ser = MagicMock()
+        type(ser).in_waiting = property(
+            lambda self: (_ for _ in ()).throw(OSError("device gone")))
+        wdog = _make_watchdog(ser)
+        assert wdog.read_serial_data() is None  # must not raise
+        assert wdog._disconnected.is_set()
+
+    def test_readline_serial_exception_marks_disconnected(self):
+        import serial as serial_mod
+        ser = MagicMock()
+        ser.in_waiting = 3
+        ser.readline.side_effect = serial_mod.SerialException("read failed")
+        wdog = _make_watchdog(ser)
+        assert wdog.read_serial_data() is None
+        assert wdog._disconnected.is_set()
+
+    def test_write_error_marks_disconnected(self):
+        import serial as serial_mod
+        ser = MagicMock()
+        ser.write.side_effect = serial_mod.SerialException("write failed")
+        wdog = _make_watchdog(ser)
+        wdog._serial_write('HB\n', 'HB')  # must not raise
+        assert wdog._disconnected.is_set()
+
+    def test_write_after_disconnect_is_silent_noop(self, capsys):
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+        wdog._disconnected.set()
+        wdog._serial_write('HB\n', 'HB')
+        ser.write.assert_not_called()
+        assert capsys.readouterr().out == ""
+
+    def test_heartbeat_loop_exits_on_disconnect(self):
+        ser = MagicMock()
+        wdog = _make_watchdog(ser)
+        wdog._disconnected.set()
+        # wait() would allow two more iterations — the disconnected check must
+        # exit first, without sending anything (and without real 2 s waits)
+        with patch.object(wdog._stop_event, 'wait', side_effect=[False, False, True]):
+            wdog._run_heartbeat_loop()
+        ser.write.assert_not_called()
+
+
+class TestConnectOrWait:
+    """main()'s connect helper retries until the Pico appears (reconnect
+    default) or gives up immediately with --no-reconnect."""
+
+    def _args(self, no_reconnect):
+        return argparse.Namespace(port=None, speed=9600, verbose=False,
+                                  rotate=None, no_reconnect=no_reconnect)
+
+    def test_retries_until_port_appears(self, monkeypatch):
+        wd = _import_watchdog()
+        ports = iter([None, None, '/dev/cu.fake'])
+        monkeypatch.setattr(wd, 'find_pico_port_by_vid', lambda: next(ports))
+        sentinel = MagicMock()
+        monkeypatch.setattr(wd, 'create_serial_connection', lambda p, s: sentinel)
+        monkeypatch.setattr(wd.time, 'sleep', lambda s: None)
+        assert wd._connect_or_wait(self._args(no_reconnect=False)) is sentinel
+
+    def test_no_reconnect_returns_none_when_absent(self, monkeypatch):
+        wd = _import_watchdog()
+        monkeypatch.setattr(wd, 'find_pico_port_by_vid', lambda: None)
+        assert wd._connect_or_wait(self._args(no_reconnect=True)) is None
+
+
+class TestSelfActivationIgnored:
+    """Phase E guard: an activation notification for our own process (menu-bar
+    app) must never repaint the keypad to ourselves."""
+
+    def _notification(self, pid):
+        app = MagicMock()
+        app.processIdentifier.return_value = pid
+        app.localizedName.return_value = "Python"
+        notification = MagicMock()
+        notification.userInfo.return_value = {'NSWorkspaceApplicationKey': app}
+        return notification
+
+    def test_own_pid_activation_is_ignored(self):
+        wdog = _make_watchdog()
+        with patch.object(wdog, 'send_app_name_to_microcontroller') as send:
+            wdog.applicationActivated_(self._notification(os.getpid()))
+        send.assert_not_called()
+
+    def test_other_pid_activation_is_processed(self):
+        wdog = _make_watchdog()
+        with patch.object(wdog, 'send_app_name_to_microcontroller') as send:
+            wdog.applicationActivated_(self._notification(os.getpid() + 1))
+        send.assert_called_once_with("Python")
+
+
+class TestOnAppChangedCallback:
+    """The optional on_app_changed observer fires on real app changes only
+    (after dedup), so the menu-bar cheat sheet tracks the keypad exactly."""
+
+    def test_callback_fires_on_new_app(self):
+        wdog = _make_watchdog()
+        seen = []
+        wdog.on_app_changed = seen.append
+        wdog.send_app_name_to_microcontroller("Finder")
+        assert seen == ["Finder"]
+
+    def test_callback_suppressed_for_duplicate_activation(self):
+        wdog = _make_watchdog()
+        seen = []
+        wdog.on_app_changed = seen.append
+        wdog.send_app_name_to_microcontroller("Finder")
+        wdog.send_app_name_to_microcontroller("Finder")
+        assert seen == ["Finder"]

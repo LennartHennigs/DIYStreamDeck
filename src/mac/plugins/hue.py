@@ -6,11 +6,20 @@ from src.mac.plugins.base_plugin import BasePlugin
 class HuePlugin(BasePlugin):
     verbose: bool
     config: Dict[str, Union[str, int]]
-    bridge: Bridge
 
     def __init__(self, config_file: str, verbose: bool) -> None:
         super().__init__(config_file, verbose)
-        self.bridge = self._connect_to_bridge()
+        # Fail fast on config errors (cheap), but connect lazily on first
+        # command — an unreachable bridge must not block watchdog startup.
+        if not self.config.get('bridge_ip'):
+            raise ValueError("Bridge IP not found in the config.")
+        self._bridge: Optional[Bridge] = None
+
+    @property
+    def bridge(self) -> Bridge:
+        if self._bridge is None:
+            self._bridge = self._connect_to_bridge()
+        return self._bridge
 
     def commands(self) -> Dict[str, Callable]:
         return {

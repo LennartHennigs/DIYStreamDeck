@@ -26,9 +26,6 @@ HEARTBEAT_INTERVAL = 2
 SERIAL_CLOSE_GRACE_PERIOD = 0.3  # seconds to wait after BYE so Pico can read it before port closes
 PICO_VIDS = (0x2E8A, 0x239A)  # Raspberry Pi / Adafruit (CircuitPython) USB vendor IDs
 
-plugins_directory = os.path.dirname(os.path.abspath(__file__)) + '/plugins'
-sys.path.append(plugins_directory)
-
 def create_serial_connection(port: str, baud_rate: int) -> Optional[serial.Serial]:
     try:
         return serial.Serial(port, baud_rate, timeout=1)
@@ -63,6 +60,10 @@ class WatchDog(Cocoa.NSObject):
         self.plugins = plugins
         self._serial_lock = threading.Lock()
         self._stop_event = threading.Event()
+        # Set when the serial port dies; ends the session so main() can reconnect
+        self._disconnected = threading.Event()
+        # Optional observer fired on real app changes (menu-bar cheat sheet)
+        self.on_app_changed = None
         # Dedup state for send_app_name_to_microcontroller — see there.
         self._last_sent_app_name = None
         # Add observer for application termination
@@ -94,9 +95,10 @@ class WatchDog(Cocoa.NSObject):
 
 
     # Called every HEARTBEAT_INTERVAL seconds
-    @objc.typedSelector(b'v@:')  # Encoded the signature string as bytes
     def _run_heartbeat_loop(self) -> None:
         while not self._stop_event.wait(HEARTBEAT_INTERVAL):
+            if self._disconnected.is_set():
+                return  # port is gone — stop instead of spamming errors
             # Send a framed heartbeat message so the keypad can detect liveness
             self._serial_write('HB\n', 'HB')
 
@@ -105,12 +107,15 @@ class WatchDog(Cocoa.NSObject):
     @objc.typedSelector(b'v@:@')  # Encoded the signature string as bytes
     def applicationActivated_(self, notification: Cocoa.NSNotification) -> None:
         app = notification.userInfo()['NSWorkspaceApplicationKey']
+        # Never react to our own process (menu-bar app's About window, running
+        # unbundled as "Python") — the keypad must keep showing the real app.
+        if app.processIdentifier() == os.getpid():
+            return
         app_name = self._get_app_name(app)
         self.send_app_name_to_microcontroller(app_name)
 
 
     # Get the URL of the active tab in Google Chrome or Safari
-    @objc.typedSelector(b'v@:@')  # Encoded the signature string as bytes
     def get_url(self, app_name) -> str:
         command_dict = {
             "Google Chrome": '''
@@ -139,7 +144,15 @@ class WatchDog(Cocoa.NSObject):
         '''
         osa = subprocess.Popen(
             ['osascript', '-'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = osa.communicate(script.encode())
+        try:
+            # runs on the main thread — a hung osascript must not freeze the run loop
+            output, error = osa.communicate(script.encode(), timeout=2)
+        except subprocess.TimeoutExpired:
+            osa.kill()
+            osa.communicate()
+            if self.args.verbose:
+                print(f"osascript timed out querying {app_name}")
+            return ""
         if error and self.args.verbose:
             print(f"osascript error: {error.decode().strip()}")
         full_url = output.decode().strip()
@@ -157,7 +170,6 @@ class WatchDog(Cocoa.NSObject):
 
 
     # Send the name of the active application to the keypad via serial
-    @objc.typedSelector(b'v@:@')
     def send_app_name_to_microcontroller(self, app_name: str) -> None:
         if app_name in ["Safari", "Google Chrome"]:
             app_name = app_name + self.get_url(app_name)
@@ -176,11 +188,28 @@ class WatchDog(Cocoa.NSObject):
             print(f'Active app: {app_name}')
         self._serial_write("App: " + app_name + '\n', "App")
 
+        # Optional observer (menu-bar app's cheat sheet); fires only on real
+        # app changes thanks to the dedup above. getattr: test instances are
+        # built via object.__new__ and may lack the attribute.
+        callback = getattr(self, 'on_app_changed', None)
+        if callback:
+            callback(app_name)
+
+    # Flag the serial port as dead exactly once (ends the current session)
+    def _mark_disconnected(self, error: Exception) -> None:
+        if not self._disconnected.is_set():
+            print(f"Serial connection lost: {error}")
+            self._disconnected.set()
+
     # Send a HELLO or BYE message so the keypad can react to clean startup/shutdown
     def _serial_write(self, message: str, label: str) -> None:
         with self._serial_lock:
+            if self._disconnected.is_set():
+                return
             try:
                 self.ser.write(message.encode('utf-8'))
+            except (serial.SerialException, OSError) as e:
+                self._mark_disconnected(e)
             except Exception as e:
                 print(f"Error sending {label}: {e}")
 
@@ -198,17 +227,17 @@ class WatchDog(Cocoa.NSObject):
 
     # Read data from the serial connection from the keypad
     def read_serial_data(self) -> Optional[str]:
-        if self.ser.in_waiting == 0:
-            return
         try:
-            return self.ser.readline().decode().strip()
-        except serial.SerialException as e:
-            print(f"Error reading from microcontroller: {e}")
+            if self.ser.in_waiting == 0:
+                return
+            # errors="replace": one junk byte must not kill the run loop
+            return self.ser.readline().decode(errors="replace").strip()
+        except (serial.SerialException, OSError) as e:
+            self._mark_disconnected(e)
             return
 
 
     # Launch an application
-    @objc.typedSelector(b'v@:@')
     def launch_app(self, match: re.Match) -> None:
         launch_app_name = match.group(1)
         # Leading dash injects flags into `open -a`; / \ \x00 are path traversal / null injection
@@ -225,7 +254,6 @@ class WatchDog(Cocoa.NSObject):
 
 
     # Run a plugin command
-    @objc.typedSelector(b'v@:@')
     def run_plugin_command(self, match: re.Match) -> None:
         parts = match.group(1).split(' ', 1)
         command = parts[0].strip()
@@ -243,9 +271,11 @@ class WatchDog(Cocoa.NSObject):
             if self.args.verbose:
                 print(f"Command {command} not found")
             return
-        # Check if the command requires a parameter
+        # Check if the command requires a parameter (defaults make it optional)
         command_func = commands[command]
-        if len(signature(command_func).parameters) > 0 and param is None:
+        required_params = [p for p in signature(command_func).parameters.values()
+                           if p.default is p.empty]
+        if required_params and param is None:
             if self.args.verbose:
                 print(f"Parameter missing for command: {command}")
             return
@@ -265,10 +295,10 @@ class WatchDog(Cocoa.NSObject):
         command_func(param) if param is not None else command_func()
 
 
-    # Run the NSRunLoop, polling serial each iteration
+    # Run the NSRunLoop, polling serial each iteration; returns on disconnect
     def run_loop(self) -> None:
         ns_run_loop = Cocoa.NSRunLoop.currentRunLoop()
-        while True:
+        while not self._disconnected.is_set():
             ns_run_loop.runMode_beforeDate_(
                 Cocoa.NSDefaultRunLoopMode, Cocoa.NSDate.dateWithTimeIntervalSinceNow_(0.1))
             self.check_serial()
@@ -311,6 +341,7 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
     full_path = os.path.join(base_path, path)
 
     # Only consider real plugin python files. Skip base_plugin, __init__.py, and hidden files.
+    home = os.path.expanduser('~')
     plugin_files = [f for f in os.scandir(full_path)
                     if f.is_file()
                     and f.name.endswith('.py')
@@ -320,7 +351,23 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
         plugin_name = os.path.splitext(plugin_file.name)[0]
         abs_path = os.path.join(full_path, plugin_file.name)
 
-        # Stage 1: load the module
+        # Stage 1: locate config file — skip before importing the module so
+        # plugins with missing optional dependencies don't produce noisy errors.
+        candidates = [
+            (os.path.join(base_path, 'plugins_config', f'{plugin_name}.json'), 'central'),
+            (os.path.join(full_path, 'config', f'{plugin_name}.json'),          'plugin-local'),
+            (os.path.join(home, 'Library', 'Application Support',
+                          'DIYStreamDeck', 'plugins_config', f'{plugin_name}.json'), 'user-support'),
+        ]
+        for config_path, source in candidates:
+            if os.path.exists(config_path):
+                break
+        else:
+            paths = ', '.join(p for p, _ in candidates)
+            print(f"Skipping plugin '{plugin_name}': no config found at {paths}")
+            continue
+
+        # Stage 2: config exists — now load the module
         try:
             spec = importlib.util.spec_from_file_location(plugin_name, abs_path)
             plugin_module = importlib.util.module_from_spec(spec)
@@ -329,25 +376,19 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
             print(f"Error loading plugin module {plugin_name}: {e}")
             continue
 
-        # Stage 2: locate config file
-        central = os.path.join(base_path, 'plugins_config', f'{plugin_name}.json')
-        fallback = os.path.join(full_path, 'config', f'{plugin_name}.json')
-        if os.path.exists(central):
-            config_path = central
-            source = 'central'
-        elif os.path.exists(fallback):
-            config_path = fallback
-            source = 'plugin-local'
-        else:
-            print(f"Skipping plugin '{plugin_name}': no config found at {central} or {fallback}")
-            continue
-
         if verbose:
             print(f"Using {source} config for plugin '{plugin_name}': {config_path}")
 
-        # Stage 3: instantiate
+        # Stage 3: instantiate — find the BasePlugin subclass defined in the
+        # module (robust against naming, unlike capitalize()+'Plugin')
         try:
-            plugin_class = getattr(plugin_module, f'{plugin_name.capitalize()}Plugin')
+            plugin_class = next(
+                obj for obj in vars(plugin_module).values()
+                if isinstance(obj, type)
+                and issubclass(obj, BasePlugin)
+                and obj is not BasePlugin
+                and obj.__module__ == plugin_module.__name__
+            )
             plugins[plugin_name] = plugin_class(config_path, verbose)
             print(f"Loaded plugin: {plugin_name}")
         except Exception as e:
@@ -365,36 +406,43 @@ def _run_plugin_lifecycle(plugins: Dict[str, BasePlugin], method_name: str, *arg
             print(f"Plugin '{name}' {method_name} error: {e}")
 
 
-# Main function
-def main() -> None:
-    parser = argparse.ArgumentParser(
-        description='Monitor active app and send data to microcontroller')
-    parser.add_argument('--port', default=None,
-                        help='Serial port for the microcontroller (auto-detected if omitted)')
-    parser.add_argument('--speed', type=int, default=9600,
-                        help='Baud rate for the serial connection (default: 9600)')
-    parser.add_argument('--verbose', action='store_true', default=False,
-                        help='Print the name of the current active window (default: False)')
-    parser.add_argument('--rotate', choices=['CW', 'CCW'],
-                        help='Rotation direction for the keypad (default: CW)')
-    args = parser.parse_args()
+# Single connection attempt: resolve the port and open it (None on failure)
+def _attempt_connect(args: argparse.Namespace) -> Optional[serial.Serial]:
+    port = args.port or find_pico_port_by_vid()
+    if not port:
+        return None
+    return create_serial_connection(port, args.speed)
 
-    if args.port is None:
-        args.port = find_pico_port_by_vid()
-        if args.port is None:
+
+# Connect to the Pico. With reconnect enabled (the default) this polls with
+# capped backoff until a device appears; with --no-reconnect it returns None
+# immediately when no device is available.
+def _connect_or_wait(args: argparse.Namespace) -> Optional[serial.Serial]:
+    delay = 2.0
+    waiting_reported = False
+    while True:
+        ser = _attempt_connect(args)
+        if ser:
+            print(f"Connected: {ser.port}")
+            return ser
+        if args.no_reconnect:
             print("Error: Pico not found. Connect the device or specify --port.")
-            return
-        print(f"Auto-detected port: {args.port}")
+            return None
+        if not waiting_reported:
+            print("Waiting for the Pico to appear...")
+            waiting_reported = True
+        time.sleep(delay)
+        delay = min(delay * 1.5, 15.0)
 
-    ser = create_serial_connection(args.port, args.speed)
-    if ser is None:
-        print("Error: No serial connection.")
-        return
 
-    print(f'Keypad watchdog {VERSION} is running...')
-
-    plugins = load_plugins(verbose=args.verbose)
+# Start one serial session: handshake, observers, heartbeat, plugin lifecycle.
+# The session protocol lives here (and in end_session) only — the CLI's
+# run_session and the menu-bar app both build on these two helpers.
+def start_session(ser: serial.Serial, args: argparse.Namespace,
+                  plugins: Dict[str, BasePlugin],
+                  on_app_changed=None) -> tuple:
     watchdog = WatchDog.alloc().initWithSerial_args_plugins_(ser, args, plugins)
+    watchdog.on_app_changed = on_app_changed
     notification_center = Cocoa.NSWorkspace.sharedWorkspace().notificationCenter()
     notification_center.addObserver_selector_name_object_(
         watchdog,
@@ -403,7 +451,7 @@ def main() -> None:
         Cocoa.NSWorkspaceDidActivateApplicationNotification,
         None,
     )
-    # send HELLO so the keypad can know we started
+    # send HELLO so the keypad can know we started (repaints after reconnect too)
     watchdog.send_hello()
     frontmost = Cocoa.NSWorkspace.sharedWorkspace().frontmostApplication()
     if frontmost:
@@ -418,25 +466,79 @@ def main() -> None:
     # BasePlugin.on_watchdog_start is a no-op, so keypress-only plugins
     # (spotify/hue/sounds) are unaffected.
     _run_plugin_lifecycle(plugins, 'on_watchdog_start', watchdog._send_line_to_keypad)
+    return watchdog, heartbeat_thread
 
+
+# Tear down a session started by start_session. BYE is only sent when the
+# port is still alive (send_bye and not disconnected).
+def end_session(watchdog: 'WatchDog', heartbeat_thread: threading.Thread,
+                plugins: Dict[str, BasePlugin], send_bye: bool = True) -> None:
+    Cocoa.NSWorkspace.sharedWorkspace().notificationCenter().removeObserver_(watchdog)
+    watchdog._stop_event.set()
+    heartbeat_thread.join()   # stop heartbeat before BYE to avoid lock contention
+    # Stop plugins before closing the port (they may want a final flush)
+    _run_plugin_lifecycle(plugins, 'on_watchdog_stop')
+    if send_bye and not watchdog._disconnected.is_set():
+        watchdog.send_bye()
+        try:
+            watchdog.ser.flush()
+            time.sleep(SERIAL_CLOSE_GRACE_PERIOD)
+        except (serial.SerialException, OSError):
+            pass
     try:
-        watchdog.run_loop()
-    except KeyboardInterrupt:
-        pass  # User pressed CTRL-C to exit
+        watchdog.ser.close()
+    except (serial.SerialException, OSError):
+        pass
+
+
+# Run one serial session; returns True if it ended because the port died
+# (caller should reconnect), False on clean shutdown (Ctrl-C).
+def run_session(ser: serial.Serial, args: argparse.Namespace,
+                plugins: Dict[str, BasePlugin]) -> bool:
+    watchdog, heartbeat_thread = start_session(ser, args, plugins)
+    try:
+        watchdog.run_loop()  # returns when the serial port dies
     except Exception as e:
         print(f"An error occurred during the execution: {e}")
     finally:
-        notification_center.removeObserver_(watchdog)
-        watchdog._stop_event.set()
-        heartbeat_thread.join()   # stop heartbeat before BYE to avoid lock contention
-        # Stop plugins before closing the port (they may want a final flush)
-        _run_plugin_lifecycle(plugins, 'on_watchdog_stop')
-        watchdog.send_bye()
-        ser.flush()
-        time.sleep(SERIAL_CLOSE_GRACE_PERIOD)
-        ser.close()
-        if args.verbose:
-            print("Shutdown complete.")
+        end_session(watchdog, heartbeat_thread, plugins)
+    return watchdog._disconnected.is_set()
+
+
+# Main function
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description='Monitor active app and send data to microcontroller')
+    parser.add_argument('--port', default=None,
+                        help='Serial port for the microcontroller (auto-detected if omitted)')
+    parser.add_argument('--speed', type=int, default=9600,
+                        help='Baud rate for the serial connection (default: 9600)')
+    parser.add_argument('--verbose', action='store_true', default=False,
+                        help='Print the name of the current active window (default: False)')
+    parser.add_argument('--rotate', choices=['CW', 'CCW'],
+                        help='Rotation direction for the keypad (default: none)')
+    parser.add_argument('--no-reconnect', action='store_true', default=False,
+                        help='Exit when the Pico disconnects instead of waiting for it to return')
+    args = parser.parse_args()
+
+    print(f'Keypad watchdog {VERSION} is running...')
+    plugins = load_plugins(verbose=args.verbose)
+
+    try:
+        while True:
+            ser = _connect_or_wait(args)
+            if ser is None:
+                sys.exit(1)  # --no-reconnect and no device
+            disconnected = run_session(ser, args, plugins)
+            if not disconnected:
+                break  # clean shutdown
+            if args.no_reconnect:
+                sys.exit(1)
+            print("Pico disconnected — reconnecting...")
+    except KeyboardInterrupt:
+        pass  # User pressed CTRL-C to exit
+    if args.verbose:
+        print("Shutdown complete.")
 
 
 # Entry point for the script

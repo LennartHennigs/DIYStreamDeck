@@ -14,7 +14,15 @@ class SpotifyPlugin(BasePlugin):
 
     def __init__(self, config_file: str, verbose: bool) -> None:
         super().__init__(config_file, verbose)
-        self.sp = self._authenticate()
+        # Lazy: authenticate on first command, not at watchdog startup — the
+        # OAuth flow can hit the network or open a browser.
+        self._sp: Optional[Spotify] = None
+
+    @property
+    def sp(self) -> Spotify:
+        if self._sp is None:
+            self._sp = self._authenticate()
+        return self._sp
 
     def commands(self):
         return {
