@@ -123,6 +123,41 @@ def test_load_plugins_prefers_central(tmp_path, monkeypatch, capsys):
     assert 'dummy' in plugins
 
 
+def test_load_plugins_prefers_user_config(tmp_path, capsys):
+    """The flat ~/Documents/DIYStreamDeck folder (STREAMDECK_CONFIG_DIR) takes
+    priority over the in-repo central config."""
+    sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../..')))
+    from tests.unit.mac.test_watchdog import _import_watchdog
+
+    project_src = tmp_path / "src" / "mac"
+    plugins_dir = project_src / "plugins"
+    plugins_dir.mkdir(parents=True)
+    _create_dummy_plugin(str(plugins_dir), "dummy")
+
+    # central config also exists — user-config must win
+    central = project_src / "plugins_config"
+    central.mkdir()
+    (central / "dummy.json").write_text("{}")
+
+    user_dir = tmp_path / "DIYStreamDeck"
+    user_dir.mkdir()
+    (user_dir / "dummy.json").write_text(json.dumps({"from": "user"}))
+
+    watchdog_mod = _import_watchdog()
+    original_file = watchdog_mod.__file__
+    os.environ["STREAMDECK_CONFIG_DIR"] = str(user_dir)
+    try:
+        watchdog_mod.__file__ = str(project_src / "watchdog.py")
+        plugins = watchdog_mod.load_plugins(path="plugins", verbose=True)
+    finally:
+        watchdog_mod.__file__ = original_file
+        del os.environ["STREAMDECK_CONFIG_DIR"]
+
+    captured = capsys.readouterr()
+    assert "Using user-config config for plugin 'dummy'" in captured.out
+    assert "dummy" in plugins
+
+
 def test_load_plugins_fallback_to_plugin_local(tmp_path, monkeypatch, capsys):
     project_src = tmp_path / "src" / "mac"
     plugins_dir = project_src / "plugins"

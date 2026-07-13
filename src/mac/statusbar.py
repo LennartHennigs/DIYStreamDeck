@@ -13,9 +13,12 @@ src/mac/service/install-service.sh --statusbar.
 import argparse
 import os
 import sys
+import tempfile
+import webbrowser
 
 import rumps
 
+from src.mac import config_paths, github_update, pico_deploy
 from src.mac.layout_formatter import load_key_def, layout_lines
 from src.mac.watchdog import (
     VERSION,
@@ -32,7 +35,9 @@ if getattr(sys, 'frozen', False):
     _MAC_DIR = os.path.join(sys._MEIPASS, 'src', 'mac')
 else:
     _MAC_DIR = os.path.dirname(os.path.abspath(__file__))
-DEFAULT_KEY_DEF = os.path.join(_MAC_DIR, '..', 'pi_pico', 'key_def.json')
+# key_def.json lives in the user config folder (~/Documents/DIYStreamDeck),
+# seeded from the bundle on first run — see config_paths.ensure_config_dir().
+DEFAULT_KEY_DEF = config_paths.key_def_path()
 _GRID_ICON = os.path.join(_MAC_DIR, 'assets', 'grid_icon.png')
 
 TICK_SECONDS = 0.1
@@ -64,6 +69,11 @@ class StreamDeckApp(rumps.App):
             None,
             self._autoconnect_item,
             self._connect_item,
+            None,
+            rumps.MenuItem("Reload layout on Pico", callback=self._reload_layout),
+            rumps.MenuItem("Update firmware from GitHub", callback=self._update_firmware),
+            None,
+            rumps.MenuItem("Project on GitHub", callback=self._open_github),
             None,
             rumps.MenuItem("Quit", callback=self._quit),
         ]
@@ -152,6 +162,55 @@ class StreamDeckApp(rumps.App):
         if self._watchdog is None and not self._try_connect():
             self._set_status("○  Pico not found")
 
+    # -- Pico deploy / firmware -------------------------------------------------
+
+    def _force_reconnect(self) -> None:
+        """Drop the session so the state machine reconnects + re-HELLOs, which
+        repaints the layout after the Pico auto-reloads."""
+        if self._watchdog is not None:
+            self._teardown_session(send_bye=False)
+        self._enter_disconnected_state()
+
+    def _reload_layout(self, _item) -> None:
+        if pico_deploy.circuitpy_mount() is None:
+            self._set_status("○  Pico storage not mounted")
+            return
+        try:
+            pico_deploy.push_key_def()
+        except pico_deploy.PicoDeployError as e:
+            self._set_status(f"○  {e}")
+            return
+        self._set_status("◌  Reloading layout...")
+        self._force_reconnect()
+
+    def _update_firmware(self, _item) -> None:
+        if pico_deploy.circuitpy_mount() is None:
+            self._set_status("○  Pico storage not mounted")
+            return
+        try:
+            ref, code_py = github_update.latest_code_py()
+        except github_update.UpdateError:
+            self._set_status("○  Update failed (offline?)")
+            return
+        try:
+            with tempfile.NamedTemporaryFile('w', suffix='.py', delete=False) as tmp:
+                tmp.write(code_py)
+                tmp_path = tmp.name
+            pico_deploy.push_file(tmp_path, 'code.py')
+        except pico_deploy.PicoDeployError as e:
+            self._set_status(f"○  {e}")
+            return
+        finally:
+            try:
+                os.unlink(tmp_path)
+            except (OSError, NameError):
+                pass
+        self._set_status(f"◌  Installed firmware {ref}...")
+        self._force_reconnect()
+
+    def _open_github(self, _item) -> None:
+        webbrowser.open(github_update.REPO_URL)
+
     def _quit(self, _item) -> None:
         self._timer.stop()
         self._teardown_session(send_bye=True)
@@ -173,6 +232,7 @@ def main() -> None:
     args = parser.parse_args()
 
     print(f'DIY StreamDeck menu-bar app {VERSION}')
+    config_paths.ensure_config_dir()  # create + seed ~/Documents/DIYStreamDeck
     StreamDeckApp(args).run()
 
 

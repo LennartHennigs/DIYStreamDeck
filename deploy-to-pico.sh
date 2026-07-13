@@ -50,12 +50,19 @@ remount_noasync() {
   done
 }
 
+# key_def.json single source of truth: the user config folder
+# (~/Documents/DIYStreamDeck, override with STREAMDECK_CONFIG_DIR) if it exists,
+# else the in-repo copy.
+CONFIG_DIR="${STREAMDECK_CONFIG_DIR:-$HOME/Documents/DIYStreamDeck}"
+KEY_DEF_SRC="src/pi_pico/key_def.json"
+[ -f "$CONFIG_DIR/key_def.json" ] && KEY_DEF_SRC="$CONFIG_DIR/key_def.json"
+
 DEVICE=$(df "$MOUNT" | awk 'NR==2 {print $1}')
 remount_noasync "$DEVICE" "$MOUNT"
 
 echo "Deploying to $MOUNT..."
 $DEPLOY_CODE && { echo "  code.py"; cp -X src/pi_pico/code.py "$MOUNT/"; }
-$DEPLOY_KEYS && { echo "  key_def.json"; cp -X src/pi_pico/key_def.json "$MOUNT/"; }
+$DEPLOY_KEYS && { echo "  key_def.json (from $KEY_DEF_SRC)"; cp -X "$KEY_DEF_SRC" "$MOUNT/key_def.json"; }
 sync
 
 echo "Done. Pico will restart automatically."

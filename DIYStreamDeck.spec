@@ -39,8 +39,10 @@ a = Analysis(
         [
             # Plugin .py files must be real files on disk (watchdog uses spec_from_file_location)
             (os.path.join('src', 'mac', 'plugins'), os.path.join('src', 'mac', 'plugins')),
-            # Key layout JSON
+            # Key layout JSON (seed source for ~/Documents/DIYStreamDeck/key_def.json)
             (os.path.join('src', 'pi_pico', 'key_def.json'), os.path.join('src', 'pi_pico')),
+            # Plugin config templates (*.json.example) — seed source for first run
+            (os.path.join('src', 'mac', 'plugins_config'), os.path.join('src', 'mac', 'plugins_config')),
             # Menu bar icon
             (os.path.join('src', 'mac', 'assets', 'grid_icon.png'), os.path.join('src', 'mac', 'assets')),
         ]

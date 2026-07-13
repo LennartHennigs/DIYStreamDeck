@@ -1,6 +1,28 @@
 
 # CHANGELOG
 
+## 2026-07-13 (external config folder + in-app Pico deploy)
+
+- **User config folder `~/Documents/DIYStreamDeck`.** New `src/mac/config_paths.py`
+  resolves a single visible, editable folder used by both the packaged `.app` and
+  source/dev runs (override with `STREAMDECK_CONFIG_DIR`). `ensure_config_dir()` creates
+  it on first run and seeds `key_def.json` (active) plus the plugin config
+  `*.json.example` templates (rename to `.json` to activate) from the bundle/repo —
+  never clobbering existing files. `statusbar.py` reads `key_def.json` from here (cheat
+  sheet), and `watchdog.py:load_plugins` searches it first (flat `<plugin>.json`) ahead
+  of the previous central/plugin-local/user-support paths.
+- **`key_def.json` is the single source of truth.** `deploy-to-pico.sh --keys` now
+  deploys the folder's `key_def.json` (falling back to the in-repo copy).
+- **Menu: Reload layout on Pico.** New `src/mac/pico_deploy.py` copies the folder's
+  `key_def.json` onto the Pico's CIRCUITPY drive using the FAT32-safe noasync remount
+  via a single macOS admin prompt; CircuitPython auto-reload then restarts and the app
+  re-handshakes so the layout repaints. Reports `Pico storage not mounted` when absent.
+- **Menu: Update firmware from GitHub.** New `src/mac/github_update.py` fetches the
+  newest `code.py` (latest release tag, else `main`) and pushes it to the Pico (stdlib
+  urllib, bundled certifi CA). Reports `Update failed (offline?)` on network errors.
+- **Menu: Project on GitHub** opens the repo page.
+- **Spec**: bundles `src/mac/plugins_config/*.json.example` as first-run seed sources.
+
 ## 2026-07-12 (bundle launch + codesign fixes)
 
 - **Bundled `.app` now launches.** `statusbar.py` derived resource paths (`grid_icon.png`, `key_def.json`) from `__file__`, but as the PyInstaller entry script its `__file__` resolves to the bundle root (`Contents/Frameworks`) rather than `src/mac`, so the icon load crashed the app at startup with `FileNotFoundError`. `_MAC_DIR` is now resolved from `sys._MEIPASS/src/mac` when `sys.frozen` is set. (`load_plugins` in `watchdog.py` was unaffected — as a dotted submodule its `__file__` already sits under `src/mac`.)

@@ -37,13 +37,17 @@ Pico unloads the keypad if heartbeats stop (host disconnected).
 | Path | Purpose |
 | --- | --- |
 | `src/pi_pico/code.py` | Pico firmware (CircuitPython) |
-| `src/pi_pico/key_def.json` | Key layout configuration |
+| `src/pi_pico/key_def.json` | Key layout configuration (repo copy = first-run seed source) |
+| `~/Documents/DIYStreamDeck/` | **Runtime** config folder: `key_def.json` + flat plugin `<name>.json`. Seeded on first run; used by the `.app` and source runs. Override with `STREAMDECK_CONFIG_DIR` |
+| `src/mac/config_paths.py` | Resolves + seeds the runtime config folder (`config_dir`, `key_def_path`, `ensure_config_dir`) |
+| `src/mac/pico_deploy.py` | Push files to the Pico's CIRCUITPY drive (noasync remount via admin prompt) |
+| `src/mac/github_update.py` | Fetch the latest `code.py` from GitHub for in-app firmware update |
 | `src/mac/watchdog.py` | Mac watchdog entry point |
 | `src/mac/plugins/` | Plugin implementations (extend `BasePlugin`) |
-| `src/mac/plugins_config/` | Plugin credentials (git-ignored; copy from `*.json.example`) |
+| `src/mac/plugins_config/` | Plugin config `*.json.example` templates (seed source; real `*.json` git-ignored) |
 | `src/mac/hooks/` | Claude Code hook scripts (`streamdeck-claude.py`) + installer |
 | `src/mac/requirements.txt` | Mac Python dependencies |
-| `src/mac/statusbar.py` | Menu-bar app (rumps wrapper around watchdog) |
+| `src/mac/statusbar.py` | Menu-bar app (rumps wrapper around watchdog); Reload/Update/GitHub menu items |
 | `src/mac/assets/grid_icon.png` | Menu bar icon — regenerate with `scripts/generate_icon.py` |
 | `src/mac/layout_formatter.py` | Loads `key_def.json`, formats layout lines for the status bar cheat sheet |
 | `scripts/generate_icon.py` | One-time generator for `src/mac/assets/grid_icon.png` |
@@ -123,7 +127,7 @@ Test locations:
 
 ## Plugin Development
 
-Plugins extend `BasePlugin` in `src/mac/plugins/`. Each plugin needs a config template in `src/mac/plugins_config/<name>.json.example`. Command format: `plugin_name.command [parameter]`. See [README.md](README.md) for the full command reference.
+Plugins extend `BasePlugin` in `src/mac/plugins/`. Each plugin needs a config template in `src/mac/plugins_config/<name>.json.example` (seeded into the runtime folder on first run). At runtime, `load_plugins` looks for an active `<name>.json` first in `~/Documents/DIYStreamDeck/` (flat, `STREAMDECK_CONFIG_DIR` override), then the in-repo `plugins_config/`, then `~/Library/Application Support/DIYStreamDeck/plugins_config/`. Command format: `plugin_name.command [parameter]`. See [README.md](README.md) for the full command reference.
 
 Service-style plugins (that push events *to* the keypad, not just react to keypresses) override optional `on_watchdog_start(send_to_keypad)` and `on_watchdog_stop()` on `BasePlugin` — the `on_watchdog_` prefix keeps lifecycle names distinct from user command handlers like `SoundsPlugin.stop`. See `src/mac/plugins/claude.py` for the reference implementation (Unix-socket listener relaying `Claude: <color>` to the Pico).
 

@@ -16,6 +16,7 @@ from typing import Optional, Dict, Any
 from urllib.parse import urlparse
 import importlib.util
 import os
+from src.mac import config_paths
 from src.mac.plugins.base_plugin import BasePlugin
 import threading
 import time
@@ -354,6 +355,7 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
         # Stage 1: locate config file — skip before importing the module so
         # plugins with missing optional dependencies don't produce noisy errors.
         candidates = [
+            (os.path.join(config_paths.config_dir(), f'{plugin_name}.json'),     'user-config'),
             (os.path.join(base_path, 'plugins_config', f'{plugin_name}.json'), 'central'),
             (os.path.join(full_path, 'config', f'{plugin_name}.json'),          'plugin-local'),
             (os.path.join(home, 'Library', 'Application Support',
@@ -522,6 +524,7 @@ def main() -> None:
     args = parser.parse_args()
 
     print(f'Keypad watchdog {VERSION} is running...')
+    config_paths.ensure_config_dir()  # create + seed ~/Documents/DIYStreamDeck
     plugins = load_plugins(verbose=args.verbose)
 
     try:

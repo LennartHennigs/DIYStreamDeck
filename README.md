@@ -129,7 +129,15 @@ The agent starts at login, is restarted by launchd if it crashes, and logs to
   Tab (GUI+W)"), read from `key_def.json` (override with `--key-def`).
 - **Auto-connect** toggle — when on (default), the app finds and re-attaches
   to the Pico automatically; when off, use **Connect now**.
+- **Reload layout on Pico** — copies `~/Documents/DIYStreamDeck/key_def.json` onto the
+  Pico's CIRCUITPY drive (one admin prompt) and reloads it. Requires the drive mounted.
+- **Update firmware from GitHub** — downloads the latest `code.py` and installs it on
+  the Pico.
+- **Project on GitHub** — opens the repository page.
 - Same flags as the watchdog (`--port`, `--speed`, `--verbose`, `--rotate`).
+
+On first launch the app creates **`~/Documents/DIYStreamDeck/`** and seeds it with
+`key_def.json` and the plugin config templates (override with `STREAMDECK_CONFIG_DIR`).
 
 Clicking the menu-bar icon does not activate the app, so the keypad keeps
 showing the layout of the app you're actually using.
@@ -275,11 +283,16 @@ Bad key definitions (unknown keycodes, malformed hex colors) don't crash the key
 
 ## Plugins
 
-Plugins live in `src/mac/plugins/` and extend `BasePlugin`. Config files go in `src/mac/plugins_config/` (git-ignored — copy from the `.json.example` templates).
+Plugins live in `src/mac/plugins/` and extend `BasePlugin`. Config files live in the
+runtime config folder **`~/Documents/DIYStreamDeck/`** (created and seeded with
+`*.json.example` templates on first run; override with `STREAMDECK_CONFIG_DIR`). To
+enable a plugin, rename its template there — e.g. `spotify.json.example` →
+`spotify.json` — and fill in the values. (For development, an active `<name>.json` in
+the in-repo `src/mac/plugins_config/` still works as a fallback.)
 
 ### Spotify
 
-Requires a Spotify Premium account. Add credentials to `plugins_config/spotify.json`.
+Requires a Spotify Premium account. Add credentials to `~/Documents/DIYStreamDeck/spotify.json`.
 
 | Command | Description |
 | --- | --- |
@@ -293,7 +306,7 @@ Requires a Spotify Premium account. Add credentials to `plugins_config/spotify.j
 
 ### Philips Hue
 
-Set the bridge IP in `plugins_config/hue.json` and press the bridge button on first run. Lamp identifier can be a name in single quotes or a numeric index.
+Set the bridge IP in `~/Documents/DIYStreamDeck/hue.json` and press the bridge button on first run. Lamp identifier can be a name in single quotes or a numeric index.
 
 | Command | Description |
 | --- | --- |
@@ -303,7 +316,7 @@ Set the bridge IP in `plugins_config/hue.json` and press the bridge button on fi
 
 ### Sounds
 
-Place `.wav` or `.mp3` files in `src/mac/sounds/` (configure path in `plugins_config/sounds.json`).
+Place `.wav` or `.mp3` files in `src/mac/sounds/` (configure path in `~/Documents/DIYStreamDeck/sounds.json`).
 
 | Command | Description |
 | --- | --- |
@@ -331,8 +344,8 @@ The `claude` plugin lights the whole keypad in traffic-light colors when [Claude
 ```bash
 # Prereqs
 brew install jq                                              # once, if not already installed
-cp src/mac/plugins_config/claude.json.example \
-   src/mac/plugins_config/claude.json                        # empty defaults are fine
+cp ~/Documents/DIYStreamDeck/claude.json.example \
+   ~/Documents/DIYStreamDeck/claude.json                     # empty defaults are fine
 
 # Register the hook with Claude Code (idempotent — safe to re-run)
 ./src/mac/hooks/install-claude-hooks.sh
