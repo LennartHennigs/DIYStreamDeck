@@ -43,8 +43,9 @@ a = Analysis(
             (os.path.join('src', 'pi_pico', 'key_def.json'), os.path.join('src', 'pi_pico')),
             # Plugin config templates (*.json.example) — seed source for first run
             (os.path.join('src', 'mac', 'plugins_config'), os.path.join('src', 'mac', 'plugins_config')),
-            # Menu bar icon
+            # Menu bar icon + Dock/Finder app icon
             (os.path.join('src', 'mac', 'assets', 'grid_icon.png'), os.path.join('src', 'mac', 'assets')),
+            (os.path.join('src', 'mac', 'assets', 'app_icon.icns'), os.path.join('src', 'mac', 'assets')),
         ]
     ),
     hiddenimports=(
@@ -73,6 +74,8 @@ a = Analysis(
             'src.mac.statusbar',
             'src.mac.watchdog',
             'src.mac.layout_formatter',
+            'src.mac.login_item',
+            'src.mac.config_paths',
             'src.mac.plugins',
             'src.mac.plugins.base_plugin',
             'src.mac.plugins.claude',
@@ -129,7 +132,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='DIYStreamDeck.app',
-    icon=None,
+    icon=os.path.join('src', 'mac', 'assets', 'app_icon.icns'),
     bundle_identifier='com.lennarthennigs.diystreamdeck',
     info_plist={
         'LSUIElement': True,

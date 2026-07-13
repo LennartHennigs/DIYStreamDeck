@@ -12,13 +12,14 @@ src/mac/service/install-service.sh --statusbar.
 """
 import argparse
 import os
-import tempfile
 import webbrowser
 
 import rumps
+from AppKit import NSColor, NSForegroundColorAttributeName
+from Foundation import NSMutableAttributedString
 
-from src.mac import config_paths, github_update, pico_deploy
-from src.mac.layout_formatter import load_key_def, layout_lines
+from src.mac import config_paths, github_update, login_item
+from src.mac.layout_formatter import layout_entries, load_key_def
 from src.mac.watchdog import (
     VERSION,
     _attempt_connect,
@@ -26,6 +27,31 @@ from src.mac.watchdog import (
     load_plugins,
     start_session,
 )
+
+# Status-dot colors (r, g, b). Dark green for connected; the rest track state.
+_GREEN = (0, 128, 0)
+_GREY = (140, 140, 140)
+_AMBER = (200, 150, 0)
+_RED = (200, 60, 60)
+
+
+def _set_dot_title(item: 'rumps.MenuItem', rgb, text: str) -> None:
+    """Render '●  text' on a menu item with only the ● glyph colored rgb.
+
+    rumps has no colored-text API, so we set an NSAttributedString directly on
+    the underlying NSMenuItem. If rgb is None, no dot is shown (plain text).
+
+    item.title is always set to `text` first so rumps' menu keeps a stable,
+    unique key for the item; the attributed title only overrides the display."""
+    item.title = text
+    if rgb is None:
+        item._menuitem.setAttributedTitle_(None)
+        return
+    attr = NSMutableAttributedString.alloc().initWithString_(f"●  {text}")
+    color = NSColor.colorWithCalibratedRed_green_blue_alpha_(
+        rgb[0] / 255.0, rgb[1] / 255.0, rgb[2] / 255.0, 1.0)
+    attr.addAttribute_value_range_(NSForegroundColorAttributeName, color, (0, 1))
+    item._menuitem.setAttributedTitle_(attr)
 
 # In a PyInstaller bundle this file is the entry script, so __file__ points at
 # the bundle root instead of src/mac; config_paths.bundle_root() resolves the
@@ -53,23 +79,25 @@ class StreamDeckApp(rumps.App):
         self._retry_ticks = RETRY_TICKS
         self._retry_countdown = 0
 
-        self._status_item = rumps.MenuItem("◌  Starting...")
+        self._status_item = rumps.MenuItem("Starting...")
+        self._set_status("Starting...", _GREY)
         self._layout_menu = rumps.MenuItem("Layout")
         self._layout_menu.add(rumps.MenuItem("(no app yet)"))
         self._autoconnect_item = rumps.MenuItem("Auto-connect", callback=self._toggle_autoconnect)
         self._autoconnect_item.state = 1
         self._connect_item = rumps.MenuItem("Connect now", callback=self._connect_now)
+        self._login_item = rumps.MenuItem("Start at login", callback=self._toggle_login_item)
+        self._login_item.state = login_item.is_enabled()
         self.menu = [
             self._status_item,
             self._layout_menu,
             None,
             self._autoconnect_item,
             self._connect_item,
+            self._login_item,
             None,
-            rumps.MenuItem("Reload layout on Pico", callback=self._reload_layout),
-            rumps.MenuItem("Update firmware from GitHub", callback=self._update_firmware),
-            None,
-            rumps.MenuItem("Project on GitHub", callback=self._open_github),
+            rumps.MenuItem("Open Project on GitHub", callback=self._open_github),
+            rumps.MenuItem("About DIY StreamDeck…", callback=self._about),
             None,
             rumps.MenuItem("Quit", callback=self._quit),
         ]
@@ -98,9 +126,9 @@ class StreamDeckApp(rumps.App):
         self._retry_ticks = RETRY_TICKS
         self._retry_countdown = 0  # retry on the next tick
         if self._autoconnect_item.state:
-            self._set_status("◌  Searching for Pico...")
+            self._set_status("Searching for Pico...", _AMBER)
         else:
-            self._set_status("○  Disconnected")
+            self._set_status("Disconnected", _GREY)
 
     def _try_connect(self) -> bool:
         ser = _attempt_connect(self.args)
@@ -109,7 +137,7 @@ class StreamDeckApp(rumps.App):
         self._watchdog, self._heartbeat_thread = start_session(
             ser, self.args, self.plugins, on_app_changed=self._on_app_changed)
         self._retry_ticks = RETRY_TICKS
-        self._set_status(f"●  Connected: {ser.port}")
+        self._set_status(f"Connected ({ser.port})", _GREEN)
         if self.args.verbose:
             print(f"Connected: {ser.port}")
         return True
@@ -127,26 +155,35 @@ class StreamDeckApp(rumps.App):
     def _on_app_changed(self, app_name: str) -> None:
         try:
             key_def = load_key_def(self.args.key_def)
-            lines = layout_lines(key_def, app_name.split(" (", 1)[0])
+            entries = layout_entries(key_def, app_name.split(" (", 1)[0])
         except (OSError, ValueError) as e:
-            lines = [f"key_def.json error: {e}"]
+            entries = None
+            err = f"key_def.json error: {e}"
         if getattr(self, '_last_app_name', None) == app_name and \
-                getattr(self, '_last_layout_lines', None) == lines:
+                getattr(self, '_last_layout_entries', None) == entries:
             return
         self._last_app_name = app_name
-        self._last_layout_lines = lines
+        self._last_layout_entries = entries
         # rumps MenuItem has no public clear-children API on all versions;
         # rebuild via the underlying dict interface it exposes.
         for key in list(self._layout_menu.keys()):
             del self._layout_menu[key]
         self._layout_menu.add(rumps.MenuItem(app_name))
-        for line in lines or ["(no keys defined)"]:
-            self._layout_menu.add(rumps.MenuItem(line))
+        if entries is None:
+            self._layout_menu.add(rumps.MenuItem(err))
+            return
+        if not entries:
+            self._layout_menu.add(rumps.MenuItem("(no keys defined)"))
+            return
+        for num, text, rgb in entries:
+            item = rumps.MenuItem("")
+            _set_dot_title(item, rgb, f"Key {num:2d} — {text}")
+            self._layout_menu.add(item)
 
     # -- menu callbacks -----------------------------------------------------------
 
-    def _set_status(self, text: str) -> None:
-        self._status_item.title = text
+    def _set_status(self, text: str, rgb=_GREY) -> None:
+        _set_dot_title(self._status_item, rgb, text)
 
     def _toggle_autoconnect(self, item: rumps.MenuItem) -> None:
         item.state = not item.state
@@ -156,54 +193,25 @@ class StreamDeckApp(rumps.App):
     def _connect_now(self, _item) -> None:
         self._retry_ticks = RETRY_TICKS
         if self._watchdog is None and not self._try_connect():
-            self._set_status("○  Pico not found")
-
-    # -- Pico deploy / firmware -------------------------------------------------
-
-    def _force_reconnect(self) -> None:
-        """Drop the session so the state machine reconnects + re-HELLOs, which
-        repaints the layout after the Pico auto-reloads."""
-        if self._watchdog is not None:
-            self._teardown_session(send_bye=False)
-        self._enter_disconnected_state()
-
-    def _push_and_reload(self, push, ok_status: str) -> None:
-        """Run push() (may raise PicoDeployError, incl. 'not mounted'); on success
-        report ok_status and reconnect so the reloaded layout repaints."""
-        try:
-            push()
-        except pico_deploy.PicoDeployError as e:
-            self._set_status(f"○  {e}")
-            return
-        self._set_status(ok_status)
-        self._force_reconnect()
-
-    def _reload_layout(self, _item) -> None:
-        self._push_and_reload(pico_deploy.push_key_def, "◌  Reloading layout...")
-
-    def _update_firmware(self, _item) -> None:
-        if pico_deploy.circuitpy_mount() is None:  # avoid a slow fetch when absent
-            self._set_status("○  Pico storage not mounted")
-            return
-        try:
-            ref, code_py = github_update.latest_code_py()
-        except github_update.UpdateError:
-            self._set_status("○  Update failed (offline?)")
-            return
-        fd, tmp_path = tempfile.mkstemp(suffix='.py')
-        try:
-            with os.fdopen(fd, 'w') as f:
-                f.write(code_py)
-            self._push_and_reload(lambda: pico_deploy.push_file(tmp_path, 'code.py'),
-                                  f"◌  Installed firmware {ref}...")
-        finally:
-            try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
+            self._set_status("Pico not found", _RED)
 
     def _open_github(self, _item) -> None:
         webbrowser.open(github_update.REPO_URL)
+
+    def _about(self, _item) -> None:
+        rumps.alert(title="DIY StreamDeck", message=f"Version {VERSION}")
+
+    def _toggle_login_item(self, item: rumps.MenuItem) -> None:
+        try:
+            if item.state:
+                login_item.disable()
+                item.state = False
+            else:
+                login_item.enable()
+                item.state = True
+        except OSError as e:
+            self._set_status(f"Login item failed: {e}", _RED)
+            item.state = login_item.is_enabled()
 
     def _quit(self, _item) -> None:
         self._timer.stop()

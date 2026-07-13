@@ -39,24 +39,62 @@ if [ ! -f "${DIR}/.venv/bin/pyinstaller" ]; then
   exit 1
 fi
 
+# Split our own flags from pass-through PyInstaller args. --install must NOT be
+# forwarded to PyInstaller (it rejects unknown options); anything else is passed
+# through so callers can add extra PyInstaller flags.
+INSTALL=0
+PYI_ARGS=()
+for arg in "$@"; do
+  if [ "${arg}" = "--install" ]; then
+    INSTALL=1
+  else
+    PYI_ARGS+=("${arg}")
+  fi
+done
+
 # Wipe previous artifacts. PyInstaller's --clean can leave a stale bootloader in
 # build/ that trips "struct.error: unpack requires a buffer of 4 bytes" on the
-# next run, so remove both dirs outright.
-rm -rf "${DIR}/build" "${DIR}/dist"
+# next run, so remove both dirs outright. Under an iCloud-synced folder (e.g.
+# ~/Documents) the file provider re-materializes files mid-delete, so a single
+# `rm -rf` can fail with "Directory not empty" — retry a few times.
+rm_retry() {
+  local target="$1" attempt
+  for attempt in 1 2 3 4 5; do
+    rm -rf "${target}" 2>/dev/null
+    [ ! -e "${target}" ] && return 0
+    sleep 1
+  done
+  rm -rf "${target}"  # final attempt, let any real error surface
+}
+rm_retry "${DIR}/build"
+rm_retry "${DIR}/dist"
 
-"${DIR}/.venv/bin/pyinstaller" "${DIR}/DIYStreamDeck.spec" --clean --noconfirm "$@"
+"${DIR}/.venv/bin/pyinstaller" "${DIR}/DIYStreamDeck.spec" --clean --noconfirm \
+  ${PYI_ARGS[@]+"${PYI_ARGS[@]}"}
 
-sign_app "${DIR}/dist/DIYStreamDeck.app"
+# Best-effort sign in place. Under an iCloud-synced repo (~/Documents) the file
+# provider re-stamps xattrs and can lose codesign the --verify race on every
+# pass — the app still runs (ad-hoc signed), so warn rather than abort. For a
+# pristine signature use --install (re-signs the non-synced /Applications copy).
+if ! sign_app "${DIR}/dist/DIYStreamDeck.app"; then
+  echo "WARNING: dist app not cleanly signed (expected under iCloud-synced ~/Documents)." >&2
+  echo "         The app still runs; use --install for a pristine /Applications signature." >&2
+fi
 
 echo ""
 echo "Built: ${DIR}/dist/DIYStreamDeck.app"
 
-if [ "${1:-}" = "--install" ]; then
+if [ "${INSTALL}" = "1" ]; then
   rm -rf /Applications/DIYStreamDeck.app
   cp -r "${DIR}/dist/DIYStreamDeck.app" /Applications/
-  # Re-sign in place: /Applications isn't iCloud-synced, so this signature sticks
-  # (and clears any xattrs the copy carried over from the synced build folder).
-  sign_app /Applications/DIYStreamDeck.app
+  # Re-sign in place: /Applications isn't iCloud-synced, so xattr churn isn't a
+  # factor here. Best-effort: PyInstaller's bundled Python.framework has an
+  # "ambiguous bundle format" that codesign --deep --strict rejects regardless,
+  # so warn rather than abort — the ad-hoc-signed app still launches locally.
+  if ! sign_app /Applications/DIYStreamDeck.app; then
+    echo "WARNING: /Applications app not cleanly signed (PyInstaller Python.framework" >&2
+    echo "         layout defeats codesign --deep --strict). It still runs locally." >&2
+  fi
   echo "Installed: /Applications/DIYStreamDeck.app"
   echo "To add to Login Items: src/mac/service/install-service.sh --app"
 fi

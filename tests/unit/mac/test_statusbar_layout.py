@@ -4,7 +4,13 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
-from src.mac.layout_formatter import layout_for_app, describe_key, layout_lines
+from src.mac.layout_formatter import (
+    color_to_rgb,
+    describe_key,
+    layout_entries,
+    layout_for_app,
+    layout_lines,
+)
 
 KEY_DEF = {
     "applications": {
@@ -65,3 +71,24 @@ def test_layout_lines_are_sorted_and_formatted():
     assert lines[0].startswith("Key  0 — New Folder")
     nums = [int(line[4:6]) for line in lines]
     assert nums == sorted(nums)
+
+
+def test_color_to_rgb_named_hex_and_off():
+    assert color_to_rgb("green") == (0, 255, 0)
+    assert color_to_rgb("YELLOW") == (255, 255, 0)      # case-insensitive
+    assert color_to_rgb("#0080FF") == (0, 128, 255)     # hex
+    assert color_to_rgb("black") is None                # LED off → no dot
+    assert color_to_rgb("#000000") is None
+    assert color_to_rgb("chartreuse") is None           # unknown name
+    assert color_to_rgb(None) is None
+    assert color_to_rgb("#12") is None                  # malformed hex
+
+
+def test_layout_entries_pairs_text_with_color():
+    entries = layout_entries(KEY_DEF, "Finder")
+    by_num = {num: (text, rgb) for num, text, rgb in entries}
+    assert by_num[0] == ("New Folder (GUI+N)", (0, 255, 0))       # green
+    assert by_num[3][1] == (255, 255, 255)                        # white
+    assert by_num[14][1] == (255, 255, 0)                         # _default yellow
+    # sorted by key number, like layout_lines
+    assert [num for num, _, _ in entries] == sorted(by_num)
