@@ -12,6 +12,7 @@ src/mac/service/install-service.sh --statusbar.
 """
 import argparse
 import os
+import sys
 
 import rumps
 
@@ -24,7 +25,13 @@ from src.mac.watchdog import (
     start_session,
 )
 
-_MAC_DIR = os.path.dirname(os.path.abspath(__file__))
+# In a PyInstaller bundle this file is the entry script, so __file__ points at
+# the bundle root (Contents/Frameworks) instead of src/mac. The datas keep the
+# src/mac/... layout under sys._MEIPASS, so resolve resources from there.
+if getattr(sys, 'frozen', False):
+    _MAC_DIR = os.path.join(sys._MEIPASS, 'src', 'mac')
+else:
+    _MAC_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_KEY_DEF = os.path.join(_MAC_DIR, '..', 'pi_pico', 'key_def.json')
 _GRID_ICON = os.path.join(_MAC_DIR, 'assets', 'grid_icon.png')
 
