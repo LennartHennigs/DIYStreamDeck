@@ -343,6 +343,7 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
 
     # Only consider real plugin python files. Skip base_plugin, __init__.py, and hidden files.
     home = os.path.expanduser('~')
+    user_config_dir = config_paths.config_dir()
     plugin_files = [f for f in os.scandir(full_path)
                     if f.is_file()
                     and f.name.endswith('.py')
@@ -355,7 +356,7 @@ def load_plugins(path: str = 'plugins', verbose: bool = False) -> Dict[str, Base
         # Stage 1: locate config file — skip before importing the module so
         # plugins with missing optional dependencies don't produce noisy errors.
         candidates = [
-            (os.path.join(config_paths.config_dir(), f'{plugin_name}.json'),     'user-config'),
+            (os.path.join(user_config_dir, f'{plugin_name}.json'),             'user-config'),
             (os.path.join(base_path, 'plugins_config', f'{plugin_name}.json'), 'central'),
             (os.path.join(full_path, 'config', f'{plugin_name}.json'),          'plugin-local'),
             (os.path.join(home, 'Library', 'Application Support',

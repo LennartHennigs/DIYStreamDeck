@@ -142,6 +142,15 @@ On first launch the app creates **`~/Documents/DIYStreamDeck/`** and seeds it wi
 Clicking the menu-bar icon does not activate the app, so the keypad keeps
 showing the layout of the app you're actually using.
 
+### Standalone `.app`
+
+`./build-app.sh` bundles the menu-bar app into `dist/DIYStreamDeck.app` (add
+`--install` to copy it to `/Applications/` and re-sign it there). The bundle is
+ad-hoc signed, not notarized, so the first launch needs a right-click → **Open**
+to get past Gatekeeper. Run it from `/Applications` rather than a folder synced by
+iCloud Drive — iCloud restamps the bundle and invalidates the ad-hoc signature
+(the app still runs, but Gatekeeper may complain).
+
 ---
 
 ## Configuration (`key_def.json`)

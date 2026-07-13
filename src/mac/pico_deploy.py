@@ -29,18 +29,14 @@ def circuitpy_mount(mount: str = DEFAULT_MOUNT) -> str | None:
 
 def _admin_shell(script: str) -> None:
     """Run a shell snippet as root via one macOS admin-password prompt."""
-    osa = f'do shell script {_as_applescript_string(script)} with administrator privileges'
+    literal = '"' + script.replace('\\', '\\\\').replace('"', '\\"') + '"'  # AppleScript string
+    osa = f'do shell script {literal} with administrator privileges'
     result = subprocess.run(['osascript', '-e', osa], capture_output=True, text=True)
     if result.returncode != 0:
         err = (result.stderr or '').strip()
         if 'User canceled' in err or '-128' in err:
             raise PicoDeployError('Admin authorization cancelled')
         raise PicoDeployError(f'Deploy failed: {err or "unknown error"}')
-
-
-def _as_applescript_string(text: str) -> str:
-    """Quote a string as an AppleScript literal."""
-    return '"' + text.replace('\\', '\\\\').replace('"', '\\"') + '"'
 
 
 def push_file(src_path: str, dest_name: str, mount: str = DEFAULT_MOUNT) -> None:

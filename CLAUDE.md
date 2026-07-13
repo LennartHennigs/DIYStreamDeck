@@ -137,6 +137,9 @@ Service-style plugins (that push events *to* the keypad, not just react to keypr
 - **`redis` hangs Python**: A broken `redis` install causes Python (and `pip`) to hang on import. Remove it directly: `rm -rf .venv/lib/python3.11/site-packages/redis .venv/lib/python3.11/site-packages/redis-*.dist-info`
 - **PyObjC NSRect format**: `((x, y), (w, h))` — not `(x, y, w, h)`. The flat 4-tuple raises `ValueError: depythonifying struct of 2 members`.
 - **Plugin loader order**: Config check must happen before module import (`load_plugins` in `watchdog.py`). Importing first causes noisy errors from unconfigured plugins whose optional dependencies (e.g. `spotipy` → `redis`) are missing.
+- **iCloud-synced repo invalidates ad-hoc `.app` signatures**: this repo lives under an iCloud-synced `~/Documents`; the file provider stamps `com.apple.fileprovider.fpfs#P`/`FinderInfo` xattrs on the freshly-signed bundle, so `codesign --verify` fails seconds later (the app still runs). For a valid signature build/run from a non-synced path — `build-app.sh --install` re-signs the `/Applications` copy.
+- **PyInstaller `.app` signing needs two passes**: its internal ad-hoc sign fails on resource-fork detritus, and the first `xattr -cr` + `codesign` still trips `--verify`; a second pass fixes it (`sign_app` loop in `build-app.sh`). A stale `build/` causes `struct.error: unpack requires a buffer of 4 bytes` — `build-app.sh` does `rm -rf build dist` first.
+- **PyInstaller entry-script `__file__` = bundle root**: `statusbar.py` (the entry script) sees `__file__` under `sys._MEIPASS`, not `src/mac` — resolve bundled resources via `config_paths.bundle_root()`. Dotted submodules (e.g. `src.mac.watchdog`) keep a correct `__file__`.
 
 ## Development Principles
 

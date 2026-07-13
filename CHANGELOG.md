@@ -22,6 +22,16 @@
   urllib, bundled certifi CA). Reports `Update failed (offline?)` on network errors.
 - **Menu: Project on GitHub** opens the repo page.
 - **Spec**: bundles `src/mac/plugins_config/*.json.example` as first-run seed sources.
+- **`build-app.sh` hardening.** `rm -rf build dist` before building (a stale bootloader
+  in `build/` caused `struct.error: unpack requires a buffer of 4 bytes`); the ad-hoc
+  sign is a `sign_app` loop (PyInstaller's internal sign leaves resource-fork detritus,
+  and the first re-sign still fails `--verify` — a second `xattr -cr` + `codesign` pass
+  fixes it); `--install` re-signs the `/Applications` copy so an iCloud-synced build
+  folder (which restamps xattrs and invalidates the signature) doesn't leave the
+  installed app unsigned.
+- **Cleanup** (`/simplify`): shared `config_paths.bundle_root()` (drops the duplicated
+  frozen-path logic in `statusbar.py`); the two Pico-deploy menu callbacks share a
+  `_push_and_reload` helper; `code.py` update uses `mkstemp`; misc dedup.
 
 ## 2026-07-12 (bundle launch + codesign fixes)
 

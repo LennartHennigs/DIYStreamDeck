@@ -12,7 +12,6 @@ src/mac/service/install-service.sh --statusbar.
 """
 import argparse
 import os
-import sys
 import tempfile
 import webbrowser
 
@@ -29,12 +28,9 @@ from src.mac.watchdog import (
 )
 
 # In a PyInstaller bundle this file is the entry script, so __file__ points at
-# the bundle root (Contents/Frameworks) instead of src/mac. The datas keep the
-# src/mac/... layout under sys._MEIPASS, so resolve resources from there.
-if getattr(sys, 'frozen', False):
-    _MAC_DIR = os.path.join(sys._MEIPASS, 'src', 'mac')
-else:
-    _MAC_DIR = os.path.dirname(os.path.abspath(__file__))
+# the bundle root instead of src/mac; config_paths.bundle_root() resolves the
+# frozen-aware root the datas keep the src/mac/... layout under.
+_MAC_DIR = os.path.join(config_paths.bundle_root(), 'src', 'mac')
 # key_def.json lives in the user config folder (~/Documents/DIYStreamDeck),
 # seeded from the bundle on first run — see config_paths.ensure_config_dir().
 DEFAULT_KEY_DEF = config_paths.key_def_path()
@@ -171,20 +167,22 @@ class StreamDeckApp(rumps.App):
             self._teardown_session(send_bye=False)
         self._enter_disconnected_state()
 
-    def _reload_layout(self, _item) -> None:
-        if pico_deploy.circuitpy_mount() is None:
-            self._set_status("○  Pico storage not mounted")
-            return
+    def _push_and_reload(self, push, ok_status: str) -> None:
+        """Run push() (may raise PicoDeployError, incl. 'not mounted'); on success
+        report ok_status and reconnect so the reloaded layout repaints."""
         try:
-            pico_deploy.push_key_def()
+            push()
         except pico_deploy.PicoDeployError as e:
             self._set_status(f"○  {e}")
             return
-        self._set_status("◌  Reloading layout...")
+        self._set_status(ok_status)
         self._force_reconnect()
 
+    def _reload_layout(self, _item) -> None:
+        self._push_and_reload(pico_deploy.push_key_def, "◌  Reloading layout...")
+
     def _update_firmware(self, _item) -> None:
-        if pico_deploy.circuitpy_mount() is None:
+        if pico_deploy.circuitpy_mount() is None:  # avoid a slow fetch when absent
             self._set_status("○  Pico storage not mounted")
             return
         try:
@@ -192,21 +190,17 @@ class StreamDeckApp(rumps.App):
         except github_update.UpdateError:
             self._set_status("○  Update failed (offline?)")
             return
+        fd, tmp_path = tempfile.mkstemp(suffix='.py')
         try:
-            with tempfile.NamedTemporaryFile('w', suffix='.py', delete=False) as tmp:
-                tmp.write(code_py)
-                tmp_path = tmp.name
-            pico_deploy.push_file(tmp_path, 'code.py')
-        except pico_deploy.PicoDeployError as e:
-            self._set_status(f"○  {e}")
-            return
+            with os.fdopen(fd, 'w') as f:
+                f.write(code_py)
+            self._push_and_reload(lambda: pico_deploy.push_file(tmp_path, 'code.py'),
+                                  f"◌  Installed firmware {ref}...")
         finally:
             try:
                 os.unlink(tmp_path)
-            except (OSError, NameError):
+            except OSError:
                 pass
-        self._set_status(f"◌  Installed firmware {ref}...")
-        self._force_reconnect()
 
     def _open_github(self, _item) -> None:
         webbrowser.open(github_update.REPO_URL)

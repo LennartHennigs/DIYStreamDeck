@@ -27,8 +27,11 @@ def key_def_path() -> str:
     return os.path.join(config_dir(), 'key_def.json')
 
 
-def _bundle_root() -> str:
-    """Root that contains src/… — sys._MEIPASS when frozen, else the repo root."""
+def bundle_root() -> str:
+    """Root that contains src/… — sys._MEIPASS when frozen, else the repo root.
+
+    Shared by statusbar.py to locate bundled assets under the same layout.
+    """
     if getattr(sys, 'frozen', False):
         return sys._MEIPASS
     # src/mac/config_paths.py -> src/mac -> src -> repo root
@@ -44,7 +47,7 @@ def ensure_config_dir() -> str:
     """
     target = config_dir()
     os.makedirs(target, exist_ok=True)
-    root = _bundle_root()
+    root = bundle_root()
 
     key_def_src = os.path.join(root, 'src', 'pi_pico', 'key_def.json')
     key_def_dst = os.path.join(target, 'key_def.json')
@@ -54,9 +57,8 @@ def ensure_config_dir() -> str:
     template_dir = os.path.join(root, 'src', 'mac', 'plugins_config')
     if os.path.isdir(template_dir):
         for name in os.listdir(template_dir):
-            if name.endswith('.json.example'):
-                dst = os.path.join(target, name)
-                if not os.path.exists(dst):
-                    shutil.copy(os.path.join(template_dir, name), dst)
+            dst = os.path.join(target, name)
+            if name.endswith('.json.example') and not os.path.exists(dst):
+                shutil.copy(os.path.join(template_dir, name), dst)
 
     return target
