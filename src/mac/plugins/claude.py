@@ -22,6 +22,12 @@ Design notes:
 - Set `"listen_for_hooks": false` in claude.json to disable the socket
   listener; the keypad-triggerable claude.green/red/yellow commands
   still work in that mode.
+- Auto-clear: a `clear` payload (sent by the UserPromptSubmit hook when
+  the user answers) repaints the real layout via a `Claude: clear` line.
+  The plugin also owns a timeout — `timeout_seconds` in claude.json
+  (default 10, 0 = disabled) — after which it sends `Claude: clear`
+  itself, so a signal never lingers longer than that. The color still
+  clears immediately on any keypress / app switch (Pico side).
 """
 
 import os
@@ -46,9 +52,13 @@ class ClaudePlugin(BasePlugin):
         # Opt-out: users who only want the keypad-triggerable test commands
         # can set "listen_for_hooks": false to skip binding the socket.
         self.listen_for_hooks = self.config.get("listen_for_hooks", True)
+        # Auto-clear timeout (seconds) — 0 disables the fallback timer.
+        self.timeout_seconds = self.config.get("timeout_seconds", 10)
         self._send: Callable[[str], None] | None = None
         self._sock: socket.socket | None = None
         self._thread: threading.Thread | None = None
+        self._timer: threading.Timer | None = None
+        self._timer_lock = threading.Lock()
 
     def commands(self) -> Dict[str, Callable]:
         # Keypad-triggerable test commands (round-trip is harmless).
@@ -56,6 +66,7 @@ class ClaudePlugin(BasePlugin):
             "claude.green": lambda: self._signal("green"),
             "claude.red": lambda: self._signal("red"),
             "claude.yellow": lambda: self._signal("yellow"),
+            "claude.clear": self._clear,
         }
 
     def on_watchdog_start(self, send_to_keypad: Callable[[str], None]) -> None:
@@ -86,6 +97,7 @@ class ClaudePlugin(BasePlugin):
         self._log(f"claude: listening on {self.socket_path}")
 
     def on_watchdog_stop(self) -> None:
+        self._cancel_timer()
         # Closing the socket unblocks recvfrom() with OSError, which the
         # listener loop treats as a shutdown signal. Single wakeup, no polling.
         if self._sock is not None:
@@ -117,6 +129,8 @@ class ClaudePlugin(BasePlugin):
             color = data.decode("utf-8", errors="ignore").strip().lower()
             if color in self.VALID_COLORS:
                 self._signal(color)
+            elif color == "clear":
+                self._clear()
             else:
                 self._log(f"claude: dropped unknown payload {color!r}")
 
@@ -126,3 +140,36 @@ class ClaudePlugin(BasePlugin):
         # on_watchdog_start() wires up the sender.
         if self._send is not None:
             self._send(f"Claude: {color}\n")
+            self._arm_timeout()
+
+    def _clear(self) -> None:
+        """Repaint the Pico's real layout now (interaction or keypad command)."""
+        self._cancel_timer()
+        if self._send is not None:
+            self._send("Claude: clear\n")
+
+    # -- auto-clear timeout ----------------------------------------------------
+
+    def _arm_timeout(self) -> None:
+        """(Re)start the fallback timer that clears a lingering signal."""
+        if self.timeout_seconds <= 0 or self._send is None:
+            return
+        with self._timer_lock:
+            if self._timer is not None:
+                self._timer.cancel()
+            self._timer = threading.Timer(self.timeout_seconds, self._on_timeout)
+            self._timer.daemon = True
+            self._timer.start()
+
+    def _on_timeout(self) -> None:
+        # Timer thread: self._send is serialized by the watchdog's _serial_lock.
+        with self._timer_lock:
+            self._timer = None
+        if self._send is not None:
+            self._send("Claude: clear\n")
+
+    def _cancel_timer(self) -> None:
+        with self._timer_lock:
+            if self._timer is not None:
+                self._timer.cancel()
+                self._timer = None

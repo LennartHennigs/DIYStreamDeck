@@ -60,10 +60,10 @@ def _send_datagram(socket_path: str, msg: str) -> None:
 # Command surface — keypad-triggerable test commands
 # ---------------------------------------------------------------------------
 
-def test_commands_expose_three_colors(claude_plugin):
-    """Plugin must expose claude.green, claude.red, claude.yellow."""
+def test_commands_expose_colors_and_clear(claude_plugin):
+    """Plugin must expose claude.green/red/yellow and claude.clear."""
     commands = claude_plugin.commands()
-    assert set(commands) == {"claude.green", "claude.red", "claude.yellow"}
+    assert set(commands) == {"claude.green", "claude.red", "claude.yellow", "claude.clear"}
 
 
 @pytest.mark.parametrize("color", ["green", "red", "yellow"])
@@ -100,6 +100,93 @@ def test_socket_bad_payload_handling(started_plugin, short_socket_path, payload,
     _send_datagram(short_socket_path, payload)
     _send_datagram(short_socket_path, "green")
     assert wait_for(lambda: sends == expected), f"got {sends!r}"
+
+
+# ---------------------------------------------------------------------------
+# Auto-clear — interaction ('clear') + timeout fallback
+# ---------------------------------------------------------------------------
+
+def test_clear_command_sends_clear_line(started_plugin):
+    plugin, sends = started_plugin
+    plugin.commands()["claude.clear"]()
+    assert sends == ["Claude: clear\n"]
+
+
+def test_clear_datagram_relays_clear(started_plugin, short_socket_path):
+    _, sends = started_plugin
+    _send_datagram(short_socket_path, "clear")
+    assert wait_for(lambda: sends == ["Claude: clear\n"]), f"got {sends!r}"
+
+
+def test_color_arms_fallback_timer(started_plugin):
+    """A relayed color arms the auto-clear timer (default timeout > 0)."""
+    plugin, _ = started_plugin
+    plugin.commands()["claude.green"]()
+    assert plugin._timer is not None
+
+
+def test_on_timeout_sends_clear(started_plugin):
+    """When the timer fires it emits a single Claude: clear and disarms."""
+    plugin, sends = started_plugin
+    plugin.commands()["claude.green"]()
+    sends.clear()
+    plugin._on_timeout()
+    assert sends == ["Claude: clear\n"]
+    assert plugin._timer is None
+
+
+def test_clear_cancels_pending_timer(started_plugin):
+    plugin, sends = started_plugin
+    plugin.commands()["claude.green"]()
+    assert plugin._timer is not None
+    plugin.commands()["claude.clear"]()
+    assert plugin._timer is None
+    assert sends[-1] == "Claude: clear\n"
+
+
+def test_new_color_replaces_timer(started_plugin):
+    """A second color cancels the first timer and arms a fresh one."""
+    plugin, _ = started_plugin
+    plugin.commands()["claude.green"]()
+    first = plugin._timer
+    plugin.commands()["claude.red"]()
+    assert plugin._timer is not first
+    assert first.finished.is_set()  # the superseded timer was cancelled
+
+
+def test_timeout_zero_disables_timer(tmp_path, short_socket_path):
+    cfg = _write_config(tmp_path / "claude.json", short_socket_path, timeout_seconds=0)
+    plugin = ClaudePlugin(cfg, verbose=False)
+    sends = []
+    plugin.on_watchdog_start(lambda line: sends.append(line))
+    try:
+        plugin.commands()["claude.green"]()
+        assert plugin._timer is None       # not armed
+        assert sends == ["Claude: green\n"]
+    finally:
+        plugin.on_watchdog_stop()
+
+
+def test_timeout_fires_clear_end_to_end(tmp_path, short_socket_path):
+    """Real timer: a color followed by nothing auto-clears after timeout_seconds."""
+    cfg = _write_config(tmp_path / "claude.json", short_socket_path, timeout_seconds=0.1)
+    plugin = ClaudePlugin(cfg, verbose=False)
+    sends = []
+    plugin.on_watchdog_start(lambda line: sends.append(line))
+    try:
+        _send_datagram(short_socket_path, "green")
+        assert wait_for(lambda: sends == ["Claude: green\n", "Claude: clear\n"]), (
+            f"expected color then auto-clear; got {sends!r}"
+        )
+    finally:
+        plugin.on_watchdog_stop()
+
+
+def test_default_timeout_is_ten(tmp_path):
+    cfg = tmp_path / "claude.json"
+    cfg.write_text(json.dumps({}))
+    plugin = ClaudePlugin(str(cfg), verbose=False)
+    assert plugin.timeout_seconds == 10
 
 
 # ---------------------------------------------------------------------------

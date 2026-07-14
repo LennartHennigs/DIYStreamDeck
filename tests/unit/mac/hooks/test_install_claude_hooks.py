@@ -2,7 +2,7 @@
 
 Verify:
 - Backup file is created before mutation.
-- Three hook entries land under Stop / Notification / StopFailure.
+- Four hook entries land under Stop / Notification / StopFailure / UserPromptSubmit.
 - Re-running is idempotent (no duplicate entries).
 - Uninstaller removes only streamdeck-claude entries; peon-ping and
   unrelated entries are preserved.
@@ -57,9 +57,12 @@ def _read_settings(home: Path) -> dict:
     return json.loads((home / ".claude" / "settings.json").read_text())
 
 
+EVENTS = ("Stop", "Notification", "StopFailure", "UserPromptSubmit")
+
+
 def _count_streamdeck_entries(settings: dict) -> int:
     total = 0
-    for event in ("Stop", "Notification", "StopFailure"):
+    for event in EVENTS:
         for entry in settings.get("hooks", {}).get(event, []):
             for h in entry.get("hooks", []):
                 if str(HOOK_SCRIPT) in h.get("command", ""):
@@ -78,17 +81,17 @@ def test_install_creates_settings_when_missing(fake_home):
     assert (fake_home / ".claude" / "settings.json").exists()
 
 
-def test_install_adds_three_entries(fake_home):
+def test_install_adds_four_entries(fake_home):
     _run(INSTALL_SH, fake_home)
     settings = _read_settings(fake_home)
-    assert _count_streamdeck_entries(settings) == 3
+    assert _count_streamdeck_entries(settings) == 4
 
 
 def test_install_registers_correct_events(fake_home):
     _run(INSTALL_SH, fake_home)
     settings = _read_settings(fake_home)
     hooks = settings["hooks"]
-    for event in ("Stop", "Notification", "StopFailure"):
+    for event in EVENTS:
         assert event in hooks, f"missing {event}"
         commands = [h["command"] for entry in hooks[event] for h in entry["hooks"]]
         assert any(str(HOOK_SCRIPT) in c for c in commands), (
@@ -111,11 +114,11 @@ def test_install_is_idempotent(fake_home):
     """Running installer twice must not add duplicate entries."""
     _run(INSTALL_SH, fake_home)
     settings1 = _read_settings(fake_home)
-    assert _count_streamdeck_entries(settings1) == 3
+    assert _count_streamdeck_entries(settings1) == 4
 
     _run(INSTALL_SH, fake_home)
     settings2 = _read_settings(fake_home)
-    assert _count_streamdeck_entries(settings2) == 3, (
+    assert _count_streamdeck_entries(settings2) == 4, (
         "second run must not duplicate entries"
     )
 
@@ -148,7 +151,7 @@ def test_install_preserves_existing_hooks(fake_home):
     settings = _read_settings(fake_home)
 
     # streamdeck entries added
-    assert _count_streamdeck_entries(settings) == 3
+    assert _count_streamdeck_entries(settings) == 4
     # peon-ping still there
     stop_cmds = [h["command"] for entry in settings["hooks"]["Stop"] for h in entry["hooks"]]
     assert "/path/to/peon-ping.sh" in stop_cmds
@@ -175,7 +178,7 @@ def test_install_refuses_invalid_json(fake_home):
 
 def test_uninstall_removes_streamdeck_entries(fake_home):
     _run(INSTALL_SH, fake_home)
-    assert _count_streamdeck_entries(_read_settings(fake_home)) == 3
+    assert _count_streamdeck_entries(_read_settings(fake_home)) == 4
 
     result = _run(UNINSTALL_SH, fake_home)
     assert result.returncode == 0, result.stderr

@@ -18,7 +18,7 @@ backup_settings
 
 # For each event, drop hook entries whose hooks[] contains our command.
 apply_jq_patch '
-  reduce ("Stop", "Notification", "StopFailure") as $evt (.;
+  reduce ($evts[]) as $evt (.;
     if (.hooks // {}) | has($evt) then
       .hooks[$evt] = (
         (.hooks[$evt] // [])
@@ -28,6 +28,6 @@ apply_jq_patch '
       .
     end
   )
-' --arg cmd "$HOOK_PATH"
+' --arg cmd "$HOOK_PATH" --argjson evts "$(hook_events_json)"
 
 echo "OK — no streamdeck-claude entries remain in $SETTINGS_FILE."

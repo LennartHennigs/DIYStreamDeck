@@ -1,6 +1,6 @@
 # DIY Streamdeck code for a Pi Pico - CircuitPython
 # L. Hennigs and ChatGPT 4.0
-# last changed: 2026-06-03
+# last changed: 2026-07-13
 # https://github.com/LennartHennigs/DIYStreamDeck
 
 import time
@@ -110,6 +110,9 @@ class KeyController:
         # A new `Claude:` line while one is active just overwrites it. Must be
         # set before the first update_keys() call below (which reads it).
         self._signal_color = None
+        # True between an ack press (one that only dismissed a signal) and its
+        # release, so key_release_action skips the release side effects too.
+        self._signal_ack = False
 
         # load the key layout
         self.update_keys()
@@ -147,11 +150,14 @@ class KeyController:
     def key_press_action(self, key):
         if key.number not in self.current_config:
             return
-        # A keypress is a deliberate ack of any active Claude signal — repaint
-        # the real layout first (update_keys() clears the sticky color),
-        # otherwise the 15 non-pressed keys would keep showing the flood-fill.
+        # A keypress while a Claude signal is active is a pure ack: repaint the
+        # real layout (update_keys() clears the sticky color) and consume the
+        # press WITHOUT running the key's action. The first press only dismisses
+        # the flood-fill; the user presses again to actually trigger the key.
         if self._signal_color is not None:
             self.update_keys()
+            self._signal_ack = True
+            return
         key_def = self.current_config[key.number]
         action = key_def.get('action')
         folder = key_def.get('folder')
@@ -182,6 +188,11 @@ class KeyController:
 
     # handle the key release
     def key_release_action(self, key):
+        # If the matching press only acked a Claude signal, swallow the release
+        # too — no toggle-color swap or repaint from a dismiss-only press.
+        if self._signal_ack:
+            self._signal_ack = False
+            return
         if key.number not in self.current_config:
             return
         key_def = self.current_config[key.number]
@@ -616,6 +627,11 @@ class KeyController:
         color = serial_str[8:].strip().lower()
         if color in FLASH_COLORS:
             self.flash_all(FLASH_COLORS[color])
+        # 'clear' repaints the real layout without a keypress — the plugin sends
+        # it on interaction (UserPromptSubmit) or after its timeout. Guarded so
+        # it's a no-op when nothing is lit (update_keys() resets _signal_color).
+        elif color == "clear" and self._signal_color is not None:
+            self.update_keys()
 
 
     # parse the app name and url

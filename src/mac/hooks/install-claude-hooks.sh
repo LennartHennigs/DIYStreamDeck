@@ -34,7 +34,7 @@ backup_settings
 # hooks[].command == $HOOK_PATH. Skip if already present.
 apply_jq_patch '
   .hooks = (.hooks // {}) |
-  reduce ("Stop", "Notification", "StopFailure") as $evt (.;
+  reduce ($evts[]) as $evt (.;
     .hooks[$evt] = (.hooks[$evt] // []) |
     if any(.hooks[$evt][]?.hooks[]?; .command == $cmd) then
       .
@@ -50,7 +50,7 @@ apply_jq_patch '
       }]
     end
   )
-' --arg cmd "$HOOK_PATH"
+' --arg cmd "$HOOK_PATH" --argjson evts "$(hook_events_json)"
 
 echo "Hook path: $HOOK_PATH"
-echo "OK — streamdeck-claude is registered for Stop, Notification, and StopFailure."
+echo "OK — streamdeck-claude is registered for: ${HOOK_EVENTS[*]}."

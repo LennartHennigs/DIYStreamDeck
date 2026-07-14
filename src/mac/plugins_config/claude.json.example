@@ -1,3 +1,4 @@
 {
-  "socket_path": "/tmp/streamdeck-claude.sock"
+  "socket_path": "/tmp/streamdeck-claude.sock",
+  "timeout_seconds": 10
 }

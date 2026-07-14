@@ -79,16 +79,17 @@ def listener(short_socket_path):
 # Happy path: each event → correct color
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("event,color", [
+@pytest.mark.parametrize("event,signal", [
     ("Stop", "green"),
     ("Notification", "red"),
     ("StopFailure", "yellow"),
+    ("UserPromptSubmit", "clear"),
 ])
-def test_event_sends_correct_color(listener, event, color):
+def test_event_sends_correct_signal(listener, event, signal):
     payload = json.dumps({"hook_event_name": event})
     _run_hook(payload, listener.path)
-    assert wait_for(lambda: listener.received == [color]), (
-        f"expected [{color!r}] after {event}; got {listener.received!r}"
+    assert wait_for(lambda: listener.received == [signal]), (
+        f"expected [{signal!r}] after {event}; got {listener.received!r}"
     )
 
 

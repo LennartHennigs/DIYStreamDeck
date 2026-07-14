@@ -20,6 +20,13 @@ HOOK_PATH="${DIR}/streamdeck-claude.py"
 SETTINGS_FILE="${HOME}/.claude/settings.json"
 BACKUP_FILE="${SETTINGS_FILE}.bak"
 
+# Claude Code events the streamdeck hook registers for — single source of truth
+# for both install and uninstall (colors + the UserPromptSubmit 'clear' event).
+HOOK_EVENTS=(Stop Notification StopFailure UserPromptSubmit)
+
+# Emit HOOK_EVENTS as a compact JSON array for jq (`--argjson evts "$(hook_events_json)"`).
+hook_events_json() { printf '%s\n' "${HOOK_EVENTS[@]}" | jq -R . | jq -s -c .; }
+
 # Validate JSON before touching. Missing file is fine (each script decides
 # whether to create one or exit early).
 if [ -f "$SETTINGS_FILE" ] && ! jq empty "$SETTINGS_FILE" >/dev/null 2>&1; then

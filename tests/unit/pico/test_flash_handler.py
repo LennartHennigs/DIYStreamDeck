@@ -153,6 +153,49 @@ class TestClaudeSerialHandler:
             "keypress must clear the sticky signal"
         )
 
+    def test_keypress_during_signal_is_ack_only(self):
+        """The dismissing press must NOT run the key's action (no pass-through)."""
+        self.controller.process_serial_str("Claude: green")
+        key = self.controller.keys[0]  # bound to CMD+C in the test config
+        with patch.object(self.controller, "handle_key_sequences") as spy:
+            self.controller.key_press_action(key)
+        assert self.controller._signal_color is None, "signal must be dismissed"
+        spy.assert_not_called()  # the key's action must not fire on the ack press
+
+    def test_keypress_after_signal_cleared_runs_action(self):
+        """With no active signal, a press runs the key's action normally."""
+        assert self.controller._signal_color is None
+        key = self.controller.keys[0]
+        with patch.object(self.controller, "handle_key_sequences") as spy:
+            self.controller.key_press_action(key)
+        spy.assert_called_once()  # second (post-dismiss) press triggers the key
+
+    def test_ack_press_release_has_no_side_effects(self):
+        """The release paired with an ack press is swallowed (flag resets)."""
+        self.controller.process_serial_str("Claude: red")
+        key = self.controller.keys[0]
+        self.controller.key_press_action(key)      # ack: sets _signal_ack
+        assert self.controller._signal_ack is True
+        self.controller.key_release_action(key)    # swallowed, resets the flag
+        assert self.controller._signal_ack is False
+
+    def test_clear_message_dismisses_active_signal(self):
+        """`Claude: clear` repaints the real layout, clearing the sticky signal."""
+        self.controller.process_serial_str("Claude: green")
+        assert self.controller._signal_color is not None
+        self.controller.process_serial_str("Claude: clear")
+        assert self.controller._signal_color is None, (
+            "clear must repaint the real layout and drop the sticky signal"
+        )
+
+    def test_clear_message_without_signal_is_noop(self):
+        """`Claude: clear` with nothing lit must not repaint or set state."""
+        assert self.controller._signal_color is None
+        with patch.object(self.controller, "update_keys") as spy:
+            self.controller.process_serial_str("Claude: clear")
+        spy.assert_not_called()
+        assert self.controller._signal_color is None
+
     def test_keypress_on_unbound_key_does_not_change_state(self):
         """An unbound key falls out of key_press_action early — no ack."""
         self.controller.process_serial_str("Claude: red")
