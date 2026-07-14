@@ -6,8 +6,7 @@ Both the packaged .app and source/dev runs resolve their key_def.json and plugin
 config files from a single visible folder (default ~/Documents/DIYStreamDeck).
 The bundled/repo copies are used only as first-run seed sources.
 
-Set STREAMDECK_CONFIG_DIR to override the location (also honoured by
-deploy-to-pico.sh and the tests).
+Set STREAMDECK_CONFIG_DIR to override the location (also honoured by the tests).
 """
 import os
 import shutil
