@@ -24,7 +24,8 @@ macOS fires `NSWorkspaceDidActivateApplicationNotification` on many events that 
 | `App: <name>` | Mac → Pico | Active application changed |
 | `Rotate: CW\|CCW` | Mac → Pico | Rotate keypad layout |
 | `Terminated: <name>` | Mac → Pico | App terminated (resets toggle state) |
-| `Claude: green\|red\|yellow` | Mac → Pico | Flood-fill LEDs; color persists until app switch, rotation, keypress, or next signal (claude plugin / Claude Code hooks) |
+| `Claude: green\|red\|yellow` | Mac → Pico | Flood-fill LEDs; color persists until app switch, rotation, keypress (ack-only — the dismissing press does not trigger the key), next signal, `Claude: clear`, or the plugin's `timeout_seconds` (claude plugin / Claude Code hooks) |
+| `Claude: clear` | Mac → Pico | Repaint the real layout, clearing any active signal (sent by the `UserPromptSubmit` hook on reply, or by the claude plugin's auto-clear timer) |
 | `Launch: <name>` | Pico → Mac | Request app launch |
 | `Run: <plugin.cmd>` | Pico → Mac | Request plugin command |
 | `Output: <text>` | Pico → Mac | Forward text to Mac console (`[Pico] <text>`) |
@@ -40,17 +41,19 @@ Pico unloads the keypad if heartbeats stop (host disconnected).
 | `src/pi_pico/key_def.json` | Key layout configuration (repo copy = first-run seed source) |
 | `~/Documents/DIYStreamDeck/` | **Runtime** config folder: `key_def.json` + flat plugin `<name>.json`. Seeded on first run; used by the `.app` and source runs. Override with `STREAMDECK_CONFIG_DIR` |
 | `src/mac/config_paths.py` | Resolves + seeds the runtime config folder (`config_dir`, `key_def_path`, `ensure_config_dir`) |
-| `src/mac/pico_deploy.py` | Push files to the Pico's CIRCUITPY drive (noasync remount via admin prompt) |
-| `src/mac/github_update.py` | Fetch the latest `code.py` from GitHub for in-app firmware update |
+| `src/mac/github_update.py` | GitHub repo URL/constants (used for the "Open Project on GitHub" menu item) |
+| `src/mac/login_item.py` | Start-at-login toggle — writes a RunAtLoad-only user LaunchAgent |
 | `src/mac/watchdog.py` | Mac watchdog entry point |
 | `src/mac/plugins/` | Plugin implementations (extend `BasePlugin`) |
 | `src/mac/plugins_config/` | Plugin config `*.json.example` templates (seed source; real `*.json` git-ignored) |
 | `src/mac/hooks/` | Claude Code hook scripts (`streamdeck-claude.py`) + installer |
 | `src/mac/requirements.txt` | Mac Python dependencies |
-| `src/mac/statusbar.py` | Menu-bar app (rumps wrapper around watchdog); Reload/Update/GitHub menu items |
+| `src/mac/statusbar.py` | Menu-bar app (rumps wrapper around watchdog); status dot, Start-at-login, GitHub/About menu items |
 | `src/mac/assets/grid_icon.png` | Menu bar icon — regenerate with `scripts/generate_icon.py` |
+| `src/mac/assets/app_icon.icns` | Dock/Finder app icon — regenerate with `scripts/generate_app_icon.py` |
 | `src/mac/layout_formatter.py` | Loads `key_def.json`, formats layout lines for the status bar cheat sheet |
 | `scripts/generate_icon.py` | One-time generator for `src/mac/assets/grid_icon.png` |
+| `scripts/generate_app_icon.py` | One-time generator for `src/mac/assets/app_icon.icns` (Dock/Finder icon) |
 | `DIYStreamDeck.spec` | PyInstaller spec for the standalone `.app` bundle |
 | `build-app.sh` | Builds `dist/DIYStreamDeck.app`; `--install` copies to `/Applications/` |
 | `tests/` | Test suite (see [`tests/CLAUDE.md`](tests/CLAUDE.md)) |
@@ -80,9 +83,11 @@ pip install -r src/mac/requirements.txt
 # Run directly
 python3 src/mac/watchdog.py --port /dev/cu.usbmodem2101 --verbose
 
-# Deploy Pico firmware
-./deploy-to-pico.sh              # requires sudo (noasync remount, macOS 14+ FAT32 safety)
-# Or use Thonny save + Ctrl-D in REPL if sudo is inconvenient
+# Deploy Pico firmware / key_def.json — copy onto the CIRCUITPY drive.
+# Use Thonny (save code.py to the Pico + Ctrl-D in the REPL), or drag the files
+# onto /Volumes/CIRCUITPY in Finder. Note: if the Pico's boot.py does
+# storage.remount("/", readonly=False), CIRCUITPY is read-only to the host and
+# only Thonny/REPL can write — remove that boot.py to enable host-side copies.
 
 # Manually trigger a Claude Code signal without waiting for a real event
 ./test-claude.sh                 # cycles green → red → yellow
@@ -100,7 +105,7 @@ For serial-protocol debugging: run watchdog with `--verbose` (logs `Active app:`
 pip install -r tests/requirements_test.txt
 
 # Run tests
-./run-tests.sh all       # everything (304 tests)
+./run-tests.sh all       # everything (389 tests)
 ./run-tests.sh pico      # Pi Pico only
 ./run-tests.sh mac       # Mac/watchdog only
 ./run-tests.sh security  # security tests only
@@ -140,6 +145,9 @@ Service-style plugins (that push events *to* the keypad, not just react to keypr
 - **iCloud-synced repo invalidates ad-hoc `.app` signatures**: this repo lives under an iCloud-synced `~/Documents`; the file provider stamps `com.apple.fileprovider.fpfs#P`/`FinderInfo` xattrs on the freshly-signed bundle, so `codesign --verify` fails seconds later (the app still runs). For a valid signature build/run from a non-synced path — `build-app.sh --install` re-signs the `/Applications` copy.
 - **PyInstaller `.app` signing needs two passes**: its internal ad-hoc sign fails on resource-fork detritus, and the first `xattr -cr` + `codesign` still trips `--verify`; a second pass fixes it (`sign_app` loop in `build-app.sh`). A stale `build/` causes `struct.error: unpack requires a buffer of 4 bytes` — `build-app.sh` does `rm -rf build dist` first.
 - **PyInstaller entry-script `__file__` = bundle root**: `statusbar.py` (the entry script) sees `__file__` under `sys._MEIPASS`, not `src/mac` — resolve bundled resources via `config_paths.bundle_root()`. Dotted submodules (e.g. `src.mac.watchdog`) keep a correct `__file__`.
+- **One PyInstaller build at a time**: two concurrent `build-app.sh` runs (e.g. a background build + a terminal build) corrupt the shared cache and crash with `FileNotFoundError: index.dat`. If it happens, `rm -rf "$HOME/Library/Application Support/pyinstaller"` and rebuild solo.
+- **rumps has no colored-text API**: colored menu text (status dot, layout dots) is set via `item._menuitem.setAttributedTitle_(NSMutableAttributedString)` — see `statusbar._set_dot_title`. Always also set `item.title` (rumps keys its menu dict by title, so empty titles collide).
+- **CIRCUITPY read-only + stale cache**: a Pico `boot.py` with `storage.remount("/", readonly=False)` gives the Pico write access and mounts CIRCUITPY read-only on the host (even root gets `Operation not permitted`) — deploy `code.py`/`key_def.json` with **Thonny**. A read-only mount also serves stale cached bytes after a Pico-side write; `diskutil unmount /dev/diskNsM && diskutil mount /dev/diskNsM` to re-read. (macOS 26's FSKit `msdos` also breaks `mount -o noasync -t msdos`.)
 
 ## Development Principles
 

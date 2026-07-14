@@ -1,6 +1,57 @@
 
 # CHANGELOG
 
+## 2026-07-13 (remove Mac-side Pico deploy)
+
+- **Dropped the host-side deploy path.** Removed `deploy-to-pico.sh`, `src/mac/pico_deploy.py`
+  (and its tests), and the menu-bar items that pushed to the Pico. Reason: it can't work
+  reliably on current macOS — the `mount -o noasync -t msdos` remount fails on macOS 26's
+  FSKit `msdos` driver, and a Pico whose `boot.py` runs `storage.remount("/", readonly=False)`
+  presents CIRCUITPY **read-only at the block level** (even root gets "Operation not permitted").
+  Deploy `code.py` / `key_def.json` with **Thonny** (or Finder drag-drop when the drive is
+  writable). `github_update.py` stays (powers the "Open Project on GitHub" link).
+
+## 2026-07-13 (Claude signal auto-clear + ack-only keypress)
+
+- **Keypress is ack-only during a signal.** On the Pico, a keypress while a Claude signal
+  color is lit now *only* dismisses the flood-fill — it no longer passes through to trigger
+  the key's action. Press again to actually use the key (`key_press_action` early-returns;
+  `key_release_action` swallows the paired release via `_signal_ack`).
+- **Signal auto-clears.** The color no longer lingers until you tap the keypad:
+  - **On interaction** — a new `UserPromptSubmit` Claude Code hook sends `clear` the moment
+    you submit a reply, repainting the real layout.
+  - **On timeout** — the claude plugin owns a fallback timer; `timeout_seconds` in
+    `claude.json` (default 10, 0 = disabled) after which it sends `Claude: clear` itself.
+- **New protocol message `Claude: clear`** (Mac → Pico) repaints the real layout without a
+  keypress; `process_flash` handles it (no-op when nothing is lit). The plugin exposes a
+  `claude.clear` command and relays a `clear` datagram; the uninstaller now also removes the
+  `UserPromptSubmit` hook. The registered event list is now defined once in `_hooks-common.sh`
+  (`HOOK_EVENTS`) and shared by the install/uninstall scripts.
+
+## 2026-07-13 (standalone app polish)
+
+- **Dock/Finder app icon.** New `scripts/generate_app_icon.py` renders a colored
+  `.icns` (grey rounded-corner keys on a light rounded-square panel; the bottom-right
+  key a darker grey) via AppKit + `iconutil`, committed as `src/mac/assets/app_icon.icns`
+  and wired into `DIYStreamDeck.spec` (`icon=`). Regenerate like `grid_icon.png`.
+- **Colored menu text.** New `_set_dot_title` helper sets an `NSAttributedString` on the
+  underlying `NSMenuItem` (rumps has no colored-text API), reused by the status line and
+  the layout cheat sheet.
+- **Connection status.** Connected now shows a dark-green dot and the serial port in
+  brackets — `● Connected (/dev/cu.usbmodem…)`; other states use amber/grey/red dots.
+- **Menu: Start at login.** New `src/mac/login_item.py` toggles a RunAtLoad-only user
+  LaunchAgent (login item, no keep-alive) so the app launches at login. macOS 12+.
+- **Menu rename.** "Project on GitHub" → "Open Project on GitHub".
+- **Menu: About DIY StreamDeck…** shows the current version in a native modal.
+- **Layout cheat sheet dots.** `layout_formatter.color_to_rgb` / `layout_entries` resolve
+  each key's color (named or `#RRGGBB`, mirroring the Pico's `NAMED_COLORS`); rows now read
+  "Key N — ● — description" with a dot in the key's LED color.
+- **`build-app.sh` robustness.** `rm -rf build/dist` now retries (the iCloud file provider
+  re-materializes files mid-delete, failing with "Directory not empty"); the in-place `dist`
+  signing is best-effort with a warning instead of aborting (the ad-hoc-signed app still runs
+  under iCloud-synced `~/Documents`; `--install` re-signs the pristine `/Applications` copy);
+  and `--install` is no longer forwarded to PyInstaller (which rejected it), so it works again.
+
 ## 2026-07-13 (external config folder + in-app Pico deploy)
 
 - **User config folder `~/Documents/DIYStreamDeck`.** New `src/mac/config_paths.py`

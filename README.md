@@ -46,7 +46,6 @@ If you find this useful, consider giving it a ⭐️ on [GitHub](https://github.
 | `run-statusbar.sh` | Launcher for the menu-bar app (`statusbar.py`) — status icon + layout cheat sheet |
 | `src/mac/service/install-service.sh` | Install the watchdog as a login LaunchAgent (`--statusbar` for the menu-bar app) |
 | `src/mac/service/uninstall-service.sh` | Remove the LaunchAgent |
-| `deploy-to-pico.sh` | Copy `code.py` + `key_def.json` to the CIRCUITPY volume — **prompts for `sudo` password** (macOS 14+ FAT32 safety remount) |
 | `run-config-tool.sh` | Launch the browser-based `key_def.json` editor at `http://localhost:8001` |
 | `run-tests.sh` | Activate the test venv and run the pytest suite |
 | `test-claude.sh` | Send Claude Code signal colors to a running watchdog for hardware smoke-testing |
@@ -63,11 +62,9 @@ If you find this useful, consider giving it a ⭐️ on [GitHub](https://github.
 2. Install required libraries into `lib/`: `adafruit_dotstar.mpy`, `adafruit_hid`, and [rgbkeypad-circuitpython](https://github.com/AngainorDev/rgbkeypad-circuitpython).
 3. Copy `src/pi_pico/` to the Pico root.
 
-   **First-time install — CLI:** `./deploy-to-pico.sh` copies `code.py` and `key_def.json` to `/Volumes/CIRCUITPY`. Pass `--code` to deploy only `code.py`, `--keys` to deploy only `key_def.json` (default: both); `--help` prints usage. An optional volume path overrides the default (e.g. `./deploy-to-pico.sh --keys /Volumes/CIRCUITPY1`). It performs a `noasync` remount to prevent FAT32 corruption on macOS 14+, which requires **`sudo` — you will be prompted for your macOS admin password**. The remount is temporary; unplugging and replugging restores normal behaviour, and Thonny works as usual afterward.
+   **Recommended — Thonny:** [Thonny](https://thonny.org/) is the reliable path. Open `code.py` / `key_def.json` from this repo, then **File → Save as → Raspberry Pi Pico** (name them `code.py` / `key_def.json`), and press `Ctrl-D` in the REPL to soft-reboot. Thonny writes from the Pico side, so it works even when the CIRCUITPY drive is read-only to the host.
 
-   **Iterating on `code.py` — Thonny:** [Thonny](https://thonny.org/) is the easier path once the Pico is set up. Open the file directly from `/Volumes/CIRCUITPY`, edit, save (Cmd-S), and press `Ctrl-D` in the REPL to soft-reboot the Pico. No `sudo`, no remount, no unplugging. This is the fastest inner loop for firmware changes.
-
-   **Also fine:** drag-and-drop in Finder for occasional edits.
+   **Also fine:** drag-and-drop the files onto `/Volumes/CIRCUITPY` in Finder — **provided the drive is writable**. If the Pico's `boot.py` contains `storage.remount("/", readonly=False)`, CircuitPython holds write access and the Mac mounts CIRCUITPY **read-only** (so Finder/CLI copies fail); remove/rename that `boot.py`, or just use Thonny.
 4. Edit `key_def.json` to set up your layouts. Key `0` is top-left, `15` is bottom-right. [Thonny](https://thonny.org/) makes this easy.
 
 ### Mac Watchdog
@@ -124,16 +121,18 @@ The agent starts at login, is restarted by launchd if it crashes, and logs to
 
 `./run-statusbar.sh` runs the watchdog inside a small menu-bar app:
 
-- **Status icon** — `●` connected, `◌` searching, `○` disconnected.
-- **Layout** submenu — a cheat sheet of the active app's keys ("Key 3 — Close
-  Tab (GUI+W)"), read from `key_def.json` (override with `--key-def`).
+- **Status line** — a colored dot plus text: green `Connected (<port>)` (with the
+  serial port name in brackets), amber while searching, grey when disconnected,
+  red on errors.
+- **Layout** submenu — a cheat sheet of the active app's keys, each shown as
+  "Key 3 — ● — Close Tab (GUI+W)" with a dot in the key's LED color, read from
+  `key_def.json` (override with `--key-def`).
 - **Auto-connect** toggle — when on (default), the app finds and re-attaches
   to the Pico automatically; when off, use **Connect now**.
-- **Reload layout on Pico** — copies `~/Documents/DIYStreamDeck/key_def.json` onto the
-  Pico's CIRCUITPY drive (one admin prompt) and reloads it. Requires the drive mounted.
-- **Update firmware from GitHub** — downloads the latest `code.py` and installs it on
-  the Pico.
-- **Project on GitHub** — opens the repository page.
+- **Start at login** toggle — registers/removes a user LaunchAgent so the app
+  launches automatically at login.
+- **Open Project on GitHub** — opens the repository page.
+- **About DIY StreamDeck…** — shows the current version in a small modal.
 - Same flags as the watchdog (`--port`, `--speed`, `--verbose`, `--rotate`).
 
 On first launch the app creates **`~/Documents/DIYStreamDeck/`** and seeds it with
@@ -336,15 +335,19 @@ Place `.wav` or `.mp3` files in `src/mac/sounds/` (configure path in `~/Document
 
 The `claude` plugin lights the whole keypad in traffic-light colors when [Claude Code](https://docs.claude.com/en/docs/claude-code) — Anthropic's terminal-based coding agent — fires lifecycle events. Useful when Claude is doing long-running work in a background tab: green tells you the turn finished, red tells you it's waiting on you, yellow tells you it errored out.
 
-**The color stays lit** until you switch apps, rotate the keypad, press a key, or the next Claude Code event overrides it — the color *is* the status signal, not just an animation. Glance at the keypad ten seconds after Claude finished and you still see the state.
+**How the color clears.** It stays lit as a status signal (not just an animation) and clears when any of these happen:
+- **You answer** — submitting your next prompt fires the `UserPromptSubmit` hook, which repaints the real layout.
+- **Timeout** — after `timeout_seconds` (default 10, set in `claude.json`; `0` disables it) the plugin clears it automatically.
+- **You press a key** — the first press during a signal is *ack-only*: it just dismisses the color and does **not** trigger that key's action (press again to use the key). Switching apps or rotating also clears it.
 
 **Events and colors:**
 
-| Claude Code event | Color | What it means |
+| Claude Code event | Signal | What it means |
 | --- | --- | --- |
 | `Stop` | green | Claude finished a turn without needing anything from you |
 | `Notification` | red | Claude needs your attention — a permission prompt is open, or the agent is idle waiting for the next message |
 | `StopFailure` | yellow | The turn ended with an API error (rate limit, network, etc.) |
+| `UserPromptSubmit` | clear | You submitted a reply — dismiss the lit signal |
 
 (These are Claude *Code* events — the CLI/terminal agent — not Claude web or desktop.)
 
@@ -362,7 +365,7 @@ cp ~/Documents/DIYStreamDeck/claude.json.example \
 
 The installer:
 - Backs up `~/.claude/settings.json` to `~/.claude/settings.json.bak`.
-- Appends three entries — one each for `Stop`, `Notification`, `StopFailure` — pointing at `src/mac/hooks/streamdeck-claude.py`.
+- Appends four entries — one each for `Stop`, `Notification`, `StopFailure`, `UserPromptSubmit` — pointing at `src/mac/hooks/streamdeck-claude.py`.
 - Coexists with `peon-ping` and any other Claude Code hooks you have wired up.
 - Is idempotent: re-running detects existing entries and doesn't duplicate them.
 
@@ -385,7 +388,7 @@ Removes only entries pointing at *this repo's* `streamdeck-claude.py`; other hoo
 
 #### Keypad-triggerable test commands
 
-The plugin also exposes `claude.green`, `claude.red`, `claude.yellow` as `action` values in `key_def.json` for hardware testing:
+The plugin also exposes `claude.green`, `claude.red`, `claude.yellow`, and `claude.clear` as `action` values in `key_def.json` for hardware testing:
 
 ```json
 "7": { "action": "claude.green", "color": "#00FF00", "description": "Test claude signal" }
@@ -394,7 +397,7 @@ The plugin also exposes `claude.green`, `claude.red`, `claude.yellow` as `action
 <details>
 <summary>How it works under the hood</summary>
 
-The watchdog owns the serial port to the Pico exclusively — Claude Code hooks can't write to it directly. So the `claude` plugin runs a background listener on a Unix domain socket (`/tmp/streamdeck-claude.sock`). The hook script writes a one-line datagram (`green`/`red`/`yellow`) to the socket; the plugin validates it and forwards `Claude: <color>` over the serial port under the watchdog's existing lock. The Pico floods all LEDs with the color and holds it until the next `App:`, `Rotate:`, keypress, or `Claude:` line — non-blocking; key scanning never freezes.
+The watchdog owns the serial port to the Pico exclusively — Claude Code hooks can't write to it directly. So the `claude` plugin runs a background listener on a Unix domain socket (`/tmp/streamdeck-claude.sock`). The hook script writes a one-line datagram (`green`/`red`/`yellow`/`clear`) to the socket; the plugin validates it and forwards `Claude: <color>` (or `Claude: clear`) over the serial port under the watchdog's existing lock. On a color, the plugin also arms a `timeout_seconds` timer that later sends `Claude: clear` if nothing else does. The Pico floods all LEDs with the color and holds it until the next `App:`, `Rotate:`, keypress, `Claude:` line, or `Claude: clear` — non-blocking; key scanning never freezes.
 
 If the watchdog isn't running or the Pico is unplugged, the hook silently no-ops so Claude Code isn't slowed down.
 
